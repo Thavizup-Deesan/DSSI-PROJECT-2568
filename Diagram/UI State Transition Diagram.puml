@@ -1,0 +1,92 @@
+@startuml
+title Combined UI State Transition Diagram (with Budget & Permission Mgt.)
+hide empty description
+
+' --- Custom Styling for new Budget states ---
+skinparam state {
+  BackgroundColor<<Budget>> GreenYellow
+}
+
+state "C00: Login Page" as C00
+state "Logout" as LOGOUT
+
+[*] --> C00
+
+' --- User States ---
+state "U01: User Dashboard" as U01
+state "U02: Purchase Request List" as U02
+state "U03: Create/Edit Form" as U03 {
+    ' --- Added Budget Display ---
+    state "<b><color:green>แสดงงบประมาณคงเหลือของโครงการ</color></b>" as U03_BUDGET
+}
+state "U04: Purchase Request Detail" as U04
+
+C00 --> U01 : [Login as User]
+U01 --> U02 : [ดูใบสั่งซื้อ]
+U01 --> LOGOUT
+
+U02 --> U03 : [สร้างใหม่]
+U02 --> U04 : [เลือกดูรายละเอียด]
+U02 --> U01 : [กลับหน้าหลัก]
+U02 --> LOGOUT
+
+U03 --> U02 : [บันทึก / ส่ง]
+U03 --> U02 : [ยกเลิก]
+U03 --> LOGOUT
+
+U04 --> U02 : [กลับไปหน้ารายการ]
+U04 --> U02 : [ยืนยันรับของ / ยกเลิก]
+U04 --> U03 : [แก้ไข]
+U04 --> LOGOUT
+
+' --- Staff States ---
+state "S01: Staff Dashboard" as S01
+state "S02: Request Approval List" as S02
+state "S03: Request Approval Detail" as S03
+state "S04: Create Purchase Order" as S04
+state "S05: Purchase Order List" as S05
+state "S06: Purchase Order Detail" as S06 {
+    ' --- Added Budget Closing Action ---
+    state "<b><color:green>ปิดการเบิกจ่าย</color></b>" as S06_CLOSE <<Budget>>
+}
+state "S07: Reports" as S07
+state "S08: Master Data Mgt." as S08 {
+    ' --- Added Budget Definition ---
+    state "<b><color:green>กำหนดงบประมาณโครงการ</color></b>" as S08_BUDGET <<Budget>>
+}
+state "S09: User Permission Mgt." as S09
+
+C00 --> S01 : [Login as Staff]
+S01 --> S02 : [ดูใบสั่งซื้อรออนุมัติ]
+S01 --> S05 : [จัดการ PO]
+S01 --> S07 : [รายงาน]
+S01 --> S08 : [ข้อมูลหลัก]
+S01 --> S09 : [จัดการสิทธิ์ผู้ใช้]
+S01 --> LOGOUT
+
+S02 --> S03 : [เลือกเพื่อตรวจสอบ]
+S02 --> S01 : [กลับหน้าหลัก]
+
+' --- Budget Encumbrance Flow (Added annotation) ---
+S03 --> S04 : [อนุมัติ]\n'<b><color:green>//-- ทำการ "กันงบประมาณ" --//</color></b>
+S03 --> S02 : [ปฏิเสธ / กลับ]
+
+S04 --> S06 : [สร้างและบันทึก PO]
+
+S05 --> S06 : [เลือกดูรายละเอียด PO]
+S05 --> S01 : [กลับหน้าหลัก]
+
+S06 --> S05 : [กลับ]
+S06 -> S06 : [อัปเดตสถานะ]
+
+' --- Budget Disbursement Flow (Added new path) ---
+S06 --> S06_CLOSE : [ปิด PO และบันทึกยอดใช้จริง]
+S06_CLOSE --> S05 : [กลับไปหน้ารายการ PO]\n'<b><color:green>//-- คืนยอดกันงบ และบันทึกยอดใช้จริง --//</color></b>
+
+S07 --> S01 : [กลับหน้าหลัก]
+S08 --> S01 : [กลับหน้าหลัก]
+S09 --> S01 : [กลับหน้าหลัก]
+S09 --> LOGOUT
+
+LOGOUT --> [*]
+@enduml
