@@ -1,0 +1,102 @@
+@startuml
+' hide the spot
+hide circle
+
+' avoid problems with angled crows feet
+skinparam linetype ortho
+
+entity "Users" as users {
+  *user_id : int <<PK>>
+  --
+  full_name : varchar
+  username : varchar
+  email : varchar
+  password : varchar
+  role : varchar
+  status : varchar
+}
+
+entity "Projects" as projects {
+  *project_id : int <<PK>>
+  --
+  project_code : varchar
+  project_name : varchar
+  budget_total : decimal
+  status : varchar
+}
+
+entity "Vendors" as vendors {
+  *vendor_id : int <<PK>>
+  --
+  vendor_name : varchar
+  phone : varchar
+  email : varchar
+}
+
+entity "Master_Items" as master_items {
+  *item_id : int <<PK>>
+  --
+  item_code : varchar
+  item_name : varchar
+  standard_unit : varchar
+}
+
+entity "Purchase_Requests" as pr {
+  *pr_id : int <<PK>>
+  --
+  pr_code : varchar
+  request_date : datetime
+  subject : varchar
+  #requester_id : int <<FK>>
+  #project_id : int <<FK>>
+  total_amount_estimate : decimal
+  status : varchar
+}
+
+entity "Purchase_Request_Items" as pr_items {
+  *pr_item_id : int <<PK>>
+  --
+  #pr_id : int <<FK>>
+  item_name : varchar
+  quantity : int
+  unit : varchar
+  #master_item_id : int <<FK>>
+}
+
+entity "Purchase_Orders" as po {
+  *po_id : int <<PK>>
+  --
+  po_code : varchar
+  order_date : date
+  #pr_id : int <<FK>>
+  #vendor_id : int <<FK>>
+  #staff_id : int <<FK>>
+  total_amount : decimal
+  actual_expense : decimal
+  status : varchar
+}
+
+entity "Purchase_Order_Items" as po_items {
+  *po_item_id : int <<PK>>
+  --
+  #po_id : int <<FK>>
+  item_name : varchar
+  quantity : int
+  unit : varchar
+  unit_price : decimal
+  line_total : decimal
+  #master_item_id : int <<FK>>
+}
+
+users ||--o{ pr
+projects ||--o{ pr
+pr ||--|{ pr_items
+master_items }o--o{ pr_items
+
+pr }o..o| po
+vendors ||--o{ po
+users ||--o{ po
+po ||--|{ po_items
+master_items }o--o{ po_items
+
+@enduml
