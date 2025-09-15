@@ -62,6 +62,8 @@ entity "Purchase_Request_Items" as pr_items {
   quantity : int
   unit : varchar
   #master_item_id : int <<FK>>
+  '-- เพิ่มคอลัมน์ใหม่ --'
+  estimated_price : decimal
 }
 
 
