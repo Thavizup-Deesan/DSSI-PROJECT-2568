@@ -1,8 +1,6 @@
 @startuml
-' hide the spot
 hide circle
 
-' avoid problems with angled crows feet
 skinparam linetype ortho
 
 entity "Users" as users {
@@ -14,6 +12,7 @@ entity "Users" as users {
   password : varchar
   role : varchar
   status : varchar
+  department : varchar
 }
 
 entity "Projects" as projects {
@@ -51,6 +50,8 @@ entity "Purchase_Requests" as pr {
   #project_id : int <<FK>>
   total_amount_estimate : decimal
   status : varchar
+  description : text
+  rejection_reason : text
 }
 
 entity "Purchase_Request_Items" as pr_items {
@@ -62,6 +63,16 @@ entity "Purchase_Request_Items" as pr_items {
   unit : varchar
   #master_item_id : int <<FK>>
 }
+
+
+entity "Request_Attachments" as attachments {
+    *attachment_id : int <<PK>>
+    --
+    #pr_id : int <<FK>>
+    file_name : varchar
+    file_path : varchar
+}
+
 
 entity "Purchase_Orders" as po {
   *po_id : int <<PK>>
@@ -92,6 +103,9 @@ users ||--o{ pr
 projects ||--o{ pr
 pr ||--|{ pr_items
 master_items }o--o{ pr_items
+
+
+pr ||--o{ attachments
 
 pr }o..o| po
 vendors ||--o{ po
