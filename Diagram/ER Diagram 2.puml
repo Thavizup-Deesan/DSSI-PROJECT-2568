@@ -1,0 +1,116 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity "users" {
+  *user_id : INT <<PK>>
+  --
+  full_name : VARCHAR(255)
+  username : VARCHAR(100)
+  email : VARCHAR(255)
+  password_hash : VARCHAR(255)
+  role : VARCHAR(50)
+  status : VARCHAR(50)
+  department : VARCHAR(255)
+}
+
+entity "projects" {
+  *project_id : INT <<PK>>
+  --
+  project_code : VARCHAR(50)
+  project_name : VARCHAR(255)
+  budget_total : DECIMAL(12, 2)
+  status : VARCHAR(50)
+}
+
+entity "vendors" {
+  *vendor_id : INT <<PK>>
+  --
+  vendor_name : VARCHAR(255)
+  phone : VARCHAR(50)
+  email : VARCHAR(255)
+}
+
+entity "master_items" {
+  *item_id : INT <<PK>>
+  --
+  item_code : VARCHAR(50)
+  item_name : VARCHAR(255)
+  standard_unit : VARCHAR(50)
+}
+
+entity "purchase_requests" {
+  *pr_id : INT <<PK>>
+  --
+  pr_code : VARCHAR(50)
+  request_date : DATETIME
+  subject : VARCHAR(255)
+  #requester_id : INT <<FK>>
+  #project_id : INT <<FK>>
+  total_amount_estimate : DECIMAL(12, 2)
+  status : VARCHAR(50)
+  description : TEXT
+  rejection_reason : TEXT
+}
+
+entity "purchase_request_items" {
+  *pr_item_id : INT <<PK>>
+  --
+  #pr_id : INT <<FK>>
+  #master_item_id : INT <<FK>> (Nullable)
+  item_name : VARCHAR(255)
+  quantity : INT
+  unit : VARCHAR(50)
+  estimated_price : DECIMAL(12, 2)
+  display_order : INT
+}
+
+entity "request_attachments" {
+    *attachment_id : INT <<PK>>
+    --
+    #pr_id : INT <<FK>>
+    file_name : VARCHAR(255)
+    file_path : VARCHAR(255)
+}
+
+entity "purchase_orders" {
+  *po_id : INT <<PK>>
+  --
+  po_code : VARCHAR(50)
+  order_date : DATE
+  #pr_id : INT <<FK>> (Nullable)
+  #vendor_id : INT <<FK>>
+  #staff_id : INT <<FK>>
+  total_amount : DECIMAL(12, 2)
+  actual_expense : DECIMAL(12, 2)
+  status : VARCHAR(50)
+}
+
+entity "purchase_order_items" {
+  *po_item_id : INT <<PK>>
+  --
+  #po_id : INT <<FK>>
+  #master_item_id : INT <<FK>> (Nullable)
+  item_name : VARCHAR(255)
+  quantity : INT
+  unit : VARCHAR(50)
+  unit_price : DECIMAL(12, 2)
+  line_total : DECIMAL(12, 2)
+  display_order : INT
+}
+
+' --- Relationships --- '
+users ||--o{ purchase_requests
+projects ||--o{ purchase_requests
+purchase_requests ||--|{ purchase_request_items
+purchase_requests ||--o{ request_attachments
+purchase_requests }o..o| purchase_orders
+vendors ||--o{ purchase_orders
+users ||--o{ purchase_orders
+purchase_orders ||--|{ purchase_order_items
+
+' --- !! นี่คือเส้นที่แก้ไข !! --- '
+master_items }o--o| purchase_request_items
+master_items }o--o| purchase_order_items
+
+@enduml

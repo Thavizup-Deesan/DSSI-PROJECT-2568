@@ -86,7 +86,7 @@ entity "Purchase_Orders" as po {
   #staff_id : int <<FK>>
   total_amount : decimal
   actual_expense : decimal
-  status : varchar
+  status : enum('Pending', 'Approved')
 }
 
 entity "Purchase_Order_Items" as po_items {

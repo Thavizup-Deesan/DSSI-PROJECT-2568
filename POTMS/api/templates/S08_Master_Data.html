@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>จัดการข้อมูลหลัก (S08: Master Data Mgt.)</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome for Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <!-- Google Fonts: Sarabun -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        font-family: "Sarabun", sans-serif;
+        background-color: #f8f9fa;
+      }
+
+      .tab-btn {
+        border-bottom: 2px solid transparent;
+        color: #6b7280;
+        transition: all 0.2s;
+      }
+      .tab-btn.active {
+        border-bottom: 2px solid #3b82f6; /* Blue-500 */
+        color: #3b82f6;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navbar -->
+    <div
+      class="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-10"
+    >
+      <div class="flex items-center gap-4">
+        <button class="text-gray-500 hover:text-gray-700">
+          <i class="fa-solid fa-arrow-left text-xl"></i>
+        </button>
+        <h1 class="text-2xl font-semibold text-gray-800">จัดการข้อมูลหลัก</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-gray-600 text-sm">เจ้าหน้าที่</span>
+        <div
+          class="w-10 h-10 rounded-full bg-indigo-100 border-2 border-indigo-200 overflow-hidden"
+        >
+          <img
+            src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+            alt="Profile"
+            class="w-full h-full object-cover"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto p-6">
+      <div
+        class="bg-white rounded-xl shadow-sm border border-gray-100 min-h-[80vh]"
+      >
+        <!-- Tabs -->
+        <div class="flex border-b px-6 pt-2">
+          <button
+            onclick="switchTab('projects')"
+            id="tab-projects"
+            class="tab-btn active px-6 py-4 flex items-center gap-2"
+          >
+            <i class="fa-solid fa-folder-open"></i> ข้อมูลโครงการ
+          </button>
+          <button
+            onclick="switchTab('vendors')"
+            id="tab-vendors"
+            class="tab-btn px-6 py-4 flex items-center gap-2"
+          >
+            <i class="fa-solid fa-building"></i> ข้อมูลผู้ขาย
+          </button>
+          <button
+            onclick="switchTab('items')"
+            id="tab-items"
+            class="tab-btn px-6 py-4 flex items-center gap-2"
+          >
+            <i class="fa-solid fa-cubes"></i> รายการพัสดุ
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6">
+          <!-- PROJECT TAB -->
+          <div id="content-projects" class="block">
+            <div
+              class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4"
+            >
+              <div class="flex gap-3">
+                <button
+                  onclick="openModal('project')"
+                  class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm"
+                >
+                  <i class="fa-solid fa-plus"></i> เพิ่มโครงการ
+                </button>
+                <!-- Import Button with Hidden Input -->
+                <button
+                  onclick="document.getElementById('importFile').click()"
+                  class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 transition border border-gray-200"
+                >
+                  <i class="fa-solid fa-file-import"></i> Import/Update จากไฟล์
+                </button>
+                <input
+                  type="file"
+                  id="importFile"
+                  class="hidden"
+                  accept=".xlsx, .xls"
+                  onchange="handleImport(this)"
+                />
+              </div>
+              <div class="text-gray-500 text-sm">
+                รวม <span id="project-count">0</span> โครงการ
+              </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+              <table class="w-full text-left text-sm text-gray-600">
+                <thead
+                  class="bg-gray-50 text-xs uppercase text-gray-500 font-medium"
+                >
+                  <tr>
+                    <th class="px-6 py-4">หมายเลขโครงการ</th>
+                    <th class="px-6 py-4">ชื่อโครงการ</th>
+                    <th class="px-6 py-4">งบประมาณโครงการ</th>
+                    <th class="px-6 py-4 text-center">สถานะ</th>
+                    <th class="px-6 py-4 text-right">การกระทำ</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="project-table-body"
+                  class="divide-y divide-gray-100"
+                ></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- VENDOR TAB -->
+          <div id="content-vendors" class="hidden">
+            <div
+              class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4"
+            >
+              <h2 class="text-xl font-semibold text-gray-800">
+                จัดการข้อมูลผู้ขาย
+              </h2>
+              <button
+                onclick="openModal('vendor')"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm"
+              >
+                <i class="fa-solid fa-plus"></i> เพิ่มผู้ขาย
+              </button>
+            </div>
+
+            <div class="mb-6 relative max-w-md">
+              <div
+                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+              >
+                <i class="fa-solid fa-search text-gray-400"></i>
+              </div>
+              <input
+                type="text"
+                id="search-vendor"
+                onkeyup="renderVendors()"
+                class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="ค้นหาผู้ขาย..."
+              />
+            </div>
+
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+              <table class="w-full text-left text-sm text-gray-600">
+                <thead
+                  class="bg-gray-50 text-xs uppercase text-gray-500 font-medium"
+                >
+                  <tr>
+                    <th class="px-6 py-4">ชื่อผู้ขาย</th>
+                    <th class="px-6 py-4">เบอร์โทร</th>
+                    <th class="px-6 py-4">อีเมล</th>
+                    <th class="px-6 py-4 text-right">การจัดการ</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="vendor-table-body"
+                  class="divide-y divide-gray-100"
+                ></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ITEMS TAB -->
+          <div id="content-items" class="hidden">
+            <div
+              class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4"
+            >
+              <h2 class="text-xl font-semibold text-gray-800">
+                รายการพัสดุมาตรฐาน
+              </h2>
+              <button
+                onclick="openModal('item')"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm"
+              >
+                <i class="fa-solid fa-plus"></i> เพิ่มรายการพัสดุ
+              </button>
+            </div>
+
+            <div class="flex gap-3 mb-6">
+              <div class="relative flex-1">
+                <div
+                  class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                >
+                  <i class="fa-solid fa-search text-gray-400"></i>
+                </div>
+                <input
+                  type="text"
+                  id="search-item"
+                  onkeyup="renderItems()"
+                  class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="ค้นหารายการพัสดุ..."
+                />
+              </div>
+              <select
+                id="filter-unit"
+                onchange="renderItems()"
+                class="border border-gray-300 rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+              >
+                <option value="">ทุกหน่วยนับ</option>
+                <option value="รีม">รีม</option>
+                <option value="กล่อง">กล่อง</option>
+                <option value="ใบ">ใบ</option>
+                <option value="อัน">อัน</option>
+                <option value="ชิ้น">ชิ้น</option>
+              </select>
+            </div>
+
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+              <table class="w-full text-left text-sm text-gray-600">
+                <thead
+                  class="bg-gray-50 text-xs uppercase text-gray-500 font-medium"
+                >
+                  <tr>
+                    <th class="px-6 py-4">รหัสพัสดุ</th>
+                    <th class="px-6 py-4">ชื่อรายการ</th>
+                    <th class="px-6 py-4">หน่วยนับมาตรฐาน</th>
+                    <th class="px-6 py-4">วันที่สร้าง</th>
+                    <th class="px-6 py-4 text-right">การกระทำ</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="item-table-body"
+                  class="divide-y divide-gray-100"
+                ></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div
+      id="modal-overlay"
+      class="fixed inset-0 bg-black bg-opacity-50 hidden z-40 flex justify-center items-center p-4"
+    >
+      <div
+        class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all"
+      >
+        <div
+          class="px-6 py-4 border-b bg-gray-50 flex justify-between items-center"
+        >
+          <h3 id="modal-title" class="text-lg font-semibold text-gray-800">
+            เพิ่มข้อมูล
+          </h3>
+          <button
+            onclick="closeModal()"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+
+        <div class="p-6" id="modal-form-container"></div>
+
+        <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+          <button
+            onclick="closeModal()"
+            class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition"
+          >
+            ยกเลิก
+          </button>
+          <button
+            onclick="saveData()"
+            class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition"
+          >
+            บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // --- CONFIGURATION ---
+      const API_BASE_URL = "/api/"; // URL จริงของ Django API
+      let currentTab = "projects";
+      let currentEditId = null; // PK ของรายการที่กำลังแก้ไข
+      let projectsData = [];
+      let vendorsData = [];
+      let itemsData = [];
+
+      // --- INITIALIZATION ---
+      document.addEventListener("DOMContentLoaded", () => {
+        loadAllData(); // โหลดข้อมูลจาก API เมื่อเปิดหน้า
+      });
+
+      // --- API HELPER ---
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+          const cookies = document.cookie.split(";");
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === name + "=") {
+              cookieValue = decodeURIComponent(
+                cookie.substring(name.length + 1)
+              );
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+
+      async function fetchAPI(endpoint, method = "GET", body = null) {
+        const headers = {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        };
+        const config = { method, headers };
+        if (body) config.body = JSON.stringify(body);
+
+        try {
+          const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(
+              errorData.error || `HTTP error! status: ${response.status}`
+            );
+          }
+          if (method === "DELETE") return true;
+          return await response.json();
+        } catch (error) {
+          console.error("API Error:", error);
+          alert("เกิดข้อผิดพลาด: " + error.message);
+          return null;
+        }
+      }
+
+      // --- DATA LOADING ---
+      async function loadAllData() {
+        await Promise.all([loadProjects(), loadVendors(), loadItems()]);
+        // Render current tab
+        if (currentTab === "projects") renderProjects();
+        else if (currentTab === "vendors") renderVendors();
+        else if (currentTab === "items") renderItems();
+      }
+
+      async function loadProjects() {
+        const data = await fetchAPI("projects/");
+        if (data) {
+          projectsData = data.results || data; // รองรับ Pagination
+          renderProjects();
+        }
+      }
+      async function loadVendors() {
+        const data = await fetchAPI("vendors/");
+        if (data) {
+          vendorsData = data.results || data;
+          renderVendors();
+        }
+      }
+      async function loadItems() {
+        const data = await fetchAPI("master-items/");
+        if (data) {
+          itemsData = data.results || data;
+          renderItems();
+        }
+      }
+
+      // --- TAB LOGIC ---
+      function switchTab(tab) {
+        currentTab = tab;
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((btn) => btn.classList.remove("active"));
+        document.getElementById(`tab-${tab}`).classList.add("active");
+        ["projects", "vendors", "items"].forEach((t) => {
+          document
+            .getElementById(`content-${t}`)
+            .classList.toggle("hidden", t !== tab);
+        });
+        // Re-render to ensure freshness
+        if (tab === "projects") renderProjects();
+        else if (tab === "vendors") renderVendors();
+        else if (tab === "items") renderItems();
+      }
+
+      // --- RENDER FUNCTIONS ---
+      function formatCurrency(amount) {
+        return new Intl.NumberFormat("th-TH", {
+          style: "currency",
+          currency: "THB",
+        }).format(amount);
+      }
+      function formatDate(dateString) {
+        if (!dateString) return "-";
+        return new Date(dateString).toLocaleDateString("th-TH", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+      }
+
+      function renderProjects() {
+        const tbody = document.getElementById("project-table-body");
+        tbody.innerHTML = "";
+        document.getElementById("project-count").innerText =
+          projectsData.length;
+
+        if (projectsData.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400">ไม่พบข้อมูล</td></tr>`;
+          return;
+        }
+
+        projectsData.forEach((p) => {
+          const statusClass =
+            p.status === "ดำเนินการ"
+              ? "bg-green-100 text-green-700 border-green-200"
+              : "bg-gray-100 text-gray-700 border-gray-200";
+          tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 font-medium text-gray-900">${
+                          p.project_code
+                        }</td>
+                        <td class="px-6 py-4">${p.project_name}</td>
+                        <td class="px-6 py-4 font-mono text-gray-700">${formatCurrency(
+                          p.budget_total
+                        )}</td>
+                        <td class="px-6 py-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-semibold border ${statusClass}">${
+            p.status
+          }</span></td>
+                        <td class="px-6 py-4 text-right space-x-2">
+                            <button onclick="openModal('project', '${
+                              p.project_code
+                            }')" class="text-blue-600 hover:text-blue-800 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteData('projects', '${
+                              p.project_code
+                            }')" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+        });
+      }
+
+      function renderVendors() {
+        const tbody = document.getElementById("vendor-table-body");
+        const search = document
+          .getElementById("search-vendor")
+          .value.toLowerCase();
+        tbody.innerHTML = "";
+        const filtered = vendorsData.filter((v) =>
+          v.vendor_name.toLowerCase().includes(search)
+        );
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-400">ไม่พบข้อมูล</td></tr>`;
+          return;
+        }
+        filtered.forEach((v) => {
+          tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 font-medium text-gray-900">${
+                          v.vendor_name
+                        }</td>
+                        <td class="px-6 py-4 text-gray-600">${
+                          v.phone || "-"
+                        }</td>
+                        <td class="px-6 py-4 text-gray-600">${
+                          v.email || "-"
+                        }</td>
+                        <td class="px-6 py-4 text-right space-x-2">
+                            <button onclick="openModal('vendor', ${
+                              v.vendor_id
+                            })" class="text-blue-600 hover:underline font-medium">แก้ไข</button>
+                            <span class="text-gray-300">|</span>
+                            <button onclick="deleteData('vendors', ${
+                              v.vendor_id
+                            })" class="text-red-500 hover:underline font-medium">ลบ</button>
+                        </td>
+                    </tr>`;
+        });
+      }
+
+      function renderItems() {
+        const tbody = document.getElementById("item-table-body");
+        const search = document
+          .getElementById("search-item")
+          .value.toLowerCase();
+        const filterUnit = document.getElementById("filter-unit").value;
+        tbody.innerHTML = "";
+
+        const filtered = itemsData.filter((i) => {
+          const matchSearch =
+            i.item_name.toLowerCase().includes(search) ||
+            i.item_code.toLowerCase().includes(search);
+          const matchUnit = filterUnit === "" || i.standard_unit === filterUnit;
+          return matchSearch && matchUnit;
+        });
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400">ไม่พบข้อมูล</td></tr>`;
+          return;
+        }
+        filtered.forEach((i) => {
+          tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 font-medium text-gray-900">${
+                          i.item_code
+                        }</td>
+                        <td class="px-6 py-4">${i.item_name}</td>
+                        <td class="px-6 py-4"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">${
+                          i.standard_unit
+                        }</span></td>
+                        <td class="px-6 py-4 text-gray-500 text-xs">${formatDate(
+                          i.created_at
+                        )}</td>
+                        <td class="px-6 py-4 text-right space-x-2">
+                            <button onclick="openModal('item', '${
+                              i.item_code
+                            }')" class="text-blue-600 hover:text-blue-800 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteData('master-items', '${
+                              i.item_code
+                            }')" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+        });
+      }
+
+      // --- CRUD OPERATIONS ---
+      async function openModal(type, id = null) {
+        currentEditId = id;
+        document.getElementById("modal-overlay").classList.remove("hidden");
+        const title = document.getElementById("modal-title");
+        const container = document.getElementById("modal-form-container");
+
+        let data = {};
+        // ถ้าเป็นการแก้ไข ให้ดึงข้อมูลจากตัวแปร local (หรือจะ fetch ใหม่ก็ได้)
+        if (id) {
+          if (type === "project")
+            data = projectsData.find((p) => p.project_code === id);
+          else if (type === "vendor")
+            data = vendorsData.find((v) => v.vendor_id === id);
+          else if (type === "item")
+            data = itemsData.find((i) => i.item_code === id);
+        }
+
+        if (type === "project") {
+          title.innerText = id ? "แก้ไขโครงการ" : "เพิ่มโครงการใหม่";
+          container.innerHTML = `
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium mb-1">หมายเลขโครงการ</label><input type="text" id="inp-code" value="${
+                          data.project_code || ""
+                        }" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" ${
+            id ? "readonly" : ""
+          }></div>
+                        <div><label class="block text-sm font-medium mb-1">ชื่อโครงการ</label><input type="text" id="inp-name" value="${
+                          data.project_name || ""
+                        }" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"></div>
+                        <div><label class="block text-sm font-medium mb-1">งบประมาณ (บาท)</label><input type="number" id="inp-budget" value="${
+                          data.budget_total || ""
+                        }" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"></div>
+                        <div><label class="block text-sm font-medium mb-1">สถานะ</label>
+                            <select id="inp-status" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                                <option value="ดำเนินการ" ${
+                                  data.status === "ดำเนินการ" ? "selected" : ""
+                                }>ดำเนินการ</option>
+                                <option value="ปิด" ${
+                                  data.status === "ปิด" ? "selected" : ""
+                                }>ปิด</option>
+                            </select>
+                        </div>
+                    </div>`;
+        } else if (type === "vendor") {
+          title.innerText = id ? "แก้ไขข้อมูลผู้ขาย" : "เพิ่มผู้ขายใหม่";
+          container.innerHTML = `
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium mb-1">ชื่อผู้ขาย</label><input type="text" id="inp-name" value="${
+                          data.vendor_name || ""
+                        }" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"></div>
+                        <div><label class="block text-sm font-medium mb-1">เบอร์โทร</label><input type="text" id="inp-phone" value="${
+                          data.phone || ""
+                        }" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"></div>
+                        <div><label class="block text-sm font-medium mb-1">อีเมล</label><input type="email" id="inp-email" value="${
+                          data.email || ""
+                        }" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"></div>
+                    </div>`;
+        } else if (type === "item") {
+          title.innerText = id ? "แก้ไขรายการพัสดุ" : "เพิ่มรายการพัสดุใหม่";
+          container.innerHTML = `
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium mb-1">รหัสพัสดุ</label><input type="text" id="inp-code" value="${
+                          data.item_code || ""
+                        }" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" ${
+            id ? "readonly" : ""
+          }></div>
+                        <div><label class="block text-sm font-medium mb-1">ชื่อรายการ</label><input type="text" id="inp-name" value="${
+                          data.item_name || ""
+                        }" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"></div>
+                        <div><label class="block text-sm font-medium mb-1">หน่วยนับมาตรฐาน</label><input type="text" id="inp-unit" value="${
+                          data.standard_unit || ""
+                        }" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"></div>
+                    </div>`;
+        }
+      }
+
+      function closeModal() {
+        document.getElementById("modal-overlay").classList.add("hidden");
+      }
+
+      async function saveData() {
+        let endpoint, body, method;
+
+        if (currentTab === "projects") {
+          endpoint = "projects/";
+          body = {
+            project_code: document.getElementById("inp-code").value,
+            project_name: document.getElementById("inp-name").value,
+            budget_total: document.getElementById("inp-budget").value,
+            status: document.getElementById("inp-status").value,
+          };
+          if (currentEditId) {
+            method = "PUT";
+            endpoint += `${currentEditId}/`;
+          } else method = "POST";
+        } else if (currentTab === "vendors") {
+          endpoint = "vendors/";
+          body = {
+            vendor_name: document.getElementById("inp-name").value,
+            phone: document.getElementById("inp-phone").value,
+            email: document.getElementById("inp-email").value,
+          };
+          if (currentEditId) {
+            method = "PUT";
+            endpoint += `${currentEditId}/`;
+          } else method = "POST";
+        } else if (currentTab === "items") {
+          endpoint = "master-items/";
+          body = {
+            item_code: document.getElementById("inp-code").value,
+            item_name: document.getElementById("inp-name").value,
+            standard_unit: document.getElementById("inp-unit").value,
+          };
+          if (currentEditId) {
+            method = "PUT";
+            endpoint += `${currentEditId}/`;
+          } else method = "POST";
+        }
+
+        const result = await fetchAPI(endpoint, method, body);
+        if (result) {
+          alert("บันทึกข้อมูลสำเร็จ");
+          closeModal();
+          loadAllData(); // Reload data to update table
+        }
+      }
+
+      async function deleteData(endpointType, id) {
+        if (!confirm("ยืนยันการลบข้อมูล?")) return;
+        const result = await fetchAPI(`${endpointType}/${id}/`, "DELETE");
+        if (result) {
+          alert("ลบข้อมูลสำเร็จ");
+          loadAllData();
+        }
+      }
+
+      // --- IMPORT LOGIC ---
+      async function handleImport(input) {
+        if (!input.files || input.files.length === 0) return;
+        const formData = new FormData();
+        formData.append("importFile", input.files[0]);
+
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}projects/import-excel/`,
+            {
+              method: "POST",
+              headers: { "X-CSRFToken": getCookie("csrftoken") },
+              body: formData,
+            }
+          );
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Upload failed");
+          alert(result.message || "Import สำเร็จ");
+          loadProjects();
+        } catch (error) {
+          alert("Error: " + error.message);
+        }
+        input.value = ""; // Reset input
+      }
+    </script>
+  </body>
+</html>
