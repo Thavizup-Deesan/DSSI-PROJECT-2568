@@ -1,15 +1,13 @@
 {
     "version": 2,
-    "builds": [
-        {
-            "src": "POTMS/wsgi.py",
-            "use": "@vercel/python"
-        }
-    ],
+    "builds": [{
+        "src": "backend/wsgi.py", 
+        "use": "@vercel/python"
+    }],
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "POTMS/wsgi.py"
+            "dest": "backend/wsgi.py"
         }
     ]
 }
