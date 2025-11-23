@@ -93,19 +93,21 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # }
 
 DATABASES = {
-     'default': {
-         'ENGINE': 'django.db.backends.sqlite3',
-         'NAME': BASE_DIR / 'db.sqlite3',
-     }
- }
+      'default': {
+          'ENGINE': 'django.db.backends.sqlite3',
+          'NAME': BASE_DIR / 'db.sqlite3',
+      }
+  }
 
-# # ถ้ามี DATABASE_URL (จาก Vercel) ให้ใช้ค่านั้น
+# # # ถ้ามี DATABASE_URL (จาก Vercel) ให้ใช้ค่านั้น
 if 'DATABASE_URL' in os.environ:
-     DATABASES['default'] = dj_database_url.config(
-         conn_max_age=600,
-         conn_health_checks=True,
-     )
+      DATABASES['default'] = dj_database_url.config(
+          conn_max_age=600,
+          conn_health_checks=True,
+      )
 
+ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.app']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
