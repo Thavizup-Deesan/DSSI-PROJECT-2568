@@ -1,0 +1,63 @@
+@startuml
+skinparam state {
+  BackgroundColor<<Auth>> LightBlue
+  BackgroundColor<<Staff>> LightYellow
+  BackgroundColor<<User>> LightGreen
+}
+
+[*] --> LoginPage
+
+' --- Authentication Group ---
+state "Login Page\n(UC-01)" as LoginPage <<Auth>>
+state "Register Page\n(UC-02)" as RegisterPage <<Auth>>
+
+' --- Staff Section ---
+state "Staff Dashboard" as StaffDash <<Staff>>
+state "Project List Page\n(UC-04)" as ProjectList <<Staff>>
+state "Project Form (Create/Edit)\n(UC-04)" as ProjectForm <<Staff>>
+state "Import Data Page\n(UC-05)" as ImportPage <<Staff>>
+state "Order Approval List\n(UC-09)" as ApproveList <<Staff>>
+state "Order Review Detail\n(UC-09)" as OrderReview <<Staff>>
+state "Inspection Page\n(UC-10)" as InspectPage <<Staff>>
+
+' --- User Section ---
+state "User Dashboard" as UserDash <<User>>
+state "Select Project Page\n(UC-06)" as SelectProject <<User>>
+state "Create Order Form\n(UC-07)" as CreateOrder <<User>>
+state "My Orders List\n(UC-08)" as MyOrders <<User>>
+state "Order Detail View\n(UC-08)" as OrderDetail <<User>>
+
+' === Transitions ===
+
+' Auth Flow
+LoginPage --> RegisterPage : Click 'Register'
+RegisterPage --> LoginPage : Registration Success
+LoginPage --> StaffDash : Login Success (Role: Staff)
+LoginPage --> UserDash : Login Success (Role: User)
+
+' Logout (UC-03)
+StaffDash --> LoginPage : Logout (UC-03)
+UserDash --> LoginPage : Logout (UC-03)
+
+' Staff Flow
+StaffDash --> ProjectList : Menu 'Manage Projects'
+ProjectList --> ProjectForm : Click 'Add/Edit'
+ProjectForm --> ProjectList : Save Success
+StaffDash --> ImportPage : Menu 'Import Data'
+ImportPage --> StaffDash : Import Success
+
+StaffDash --> ApproveList : Menu 'Approve Orders'
+ApproveList --> OrderReview : Select Order
+OrderReview --> ApproveList : Approve/Reject Action
+OrderReview --> InspectPage : Click 'Inspect Items' (If Approved)
+InspectPage --> ApproveList : Confirm Receive
+
+' User Flow
+UserDash --> SelectProject : Menu 'New Order'
+SelectProject --> CreateOrder : Select Project
+CreateOrder --> MyOrders : Submit Order
+UserDash --> MyOrders : Menu 'History'
+MyOrders --> OrderDetail : View Detail
+OrderDetail --> MyOrders : Back
+
+@enduml

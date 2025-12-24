@@ -26,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-*dy*hut_&rzo1jip2x29bgh6c+@r4#q8$7wn($44)br&&4v2qh'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['.vercel.app', '127.0.0.1', 'localhost']
 
@@ -46,6 +46,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -81,33 +82,39 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 #        'ENGINE': 'django.db.backends.mysql',
 
 
+DATABASES = {
+     'default': {
+         'ENGINE': 'django.db.backends.mysql',
+         'NAME': 'potms',
+         'USER': 'root',
+         'PASSWORD': 'BookReserve2025',
+         'HOST': 'localhost',
+         'PORT': '3306',
+     }
+ }
+
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'potms',
-#         'USER': 'root',
-#         'PASSWORD': 'BookReserve2025',
-#         'HOST': 'localhost',
-#         'PORT': '3306',
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
 # การตั้งค่าสำหรับ Vercel (ถ้ามี DATABASE_URL ให้ใช้ MySQL/Postgres)
-if 'DATABASE_URL' in os.environ:
-    DATABASES['default'] = dj_database_url.config(
-        conn_max_age=0,
-        conn_health_checks=True,
-    )
+# if 'POSTGRES_URL' in os.environ:
+#     DATABASES['default'] = dj_database_url.config(
+#         default=os.environ.get('POSTGRES_URL'),
+#         conn_max_age=0,
+#         conn_health_checks=True,
+#     )
 
-ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.app']
+ALLOWED_HOSTS = ['127.0.0.1',
+    'localhost',
+    '*.ngrok-free.app',
+    'hypnosporic-unconvictive-stephania.ngrok-free.app',
+
+]
+CSRF_TRUSTED_ORIGINS = ['https://hypnosporic-unconvictive-stephania.ngrok-free.app']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -144,8 +151,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-ALLOWED_HOSTS = ['.vercel.app', '127.0.0.1']
+ALLOWED_HOSTS = ['*']
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

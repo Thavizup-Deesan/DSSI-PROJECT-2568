@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>เข้าสู่ระบบ - POTMS</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body class="bg-gradient-to-r from-blue-500 to-indigo-600 min-h-screen flex items-center justify-center p-4">
+
+        <div class="bg-white p-5 sm:p-6 rounded-xl shadow-2xl w-full max-w-sm">
+                <h1 class="text-xl font-bold text-center text-gray-800 mb-4">ยินดีต้อนรับ</h1>
+                <p class="text-center text-gray-500 text-sm mb-6">ระบบติดตามการสั่งซื้อโครงการ</p>
+
+                <form onsubmit="handleLogin(event)">
+                        <div class="mb-3">
+                                <label class="block text-gray-700 text-xs font-bold mb-1">ชื่อผู้ใช้งาน</label>
+                                <input type="text" id="username" required
+                                        class="w-full px-2 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="mb-4">
+                                <label class="block text-gray-700 text-xs font-bold mb-1">รหัสผ่าน</label>
+                                <input type="password" id="password" required
+                                        class="w-full px-2 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <button type="submit"
+                                class="w-full bg-blue-600 text-white py-2 text-sm rounded-lg font-bold hover:bg-blue-700 transition duration-300">
+                                เข้าสู่ระบบ
+                        </button>
+                </form>
+
+                <div class="mt-3 text-center">
+                        <a href="#" class="text-xs text-gray-400 hover:text-gray-600">ลืมรหัสผ่าน?</a>
+                </div>
+
+                <!-- ลิงก์ไปหน้าสมัครสมาชิก -->
+                <div class="mt-4 pt-4 border-t border-gray-200 text-center">
+                        <p class="text-xs text-gray-500 mb-2">ยังไม่มีบัญชี?</p>
+                        <a href="/api/register-page/"
+                                class="inline-block w-full py-2 text-sm font-bold text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition duration-300">
+                                สมัครสมาชิกใหม่
+                        </a>
+                </div>
+        </div>
+
+        <script>
+                async function handleLogin(event) {
+                        event.preventDefault(); // ป้องกันหน้าเว็บรีเฟรช
+
+                        const username = document.getElementById('username').value;
+                        const password = document.getElementById('password').value;
+
+                        try {
+                                // 1. ส่งข้อมูลไปที่ API Login
+                                const response = await fetch('/api/login/', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ username, password })
+                                });
+
+                                const data = await response.json();
+
+                                if (response.ok) {
+                                        // 2. ถ้าล็อกอินผ่าน: บันทึกข้อมูลลง LocalStorage (เหมือนคุกกี้)
+                                        localStorage.setItem('user', JSON.stringify(data.user));
+
+                                        // 3. แจ้งเตือนและย้ายไปหน้า Dashboard ตาม Role
+                                        Swal.fire({
+                                                icon: 'success',
+                                                title: 'สำเร็จ',
+                                                text: 'กำลังเข้าสู่ระบบ...',
+                                                timer: 1500,
+                                                showConfirmButton: false
+                                        }).then(() => {
+                                                // Redirect ตาม Role
+                                                const role = data.user.role;
+                                                if (role === 'Staff' || role === 'Admin') {
+                                                        window.location.href = '/api/staff-dashboard/';
+                                                } else if (role === 'User') {
+                                                        window.location.href = '/api/user-dashboard/';
+                                                } else {
+                                                        window.location.href = '/api/user-dashboard/';
+                                                }
+                                        });
+
+                                } else {
+                                        // 4. ถ้าไม่ผ่าน: แจ้งเตือน
+                                        Swal.fire('ข้อผิดพลาด', data.error || 'เข้าสู่ระบบไม่สำเร็จ', 'error');
+                                }
+                        } catch (error) {
+                                console.error(error);
+                                Swal.fire('Error', 'ไม่สามารถเชื่อมต่อ Server ได้', 'error');
+                        }
+                }
+        </script>
+</body>
+
+</html>

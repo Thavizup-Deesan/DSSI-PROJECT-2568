@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการข้อมูลหลัก - POTMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+  <nav
+    class="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+    <div class="flex items-center gap-2 sm:gap-4">
+      <a href="/api/staff-dashboard/" class="text-gray-500 hover:text-gray-700 transition flex items-center gap-1">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+      </a>
+      <h1 class="text-base sm:text-xl font-semibold text-gray-800">จัดการข้อมูลหลัก</h1>
+    </div>
+
+    <div class="flex items-center gap-2 sm:gap-3">
+      <div class="text-right hidden sm:block">
+        <p class="text-sm font-medium text-gray-700">เจ้าหน้าที่พัสดุ</p>
+      </div>
+      <div class="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-gray-200 overflow-hidden border border-gray-300">
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Staff" alt="Profile"
+          class="h-full w-full object-cover">
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+
+    <div
+      class="bg-white rounded-t-xl border-b border-gray-200 px-4 sm:px-6 pt-2 flex gap-4 sm:gap-8 shadow-sm overflow-x-auto">
+      <button
+        class="py-3 sm:py-4 border-b-2 border-blue-600 text-blue-600 font-medium flex items-center gap-2 text-xs sm:text-sm whitespace-nowrap">
+        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+        </svg>
+        ข้อมูลโครงการ
+      </button>
+    </div>
+
+    <div class="bg-white rounded-b-xl shadow-sm p-4 sm:p-6 min-h-[400px] sm:min-h-[600px]">
+
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3 sm:gap-4">
+        <div class="flex flex-wrap gap-2 sm:gap-3">
+          <button onclick="openModal()"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg shadow-sm transition flex items-center gap-1 sm:gap-2 font-medium text-xs sm:text-sm">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6">
+              </path>
+            </svg>
+            เพิ่มโครงการ
+          </button>
+          <button onclick="triggerImport()"
+            class="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg shadow-sm transition flex items-center gap-1 sm:gap-2 font-medium text-xs sm:text-sm">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+              </path>
+            </svg>
+            <span class="hidden sm:inline">Import/Update จากไฟล์</span>
+            <span class="sm:hidden">Import</span>
+          </button>
+          <input type="file" id="fileInput" class="hidden" accept=".csv, .xlsx" onchange="handleFileUpload(event)">
+        </div>
+        <div class="text-gray-500 text-xs sm:text-sm">
+          รวม <span id="project-count" class="font-bold text-gray-800">0</span> โครงการ
+        </div>
+      </div>
+
+      <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col"
+                class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/6">
+                หมายเลขโครงการ (Ref ID)</th>
+              <th scope="col"
+                class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-2/6">
+                ชื่อโครงการ</th>
+              <th scope="col"
+                class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/6">
+                งบประมาณโครงการ</th>
+              <th scope="col"
+                class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/6">สถานะ
+              </th>
+              <th scope="col"
+                class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/6">การกระทำ
+              </th>
+            </tr>
+          </thead>
+          <tbody id="project-table-body" class="bg-white divide-y divide-gray-200">
+            <tr>
+              <td colspan="5" class="px-6 py-10 text-center text-gray-500 animate-pulse">
+                กำลังโหลดข้อมูล...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="createModal"
+    class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all scale-100">
+      <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+        <h2 id="modalTitle" class="text-xl font-bold text-gray-800">เพิ่มโครงการใหม่</h2>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <form id="projectForm" onsubmit="handleSave(event)">
+        <input type="hidden" id="p_id">
+        <div class="mb-5">
+          <label class="block text-gray-700 text-sm font-medium mb-2">ชื่อโครงการ</label>
+          <input type="text" id="p_name" required
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm"
+            placeholder="ระบุชื่อโครงการ">
+        </div>
+        <div class="mb-5">
+          <label class="block text-gray-700 text-sm font-medium mb-2">งบประมาณ (บาท)</label>
+          <input type="number" id="p_budget" required step="0.01"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm"
+            placeholder="0.00">
+        </div>
+        <div id="statusField" class="mb-8 hidden">
+          <label class="block text-gray-700 text-sm font-medium mb-2">สถานะโครงการ</label>
+          <select id="p_status"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm bg-white">
+            <option value="Active">ดำเนินการ</option>
+            <option value="Completed">เสร็จสิ้น</option>
+            <option value="Cancelled">ยกเลิก</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" onclick="closeModal()"
+            class="px-5 py-2.5 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition text-sm font-medium">ยกเลิก</button>
+          <button type="submit"
+            class="px-5 py-2.5 text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition text-sm font-medium">บันทึกข้อมูล</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. Load Data & Render Table ---
+    async function loadProjects() {
+      const tbody = document.getElementById('project-table-body');
+      const countSpan = document.getElementById('project-count');
+
+      try {
+        // เรียก API ดึงข้อมูลจากตาราง Project
+        const response = await fetch('/api/projects/');
+        const projects = await response.json();
+
+        countSpan.innerText = projects.length;
+        tbody.innerHTML = '';
+
+        if (projects.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-gray-400">ยังไม่มีข้อมูลโครงการ</td></tr>`;
+          return;
+        }
+
+        projects.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        projects.forEach(project => {
+          // สร้าง Ref ID จำลองจาก Doc ID (เช่น PRJ-A1B2)
+          const shortId = "PRJ-" + project.id.slice(-4).toUpperCase();
+
+          // Logic เลือกสีตามสถานะ
+          let statusBadge = '';
+          const status = project.status || 'Active'; // ถ้าไม่มีสถานะ (ข้อมูลเก่า) ให้ถือว่าเป็น Active
+
+          if (status === 'Active') {
+            statusBadge = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full whitespace-nowrap bg-green-100 text-green-700 border border-green-200">ดำเนินการ</span>`;
+          } else if (status === 'Completed') {
+            statusBadge = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full whitespace-nowrap bg-blue-100 text-blue-700 border border-blue-200">เสร็จสิ้น</span>`;
+          } else if (status === 'Cancelled') {
+            statusBadge = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full whitespace-nowrap bg-red-100 text-red-700 border border-red-200">ยกเลิก</span>`;
+          } else {
+            statusBadge = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full whitespace-nowrap bg-gray-100 text-gray-700 border border-gray-200">${status}</span>`;
+          }
+
+          // Render แถวตารางตาม UI ที่ออกแบบ
+          const row = `
+                        <tr class="hover:bg-blue-50 transition group border-b border-gray-50 last:border-b-0">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 font-mono">${shortId}</td>
+                            <td class="px-6 py-4 text-sm text-gray-800 font-medium">${project.project_name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">฿${project.budget_total.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button onclick="openAssignModal('${project.id}', '${project.project_name}')" class="text-green-500 hover:text-green-700 bg-green-50 hover:bg-green-100 p-2 rounded-lg mr-2 transition" title="กำหนดผู้รับผิดชอบ">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                                </button>
+                                <button onclick="openModal('${project.id}', '${project.project_name}', '${project.budget_total}', '${status}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-2 rounded-lg mr-2 transition" title="แก้ไข">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                </button>
+                                <button onclick="deleteProject('${project.id}')" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition" title="ลบ">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+          tbody.innerHTML += row;
+        });
+
+      } catch (error) {
+        console.error(error);
+        tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">โหลดข้อมูลไม่สำเร็จ</td></tr>`;
+      }
+    }
+
+    // --- 2. Modal Logic (Create/Edit) ---
+    function openModal(id = null, name = '', budget = '', status = 'Active') {
+      const modal = document.getElementById('createModal');
+      const title = document.getElementById('modalTitle');
+      const statusField = document.getElementById('statusField');
+
+      if (id) {
+        title.innerText = "✏️ แก้ไขข้อมูลโครงการ";
+        document.getElementById('p_id').value = id;
+        document.getElementById('p_name').value = name;
+        document.getElementById('p_budget').value = budget;
+        document.getElementById('p_status').value = status;
+        statusField.classList.remove('hidden'); // แสดง dropdown สถานะเมื่อแก้ไข
+      } else {
+        title.innerText = "เพิ่มโครงการใหม่";
+        document.getElementById('projectForm').reset();
+        document.getElementById('p_id').value = '';
+        document.getElementById('p_status').value = 'Active'; // ค่าเริ่มต้น
+        statusField.classList.remove('hidden'); // แสดง dropdown สถานะเมื่อสร้างใหม่ด้วย
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('createModal').classList.add('hidden');
+    }
+
+    // --- 3. Save Logic (API POST/PUT) ---
+    async function handleSave(event) {
+      event.preventDefault();
+      const id = document.getElementById('p_id').value;
+      const name = document.getElementById('p_name').value;
+      const budget = document.getElementById('p_budget').value;
+      const status = document.getElementById('p_status').value;
+
+      let payload = { project_name: name, budget_total: budget, status: status };
+
+      let url = '/api/projects/';
+      let method = 'POST';
+      if (id) {
+        url = `/api/projects/${id}/`;
+        method = 'PUT';
+      }
+
+      try {
+        const response = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (response.ok) {
+          closeModal();
+          Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', timer: 1500, showConfirmButton: false });
+          loadProjects();
+        } else {
+          Swal.fire('Error', 'บันทึกไม่สำเร็จ', 'error');
+        }
+      } catch (error) { Swal.fire('Error', error.message, 'error'); }
+    }
+
+    // --- 4. Delete Logic (API DELETE) ---
+    async function deleteProject(id) {
+      const result = await Swal.fire({
+        title: 'ยืนยันการลบ?',
+        text: "ข้อมูลจะหายไปถาวร",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'ลบข้อมูล',
+        cancelButtonText: 'ยกเลิก'
+      });
+      if (result.isConfirmed) {
+        try {
+          const response = await fetch(`/api/projects/${id}/`, { method: 'DELETE' });
+          if (response.ok) {
+            Swal.fire({ icon: 'success', title: 'ลบแล้ว', timer: 1000, showConfirmButton: false });
+            loadProjects();
+          }
+        } catch (error) { console.error(error); }
+      }
+    }
+
+    // --- 5. Import Logic ---
+    function triggerImport() { document.getElementById('fileInput').click(); }
+
+    async function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+
+      Swal.fire({ title: 'กำลังนำเข้า...', didOpen: () => Swal.showLoading() });
+
+      try {
+        const response = await fetch('/api/projects/import/', { method: 'POST', body: formData });
+        const result = await response.json();
+        if (response.ok) {
+          Swal.fire('สำเร็จ', result.message, 'success');
+          loadProjects();
+        } else {
+          Swal.fire('Error', result.error, 'error');
+        }
+      } catch (error) { Swal.fire('Error', 'Import Failed', 'error'); }
+      event.target.value = '';
+    }
+
+    // --- 6. Project Assignment Modal ---
+    async function openAssignModal(projectId, projectName) {
+      // ดึงข้อมูล User ทั้งหมด
+      let usersHtml = '<option value="">เลือกผู้รับผิดชอบ</option>';
+      let usersMap = {}; // เก็บ mapping ระหว่าง id และ username
+
+      try {
+        const usersRes = await fetch('/api/users/');
+        const users = await usersRes.json();
+
+        // สร้าง map สำหรับแปลง id เป็นชื่อ
+        users.forEach(u => {
+          usersMap[u.id] = u.username;
+        });
+
+        // แสดงเฉพาะ User (ไม่แสดง Staff หรือ Admin)
+        users.filter(u => u.role === 'User').forEach(u => {
+          usersHtml += `<option value="${u.id}">${u.username} (${u.department || '-'})</option>`;
+        });
+      } catch (e) {
+        console.error('Error loading users:', e);
+      }
+
+      // ดึง assignment ปัจจุบัน
+      let currentAssignments = '';
+      try {
+        const assignRes = await fetch(`/api/project-assignments/?project_id=${projectId}`);
+        const assigns = await assignRes.json();
+        if (assigns.length > 0) {
+          currentAssignments = '<p class="text-sm text-gray-500 mt-3">ผู้รับผิดชอบปัจจุบัน:</p><ul class="list-disc ml-5 mt-1">';
+          assigns.forEach(a => {
+            // แสดงชื่อ user แทน user_id
+            const userName = usersMap[a.user_id] || a.user_id;
+            currentAssignments += `<li class="text-sm">${userName} <button onclick="removeAssignment('${a.id}')" class="text-red-500 ml-2 text-xs">[ลบ]</button></li>`;
+          });
+          currentAssignments += '</ul>';
+        }
+      } catch (e) {
+        console.error('Error loading assignments:', e);
+      }
+
+      const { value: userId } = await Swal.fire({
+        title: `กำหนดผู้รับผิดชอบ`,
+        html: `
+          <p class="text-sm text-gray-600 mb-3">โครงการ: <b>${projectName}</b></p>
+          <select id="swal-user" class="w-full px-3 py-2 border rounded-lg appearance-none bg-no-repeat" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22%23666%22 viewBox=%220 0 24 24%22><path d=%22M7 10l5 5 5-5z%22/></svg>'); background-position: right 8px center; background-size: 20px;">
+            ${usersHtml}
+          </select>
+          ${currentAssignments}
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'เพิ่มผู้รับผิดชอบ',
+        cancelButtonText: 'ปิด',
+        confirmButtonColor: '#10b981',
+        preConfirm: () => document.getElementById('swal-user').value
+      });
+
+      if (userId) {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        try {
+          const res = await fetch('/api/project-assignments/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              project_id: projectId,
+              user_id: userId,
+              assigned_by: currentUser.id || ''
+            })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            Swal.fire('สำเร็จ', data.message, 'success');
+          } else {
+            Swal.fire('Error', data.error, 'error');
+          }
+        } catch (e) {
+          Swal.fire('Error', e.message, 'error');
+        }
+      }
+    }
+
+    async function removeAssignment(assignmentId) {
+      const ok = await Swal.fire({
+        title: 'ยืนยันการลบ?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33'
+      });
+      if (ok.isConfirmed) {
+        try {
+          await fetch(`/api/project-assignments/${assignmentId}/`, { method: 'DELETE' });
+          Swal.fire('ลบแล้ว', '', 'success');
+        } catch (e) {
+          Swal.fire('Error', e.message, 'error');
+        }
+      }
+    }
+
+    // เริ่มโหลดข้อมูล
+    loadProjects();
+  </script>
+</body>
+
+</html>

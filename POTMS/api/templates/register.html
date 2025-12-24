@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="th">
+<!-- 
+    ===================================================================
+    register.html - หน้าสมัครสมาชิกใหม่
+    ===================================================================
+    ไฟล์นี้ใช้สำหรับ:
+    - สมัครสมาชิกใหม่สำหรับ User และ Staff
+    - เลือก Role และแผนกที่สังกัด
+    
+    เทคโนโลยีที่ใช้:
+    - Tailwind CSS: สำหรับ styling
+    - SweetAlert2: สำหรับแสดง popup แจ้งเตือน
+    - Fetch API: สำหรับส่งข้อมูลไป Backend
+    ===================================================================
+-->
+
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>สมัครสมาชิก - POTMS</title>
+        <!-- Tailwind CSS: Framework สำหรับ styling -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- SweetAlert2: Library สำหรับแสดง popup สวยๆ -->
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <!-- Google Fonts: ฟอนต์ภาษาไทย -->
+        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <style>
+                body {
+                        font-family: 'Prompt', sans-serif;
+                }
+        </style>
+</head>
+
+<body
+        class="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 min-h-screen flex items-center justify-center p-4">
+        <!-- 
+        ===================================================================
+        ส่วน UI หลัก: Card สมัครสมาชิก
+        ===================================================================
+        - ใช้ bg-white/95 เพื่อให้โปร่งแสงเล็กน้อย (Glassmorphism)
+        - backdrop-blur-sm เพื่อเบลอพื้นหลัง
+        - shadow-2xl เพื่อเงาลึก
+    -->
+        <div class="bg-white/95 backdrop-blur-sm p-5 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md">
+
+                <!-- Header -->
+                <div class="text-center mb-6">
+                        <div
+                                class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                </svg>
+                        </div>
+                        <h1 class="text-2xl font-bold text-gray-800">สมัครสมาชิกใหม่</h1>
+                        <p class="text-gray-500 text-sm mt-1">ระบบติดตามการสั่งซื้อโครงการ (POTMS)</p>
+                </div>
+
+                <!-- 
+            ===================================================================
+            ฟอร์มสมัครสมาชิก
+            ===================================================================
+            - onsubmit="handleRegister(event)" เรียกฟังก์ชัน JS เมื่อกด submit
+            - event.preventDefault() ป้องกันหน้าเว็บ refresh
+        -->
+                <form onsubmit="handleRegister(event)" class="space-y-4">
+
+                        <!-- Input: ชื่อผู้ใช้งาน -->
+                        <div>
+                                <label class="block text-gray-700 text-sm font-semibold mb-2">
+                                        <span class="flex items-center gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                        viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                </svg>
+                                                ชื่อผู้ใช้งาน
+                                        </span>
+                                </label>
+                                <input type="text" id="username" required placeholder="กรอกชื่อผู้ใช้งาน"
+                                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition">
+                        </div>
+
+                        <!-- Input: รหัสผ่าน -->
+                        <div>
+                                <label class="block text-gray-700 text-sm font-semibold mb-2">
+                                        <span class="flex items-center gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                        viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                </svg>
+                                                รหัสผ่าน
+                                        </span>
+                                </label>
+                                <input type="password" id="password" required
+                                        placeholder="กรอกรหัสผ่าน (อย่างน้อย 6 ตัวอักษร)" minlength="6"
+                                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition">
+                        </div>
+
+                        <!-- Input: ยืนยันรหัสผ่าน -->
+                        <div>
+                                <label class="block text-gray-700 text-sm font-semibold mb-2">
+                                        <span class="flex items-center gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                        viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                ยืนยันรหัสผ่าน
+                                        </span>
+                                </label>
+                                <input type="password" id="confirmPassword" required placeholder="กรอกรหัสผ่านอีกครั้ง"
+                                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition">
+                        </div>
+
+                        <!-- 
+                ===================================================================
+                Dropdown: เลือก Role
+                ===================================================================
+                - User: ผู้สั่งซื้อ/เจ้าของโครงการ
+                - Staff: เจ้าหน้าที่/ผู้ดูแลระบบ
+            -->
+                        <div>
+                                <label class="block text-gray-700 text-sm font-semibold mb-2">
+                                        <span class="flex items-center gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                        viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                                ประเภทผู้ใช้งาน
+                                        </span>
+                                </label>
+                                <select id="role" required
+                                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition bg-white">
+                                        <option value="">-- เลือกประเภทผู้ใช้งาน --</option>
+                                        <option value="User">👤 User (ผู้สั่งซื้อ/เจ้าของโครงการ)</option>
+                                        <option value="Staff">👨‍💼 Staff (เจ้าหน้าที่/ผู้ดูแลระบบ)</option>
+                                </select>
+                        </div>
+
+                        <!-- Input: แผนกที่สังกัด -->
+                        <div>
+                                <label class="block text-gray-700 text-sm font-semibold mb-2">
+                                        <span class="flex items-center gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                        viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                                </svg>
+                                                แผนก/หน่วยงาน
+                                        </span>
+                                </label>
+                                <input type="text" id="department" required placeholder="เช่น ฝ่ายจัดซื้อ, ฝ่ายบัญชี"
+                                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition">
+                        </div>
+
+                        <!-- ปุ่มสมัครสมาชิก -->
+                        <button type="submit"
+                                class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-xl font-bold hover:from-emerald-600 hover:to-teal-600 transition duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                สมัครสมาชิก
+                        </button>
+                </form>
+
+                <!-- ลิงก์กลับไปหน้า Login -->
+                <div class="mt-6 text-center">
+                        <p class="text-gray-500 text-sm">
+                                มีบัญชีอยู่แล้ว?
+                                <a href="/api/login-page/"
+                                        class="text-emerald-600 font-semibold hover:text-emerald-700 hover:underline">
+                                        เข้าสู่ระบบ
+                                </a>
+                        </p>
+                </div>
+        </div>
+
+        <!-- 
+        ===================================================================
+        JavaScript: ฟังก์ชันจัดการการสมัครสมาชิก
+        ===================================================================
+    -->
+        <script>
+                /**
+                 * handleRegister - ฟังก์ชันจัดการเมื่อกดปุ่มสมัครสมาชิก
+                 * 
+                 * ขั้นตอนการทำงาน:
+                 * 1. ป้องกันการ refresh หน้าเว็บ (event.preventDefault)
+                 * 2. ดึงค่าจากฟอร์ม (username, password, role, department)
+                 * 3. ตรวจสอบว่ารหัสผ่านตรงกันหรือไม่
+                 * 4. ส่งข้อมูลไป API /api/register/ ด้วย POST request
+                 * 5. แสดง popup แจ้งผลลัพธ์ (สำเร็จ/ไม่สำเร็จ)
+                 * 6. ถ้าสำเร็จ redirect ไปหน้า Login
+                 * 
+                 * @param {Event} event - Event object จาก form submit
+                 */
+                async function handleRegister(event) {
+                        // ป้องกันหน้าเว็บ refresh เมื่อกด submit
+                        event.preventDefault();
+
+                        // ดึงค่าจากฟอร์มทั้งหมด
+                        const username = document.getElementById('username').value.trim();
+                        const password = document.getElementById('password').value;
+                        const confirmPassword = document.getElementById('confirmPassword').value;
+                        const role = document.getElementById('role').value;
+                        const department = document.getElementById('department').value.trim();
+
+                        // ===== Validation: ตรวจสอบข้อมูลก่อนส่ง =====
+
+                        // ตรวจสอบว่ารหัสผ่านตรงกันหรือไม่
+                        if (password !== confirmPassword) {
+                                Swal.fire({
+                                        icon: 'error',
+                                        title: 'รหัสผ่านไม่ตรงกัน',
+                                        text: 'กรุณากรอกรหัสผ่านให้ตรงกันทั้งสองช่อง',
+                                        confirmButtonColor: '#10b981'
+                                });
+                                return; // หยุดการทำงานถ้ารหัสผ่านไม่ตรงกัน
+                        }
+
+                        // ตรวจสอบความยาวรหัสผ่าน
+                        if (password.length < 6) {
+                                Swal.fire({
+                                        icon: 'error',
+                                        title: 'รหัสผ่านสั้นเกินไป',
+                                        text: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',
+                                        confirmButtonColor: '#10b981'
+                                });
+                                return;
+                        }
+
+                        try {
+                                // ===== API Call: ส่งข้อมูลไป Backend =====
+                                // ใช้ Fetch API ส่ง POST request ไปที่ /api/register/
+                                const response = await fetch('/api/register/', {
+                                        method: 'POST',
+                                        headers: {
+                                                'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                                username: username,
+                                                password: password,
+                                                role: role,
+                                                department: department
+                                        })
+                                });
+
+                                // แปลง response เป็น JSON
+                                const data = await response.json();
+
+                                // ===== Handle Response: จัดการผลลัพธ์ =====
+                                if (response.ok) {
+                                        // สำเร็จ: แสดง popup และ redirect ไปหน้า Login
+                                        Swal.fire({
+                                                icon: 'success',
+                                                title: 'สมัครสมาชิกสำเร็จ!',
+                                                text: 'กำลังไปยังหน้าเข้าสู่ระบบ...',
+                                                timer: 2000,
+                                                showConfirmButton: false
+                                        }).then(() => {
+                                                // Redirect ไปหน้า Login หลังจาก popup ปิด
+                                                window.location.href = '/api/login-page/';
+                                        });
+                                } else {
+                                        // ไม่สำเร็จ: แสดง error message จาก API
+                                        Swal.fire({
+                                                icon: 'error',
+                                                title: 'สมัครสมาชิกไม่สำเร็จ',
+                                                text: data.error || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง',
+                                                confirmButtonColor: '#10b981'
+                                        });
+                                }
+                        } catch (error) {
+                                // ===== Error Handling: จัดการกรณี Network Error =====
+                                console.error('Registration Error:', error);
+                                Swal.fire({
+                                        icon: 'error',
+                                        title: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้',
+                                        text: 'กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต',
+                                        confirmButtonColor: '#10b981'
+                                });
+                        }
+                }
+        </script>
+</body>
+
+</html>

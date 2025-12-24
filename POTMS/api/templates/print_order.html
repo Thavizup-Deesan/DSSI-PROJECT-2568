@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ใบขอซื้อ - {{ order.order_no }}</title>
+        <style>
+                @page {
+                        size: A4;
+                        margin: 10mm;
+                }
+
+                * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                }
+
+                body {
+                        font-family: 'Sarabun', 'TH Sarabun New', 'Tahoma', sans-serif;
+                        font-size: 10pt;
+                        line-height: 1.3;
+                        background: white;
+                        color: #000;
+                }
+
+                .page {
+                        width: 190mm;
+                        min-height: 277mm;
+                        padding: 8mm;
+                        margin: 0 auto;
+                        background: white;
+                        display: flex;
+                        flex-direction: column;
+                }
+
+                /* Header */
+                .header {
+                        text-align: center;
+                        margin-bottom: 10px;
+                        padding-bottom: 8px;
+                        border-bottom: 2px solid #000;
+                }
+
+                .header h1 {
+                        font-size: 18pt;
+                        font-weight: bold;
+                        margin-bottom: 3px;
+                }
+
+                .org-name {
+                        font-size: 11pt;
+                        color: #333;
+                }
+
+                /* Info Section */
+                .info-section {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 12px;
+                }
+
+                .info-left {
+                        width: 55%;
+                        border: 1px solid #333;
+                        padding: 8px;
+                }
+
+                .info-right {
+                        width: 43%;
+                        border: 1px solid #333;
+                        padding: 8px;
+                }
+
+                .info-row {
+                        margin-bottom: 4px;
+                        font-size: 10pt;
+                }
+
+                .info-label {
+                        font-weight: bold;
+                        display: inline-block;
+                        min-width: 80px;
+                }
+
+                /* Items Table */
+                table.items {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 10px;
+                        font-size: 9pt;
+                }
+
+                table.items th,
+                table.items td {
+                        border: 1px solid #333;
+                        padding: 5px 6px;
+                }
+
+                table.items th {
+                        background: #e8e8e8;
+                        font-weight: bold;
+                        text-align: center;
+                }
+
+                table.items .col-no {
+                        width: 6%;
+                        text-align: center;
+                }
+
+                table.items .col-name {
+                        width: 35%;
+                }
+
+                table.items .col-qty {
+                        width: 10%;
+                        text-align: center;
+                }
+
+                table.items .col-unit {
+                        width: 10%;
+                        text-align: center;
+                }
+
+                table.items .col-price {
+                        width: 17%;
+                        text-align: right;
+                }
+
+                table.items .col-total {
+                        width: 17%;
+                        text-align: right;
+                }
+
+                /* Summary Section */
+                .summary-section {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 15px;
+                }
+
+                .note-box {
+                        width: 50%;
+                        border: 1px solid #333;
+                        min-height: 50px;
+                        padding: 5px;
+                        font-size: 9pt;
+                }
+
+                .total-box {
+                        width: 48%;
+                }
+
+                .total-row {
+                        display: flex;
+                        justify-content: space-between;
+                        border: 1px solid #333;
+                        padding: 5px 8px;
+                        font-size: 10pt;
+                        font-weight: bold;
+                        background: #f0f0f0;
+                }
+
+                /* Signatures - Fixed at bottom */
+                .signatures {
+                        margin-top: auto;
+                        padding-top: 30px;
+                        display: flex;
+                        justify-content: space-around;
+                }
+
+                .signature-box {
+                        text-align: center;
+                        width: 30%;
+                }
+
+                .signature-line {
+                        border-bottom: 1px solid #000;
+                        height: 45px;
+                        margin-bottom: 8px;
+                }
+
+                .signature-title {
+                        font-size: 10pt;
+                        font-weight: bold;
+                }
+
+                .signature-name {
+                        font-size: 9pt;
+                }
+
+                .signature-date {
+                        font-size: 9pt;
+                        margin-top: 5px;
+                }
+
+                /* Footer */
+                .footer {
+                        margin-top: 15px;
+                        text-align: center;
+                        font-size: 8pt;
+                        color: #666;
+                        border-top: 1px solid #ddd;
+                        padding-top: 5px;
+                }
+
+                /* Print styles */
+                @media print {
+                        body {
+                                -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
+                        }
+
+                        .page {
+                                width: 100%;
+                                height: auto;
+                                padding: 0;
+                        }
+
+                        .no-print {
+                                display: none !important;
+                        }
+                }
+
+                .print-actions {
+                        position: fixed;
+                        top: 10px;
+                        right: 10px;
+                        z-index: 100;
+                }
+
+                .print-btn,
+                .close-btn {
+                        background: #4CAF50;
+                        color: white;
+                        border: none;
+                        padding: 8px 15px;
+                        font-size: 10pt;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        margin-left: 5px;
+                }
+
+                .close-btn {
+                        background: #666;
+                }
+        </style>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+        <div class="print-actions no-print">
+                <button class="print-btn" onclick="window.print()">🖨️ พิมพ์</button>
+                <button class="close-btn" onclick="window.close()">✕ ปิด</button>
+        </div>
+
+        <div class="page">
+                <!-- Header -->
+                <div class="header">
+                        <h1>ใบขอซื้อ / Purchase Request</h1>
+                        <div class="org-name">หน่วยงาน : {{ user_department }}</div>
+                </div>
+
+                <!-- Document Info -->
+                <div class="info-section">
+                        <div class="info-left">
+                                <div class="info-row"><span class="info-label">เลขที่:</span> {{ order.order_no }}</div>
+                                <div class="info-row"><span class="info-label">โครงการ:</span> {{ project_name }}</div>
+                                <div class="info-row"><span class="info-label">เรื่อง:</span> {{ order.order_title }}
+                                </div>
+                                <div class="info-row"><span class="info-label">ผู้ขอซื้อ:</span> {{ requester_name }}
+                                </div>
+                        </div>
+                        <div class="info-right">
+                                <div class="info-row"><span class="info-label">วันที่ขอซื้อ:</span> {{ created_date }}
+                                </div>
+                                <div class="info-row"><span class="info-label">ต้องการใช้:</span> {{ required_date }}
+                                </div>
+                                <div class="info-row"><span class="info-label">ร้านค้า:</span> {{ vendor_display }}
+                                </div>
+                        </div>
+                </div>
+
+                <!-- Items Table -->
+                <table class="items">
+                        <thead>
+                                <tr>
+                                        <th class="col-no">ลำดับ</th>
+                                        <th class="col-name">รายการ</th>
+                                        <th class="col-qty">จำนวน</th>
+                                        <th class="col-unit">หน่วย</th>
+                                        <th class="col-price">ราคา/หน่วย</th>
+                                        <th class="col-total">จำนวนเงิน</th>
+                                </tr>
+                        </thead>
+                        <tbody>
+                                {% for item in order.items %}
+                                <tr>
+                                        <td class="col-no">{{ forloop.counter }}</td>
+                                        <td class="col-name">{{ item.item_name }}</td>
+                                        <td class="col-qty">{{ item.quantity_requested }}</td>
+                                        <td class="col-unit">{{ item.unit }}</td>
+                                        <td class="col-price">{{ item.formatted_price }}</td>
+                                        <td class="col-total">{{ item.formatted_total }}</td>
+                                </tr>
+                                {% endfor %}
+                        </tbody>
+                </table>
+
+                <!-- Summary Section -->
+                <div class="summary-section">
+                        <div class="note-box">
+                                <strong>หมายเหตุ:</strong> {% if order.order_description %}{{ order.order_description
+                                }}{% else %}-{% endif %}
+                        </div>
+                        <div class="total-box">
+                                <div class="total-row"><span>รวมเงิน</span><span>{{ grand_total }} บาท</span></div>
+                        </div>
+                </div>
+
+                <!-- Signatures - At bottom of page -->
+                <div class="signatures">
+                        <div class="signature-box">
+                                <div class="signature-line"></div>
+                                <div class="signature-title">ผู้ขอซื้อ</div>
+                                <div class="signature-name">({{ requester_name }})</div>
+                                <div class="signature-date">วันที่ ____/____/________</div>
+                        </div>
+                        <div class="signature-box">
+                                <div class="signature-line"></div>
+                                <div class="signature-title">ผู้ตรวจสอบ</div>
+                                <div class="signature-name">(..................................................)</div>
+                                <div class="signature-date">วันที่ ____/____/________</div>
+                        </div>
+                        <div class="signature-box">
+                                <div class="signature-line"></div>
+                                <div class="signature-title">ผู้อนุมัติ</div>
+                                <div class="signature-name">(..................................................)</div>
+                                <div class="signature-date">วันที่ ____/____/________</div>
+                        </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="footer">
+                        พิมพ์จากระบบ POTMS | วันที่พิมพ์: <span id="print-date"></span>
+                </div>
+        </div>
+
+        <script>
+                document.getElementById('print-date').textContent = new Date().toLocaleDateString('th-TH', {
+                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+        </script>
+</body>
+
+</html>

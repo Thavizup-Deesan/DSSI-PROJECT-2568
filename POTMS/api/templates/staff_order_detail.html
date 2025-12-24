@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ตรวจสอบใบขอซื้อ - POTMS</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap"
+                rel="stylesheet">
+        <style>
+                body {
+                        font-family: 'Prompt', sans-serif;
+                }
+        </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-3 sm:py-4 shadow-lg">
+                <div
+                        class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+                        <div class="flex items-center gap-2 sm:gap-3">
+                                <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <h1 class="text-base sm:text-xl font-bold">ระบบจัดการติดตามการสั่งซื้อ</h1>
+                        </div>
+                        <div class="flex items-center gap-3 text-sm">
+                                <span id="staffName" class="hidden sm:inline">สำหรับ: Staff</span>
+                                <button onclick="logout()" class="hover:underline">ออกจากระบบ</button>
+                        </div>
+                </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+
+                <!-- Back Link & Title -->
+                <div class="mb-4 sm:mb-6">
+                        <a href="/api/staff/orders/page/"
+                                class="text-blue-600 hover:underline flex items-center gap-2 mb-2 text-sm">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                <span class="hidden sm:inline">กลับไปรายการใบขอซื้อ</span>
+                                <span class="sm:hidden">กลับ</span>
+                        </a>
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">ตรวจสอบใบขอซื้อเลขที่ <span id="orderNo"
+                                        class="text-blue-600">-</span></h2>
+                        <p class="text-xs sm:text-sm text-gray-600 mt-1">รายละเอียดใบขอซื้อสำหรับการพิจารณาอนุมัติ</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <!-- Left Column (2/3) -->
+                        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
+
+                                <!-- ข้อมูลผู้สั่ง -->
+                                <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+                                        <h3
+                                                class="font-semibold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
+                                                <span class="text-blue-500">👤</span> ข้อมูลผู้สั่ง
+                                        </h3>
+                                        <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                                                <div>
+                                                        <p class="text-sm text-gray-500">ผู้สั่งซื้อ</p>
+                                                        <p id="requesterName" class="font-medium">-</p>
+                                                </div>
+                                                <div>
+                                                        <p class="text-sm text-gray-500">หน่วยงาน</p>
+                                                        <p id="requesterDept" class="font-medium">-</p>
+                                                </div>
+                                                <div>
+                                                        <p class="text-sm text-gray-500">วันที่สั่งซื้อ</p>
+                                                        <p id="orderDate" class="font-medium">-</p>
+                                                </div>
+                                                <div>
+                                                        <p class="text-sm text-gray-500">สถานะ</p>
+                                                        <span id="orderStatus"
+                                                                class="px-3 py-1 rounded-full text-sm font-medium">-</span>
+                                                </div>
+                                        </div>
+                                </div>
+
+                                <!-- ข้อมูลโครงการและงบประมาณ -->
+                                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                                        <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                                <span class="text-blue-500">📋</span> ข้อมูลโครงการและงบประมาณ
+                                        </h3>
+                                        <div class="grid grid-cols-2 gap-4">
+                                                <div>
+                                                        <p class="text-sm text-gray-500">รหัสโครงการ</p>
+                                                        <p id="projectId" class="font-medium">-</p>
+                                                </div>
+                                                <div>
+                                                        <p class="text-sm text-gray-500">ชื่อโครงการ</p>
+                                                        <p id="projectName" class="font-medium">-</p>
+                                                </div>
+                                        </div>
+                                        <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                                                <p class="text-sm text-gray-600">งบประมาณคงเหลือ</p>
+                                                <p class="text-2xl font-bold text-blue-600">฿ <span
+                                                                id="budgetRemaining">0</span></p>
+                                                <p class="text-xs text-gray-500 mt-1">จากงบทั้งหมด ฿ <span
+                                                                id="budgetTotal">0</span></p>
+                                        </div>
+                                </div>
+
+                                <!-- รายละเอียดใบขอซื้อ -->
+                                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                                        <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                                <span class="text-blue-500">📝</span> รายละเอียดใบขอซื้อ
+                                        </h3>
+                                        <div class="space-y-4">
+                                                <div>
+                                                        <p class="text-sm text-gray-500">เรื่อง</p>
+                                                        <p id="orderTitle" class="font-medium">-</p>
+                                                </div>
+                                                <div>
+                                                        <p class="text-sm text-gray-500">รายละเอียด</p>
+                                                        <p id="orderDesc" class="text-gray-700">-</p>
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                                <p class="text-sm text-gray-500">วันที่ต้องการ</p>
+                                                                <p id="requiredDate" class="font-medium">-</p>
+                                                        </div>
+                                                        <div>
+                                                                <p class="text-sm text-gray-500">ชื่อร้านค้า/บริษัท</p>
+                                                                <p id="vendorName" class="font-medium">-</p>
+                                                        </div>
+                                                </div>
+                                        </div>
+                                </div>
+
+                                <!-- รายการพัสดุ -->
+                                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                                        <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                                <span class="text-blue-500">📦</span> รายการพัสดุ
+                                        </h3>
+                                        <div class="overflow-x-auto">
+                                                <table class="w-full text-sm">
+                                                        <thead class="bg-gray-50">
+                                                                <tr>
+                                                                        <th
+                                                                                class="px-4 py-3 text-left font-medium text-gray-600">
+                                                                                รายการ</th>
+                                                                        <th
+                                                                                class="px-4 py-3 text-center font-medium text-gray-600">
+                                                                                จำนวน</th>
+                                                                        <th
+                                                                                class="px-4 py-3 text-center font-medium text-gray-600">
+                                                                                หน่วย</th>
+                                                                        <th
+                                                                                class="px-4 py-3 text-right font-medium text-gray-600">
+                                                                                ราคาประมาณ</th>
+                                                                </tr>
+                                                        </thead>
+                                                        <tbody id="itemsTable" class="divide-y divide-gray-100">
+                                                                <!-- Items will be loaded here -->
+                                                        </tbody>
+                                                        <tfoot class="bg-gray-50 font-semibold">
+                                                                <tr>
+                                                                        <td colspan="3" class="px-4 py-3 text-right">
+                                                                                รวมทั้งสิ้น</td>
+                                                                        <td id="totalPrice"
+                                                                                class="px-4 py-3 text-right text-blue-600">
+                                                                                ฿ 0</td>
+                                                                </tr>
+                                                        </tfoot>
+                                                </table>
+                                        </div>
+                                </div>
+                        </div>
+
+                        <!-- Right Column (1/3) - Approval Section -->
+                        <div class="space-y-6">
+                                <!-- การอนุมัติ -->
+                                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 sticky top-6">
+                                        <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                                <span class="text-green-500">✅</span> การอนุมัติ
+                                        </h3>
+
+                                        <!-- Budget Summary -->
+                                        <div class="space-y-3 mb-6">
+                                                <div class="flex justify-between items-center py-2 border-b">
+                                                        <span class="text-gray-600">งบประมาณโครงการ</span>
+                                                        <span id="summaryTotal" class="font-medium">฿ 0</span>
+                                                </div>
+                                                <div class="flex justify-between items-center py-2 border-b">
+                                                        <span class="text-gray-600">งบจองแล้ว</span>
+                                                        <span id="summaryReserved" class="font-medium text-yellow-600">฿
+                                                                0</span>
+                                                </div>
+                                                <div
+                                                        class="flex justify-between items-center py-2 border-b bg-green-50 px-2 rounded">
+                                                        <span
+                                                                class="text-gray-700 font-medium">งบคงเหลือหลังอนุมัติ</span>
+                                                        <span id="summaryAfter" class="font-bold text-green-600">฿
+                                                                0</span>
+                                                </div>
+                                        </div>
+
+                                        <!-- Reason Input (for reject) -->
+                                        <div id="reasonSection" class="mb-4 hidden">
+                                                <label class="block text-sm text-gray-600 mb-2">เหตุผล
+                                                        (กรณีปฏิเสธ)</label>
+                                                <textarea id="staffNote" rows="3" placeholder="ระบุเหตุผลในการปฏิเสธ..."
+                                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                                        </div>
+
+                                        <!-- Action Buttons -->
+                                        <div id="actionButtons" class="space-y-3">
+                                                <button onclick="approveOrder()"
+                                                        class="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        ✓ อนุมัติ
+                                                </button>
+                                                <button onclick="showCorrectionSection()"
+                                                        class="w-full py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        ↩ ส่งกลับแก้ไข
+                                                </button>
+                                                <button onclick="showRejectSection()"
+                                                        class="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        ✕ ปฏิเสธ
+                                                </button>
+                                                <a href="/api/staff/orders/page/"
+                                                        class="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition text-center">
+                                                        ← กลับ
+                                                </a>
+                                        </div>
+
+                                        <!-- Correction Section (hidden by default) -->
+                                        <div id="correctionSection" class="hidden">
+                                                <div class="mb-4">
+                                                        <label
+                                                                class="block text-sm text-gray-600 mb-2">สิ่งที่ต้องแก้ไข</label>
+                                                        <textarea id="correctionNote" rows="3"
+                                                                placeholder="ระบุสิ่งที่ต้องแก้ไข..."
+                                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 text-sm"></textarea>
+                                                </div>
+                                                <div class="space-y-3">
+                                                        <button onclick="requestCorrection()"
+                                                                class="w-full py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition">
+                                                                ยืนยันส่งกลับแก้ไข
+                                                        </button>
+                                                        <button onclick="hideCorrectionSection()"
+                                                                class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition">
+                                                                ยกเลิก
+                                                        </button>
+                                                </div>
+                                        </div>
+
+                                        <!-- Reject Confirm Buttons (hidden by default) -->
+                                        <div id="rejectButtons" class="space-y-3 hidden">
+                                                <button onclick="rejectOrder()"
+                                                        class="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition">
+                                                        ยืนยันปฏิเสธ
+                                                </button>
+                                                <button onclick="hideRejectSection()"
+                                                        class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition">
+                                                        ยกเลิก
+                                                </button>
+                                        </div>
+
+                                        <!-- Already Processed Message -->
+                                        <div id="processedMessage" class="hidden text-center py-4">
+                                                <p id="processedText" class="text-lg font-medium"></p>
+                                        </div>
+
+                                        <!-- Buttons for WaitingBossApproval Status -->
+                                        <div id="waitingBossButtons" class="space-y-3 hidden">
+                                                <div class="text-center mb-4 p-3 bg-purple-50 rounded-lg">
+                                                        <p class="text-purple-700 font-medium">⏳ รอหัวหน้าเซ็นอนุมัติ
+                                                        </p>
+                                                        <p class="text-sm text-gray-500">
+                                                                กรุณาพิมพ์ใบสั่งซื้อและเสนอหัวหน้าเซ็น</p>
+                                                </div>
+                                                <button onclick="printOrder()"
+                                                        class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        🖨️ พิมพ์ใบสั่งซื้อ
+                                                </button>
+                                                <button onclick="bossApprove()"
+                                                        class="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        ✓ หัวหน้าอนุมัติแล้ว
+                                                </button>
+                                                <button onclick="showBossRejectSection()"
+                                                        class="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        ↩ หัวหน้าไม่อนุมัติ (ส่งกลับแก้ไข)
+                                                </button>
+                                                <a href="/api/staff/orders/page/"
+                                                        class="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition text-center">
+                                                        ← กลับ
+                                                </a>
+                                        </div>
+
+                                        <!-- Boss Reject Section (hidden by default) -->
+                                        <div id="bossRejectSection" class="hidden">
+                                                <div class="mb-4">
+                                                        <label
+                                                                class="block text-sm text-gray-600 mb-2">เหตุผลที่หัวหน้าไม่อนุมัติ</label>
+                                                        <textarea id="bossRejectNote" rows="3"
+                                                                placeholder="ระบุเหตุผลที่ต้องแก้ไข..."
+                                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"></textarea>
+                                                </div>
+                                                <div class="space-y-3">
+                                                        <button onclick="bossReject()"
+                                                                class="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition">
+                                                                ยืนยันส่งกลับแก้ไข
+                                                        </button>
+                                                        <button onclick="hideBossRejectSection()"
+                                                                class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition">
+                                                                ยกเลิก
+                                                        </button>
+                                                </div>
+                                        </div>
+
+                                        <!-- Buttons for Approved Status -->
+                                        <div id="approvedButtons" class="space-y-3 hidden">
+                                                <div class="text-center mb-4 p-3 bg-green-50 rounded-lg">
+                                                        <p class="text-green-700 font-medium">✅ หัวหน้าเซ็นอนุมัติแล้ว
+                                                        </p>
+                                                        <p class="text-sm text-gray-500">พร้อมส่งรายการให้พัสดุ</p>
+                                                </div>
+                                                <button onclick="printOrder()"
+                                                        class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        🖨️ พิมพ์ใบสั่งซื้อ
+                                                </button>
+                                                <button onclick="sendToProcurement()"
+                                                        class="w-full py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        📤 ส่งรายการให้พัสดุ
+                                                </button>
+                                                <button onclick="showApprovedCorrectionSection()"
+                                                        class="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        ↩ ส่งกลับแก้ไข
+                                                </button>
+                                                <a href="/api/staff/orders/page/"
+                                                        class="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition text-center">
+                                                        ← กลับ
+                                                </a>
+                                        </div>
+
+                                        <!-- Approved Correction Section (hidden by default) -->
+                                        <div id="approvedCorrectionSection" class="hidden">
+                                                <div class="mb-4">
+                                                        <label
+                                                                class="block text-sm text-gray-600 mb-2">เหตุผลที่ต้องส่งกลับแก้ไข</label>
+                                                        <textarea id="approvedCorrectionNote" rows="3"
+                                                                placeholder="ระบุเหตุผลที่ต้องแก้ไข..."
+                                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"></textarea>
+                                                </div>
+                                                <div class="space-y-3">
+                                                        <button onclick="approvedCorrection()"
+                                                                class="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition">
+                                                                ยืนยันส่งกลับแก้ไข
+                                                        </button>
+                                                        <button onclick="hideApprovedCorrectionSection()"
+                                                                class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition">
+                                                                ยกเลิก
+                                                        </button>
+                                                </div>
+                                        </div>
+                                </div>
+                        </div>
+                </div>
+        </main>
+
+        <script>
+                // Get order_id from Django template
+                const orderId = '{{ order_id }}';
+                let orderData = null;
+                let projectData = null;
+                let currentUser = null;
+
+                // Initialize
+                document.addEventListener('DOMContentLoaded', function () {
+                        checkAuth();
+                        loadOrderDetails();
+                });
+
+                // Check authentication
+                function checkAuth() {
+                        const user = JSON.parse(localStorage.getItem('user') || 'null');
+                        if (!user || (user.role || '').toLowerCase() !== 'staff') {
+                                Swal.fire('ไม่มีสิทธิ์', 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้', 'error')
+                                        .then(() => window.location.href = '/api/login-page/');
+                                return;
+                        }
+                        currentUser = user;
+                        document.getElementById('staffName').textContent = `สำหรับ: ${user.username}`;
+                }
+
+                // Load order details
+                async function loadOrderDetails() {
+                        try {
+                                // 1. Load order data
+                                const orderRes = await fetch(`/api/orders/${orderId}/`);
+                                if (!orderRes.ok) throw new Error('ไม่พบใบสั่งซื้อ');
+                                orderData = await orderRes.json();
+
+                                // 2. Load project data
+                                const projectRes = await fetch(`/api/projects/${orderData.project_id}/`);
+                                if (projectRes.ok) {
+                                        projectData = await projectRes.json();
+                                }
+
+                                // 3. Load requester data
+                                let requesterData = null;
+                                if (orderData.requester_id) {
+                                        const userRes = await fetch(`/api/users/${orderData.requester_id}/`);
+                                        if (userRes.ok) {
+                                                requesterData = await userRes.json();
+                                        }
+                                }
+
+                                // 4. Render data
+                                renderOrderDetails(orderData, projectData, requesterData);
+
+                        } catch (error) {
+                                console.error('Error:', error);
+                                Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                        }
+                }
+
+                // Render order details
+                function renderOrderDetails(order, project, requester) {
+                        // Order info
+                        document.getElementById('orderNo').textContent = order.order_no || order.id;
+                        document.getElementById('orderTitle').textContent = order.title || order.order_no || '-';
+                        document.getElementById('orderDesc').textContent = order.description || '-';
+                        document.getElementById('vendorName').textContent = order.vendor_name || '-';
+
+                        // Date formatting
+                        const createdAt = order.created_at ? new Date(order.created_at._seconds * 1000 || order.created_at) : null;
+                        document.getElementById('orderDate').textContent = createdAt ? createdAt.toLocaleDateString('th-TH') : '-';
+
+                        const requiredDate = order.required_date ? new Date(order.required_date._seconds * 1000 || order.required_date) : null;
+                        document.getElementById('requiredDate').textContent = requiredDate ? requiredDate.toLocaleDateString('th-TH') : '-';
+
+                        // Status
+                        const statusEl = document.getElementById('orderStatus');
+                        const statusMap = {
+                                'Draft': { text: 'ฉบับร่าง', class: 'bg-gray-100 text-gray-700' },
+                                'Pending': { text: 'รออนุมัติ', class: 'bg-yellow-100 text-yellow-700' },
+                                'WaitingBossApproval': { text: 'รอหัวหน้าเซ็นอนุมัติ', class: 'bg-purple-100 text-purple-700' },
+                                'Approved': { text: 'หัวหน้าเซ็นอนุมัติแล้ว', class: 'bg-green-100 text-green-700' },
+                                'Rejected': { text: 'ปฏิเสธ', class: 'bg-red-100 text-red-700' },
+                                'CorrectionNeeded': { text: 'ต้องแก้ไข', class: 'bg-orange-100 text-orange-700' },
+                                'SentToProcurement': { text: 'ส่งรายการให้พัสดุแล้ว', class: 'bg-indigo-100 text-indigo-700' },
+                                'Closed': { text: 'ปิดแล้ว', class: 'bg-gray-200 text-gray-500' }
+                        };
+                        const statusInfo = statusMap[order.status] || { text: order.status, class: 'bg-gray-100 text-gray-700' };
+                        statusEl.textContent = statusInfo.text;
+                        statusEl.className = `px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${statusInfo.class}`;
+
+                        // Requester info
+                        if (requester) {
+                                document.getElementById('requesterName').textContent = requester.username || '-';
+                                document.getElementById('requesterDept').textContent = requester.department || '-';
+                        }
+
+                        // Project info
+                        if (project) {
+                                // แสดงรหัสโครงการ: ใช้ project_code ถ้ามี หรือฟอร์แมตจาก ID
+                                const projectCode = project.project_code || `PRJ-${(project.id || '').slice(-6).toUpperCase()}`;
+                                document.getElementById('projectId').textContent = projectCode;
+                                document.getElementById('projectName').textContent = project.project_name || '-';
+
+                                const budgetTotal = parseFloat(project.budget_total || 0);
+                                const budgetReserved = parseFloat(project.budget_reserved || 0);
+                                const budgetSpent = parseFloat(project.budget_spent || 0);
+                                const budgetRemaining = budgetTotal - budgetReserved - budgetSpent;
+
+                                document.getElementById('budgetTotal').textContent = budgetTotal.toLocaleString();
+                                document.getElementById('budgetRemaining').textContent = budgetRemaining.toLocaleString();
+
+                                // Summary
+                                document.getElementById('summaryTotal').textContent = `฿ ${budgetTotal.toLocaleString()}`;
+                                document.getElementById('summaryReserved').textContent = `฿ ${budgetReserved.toLocaleString()}`;
+                                document.getElementById('summaryAfter').textContent = `฿ ${budgetRemaining.toLocaleString()}`;
+                        }
+
+                        // Items table
+                        const items = order.items || [];
+                        const tbody = document.getElementById('itemsTable');
+                        tbody.innerHTML = '';
+
+                        let total = 0;
+                        items.forEach(item => {
+                                const qty = parseFloat(item.quantity || item.quantity_requested || 0);
+                                const price = parseFloat(item.estimated_unit_price || item.unit_price || 0);
+                                const subtotal = qty * price;
+                                total += subtotal;
+
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                    <td class="px-4 py-3">${item.item_name || item.name || '-'}</td>
+                    <td class="px-4 py-3 text-center">${qty}</td>
+                    <td class="px-4 py-3 text-center">${item.unit || '-'}</td>
+                    <td class="px-4 py-3 text-right">฿ ${subtotal.toLocaleString()}</td>
+                `;
+                                tbody.appendChild(row);
+                        });
+
+                        document.getElementById('totalPrice').textContent = `฿ ${total.toLocaleString()}`;
+
+                        // Show/hide buttons based on status
+                        if (order.status === 'Pending') {
+                                // Show action buttons for Pending status
+                                document.getElementById('actionButtons').classList.remove('hidden');
+                        } else if (order.status === 'WaitingBossApproval') {
+                                // Show WaitingBossApproval buttons
+                                document.getElementById('actionButtons').classList.add('hidden');
+                                document.getElementById('waitingBossButtons').classList.remove('hidden');
+                        } else if (order.status === 'Approved') {
+                                // Show Approved buttons (send to procurement)
+                                document.getElementById('actionButtons').classList.add('hidden');
+                                document.getElementById('approvedButtons').classList.remove('hidden');
+                        } else {
+                                // Show processed message for other statuses
+                                document.getElementById('actionButtons').classList.add('hidden');
+                                document.getElementById('processedMessage').classList.remove('hidden');
+
+                                const processedText = document.getElementById('processedText');
+                                if (order.status === 'Rejected') {
+                                        processedText.textContent = '❌ ปฏิเสธแล้ว';
+                                        processedText.className = 'text-lg font-medium text-red-600';
+                                        if (order.staff_note) {
+                                                processedText.innerHTML += `<br><span class="text-sm text-gray-500">เหตุผล: ${order.staff_note}</span>`;
+                                        }
+                                } else if (order.status === 'CorrectionNeeded') {
+                                        processedText.textContent = '↩ ส่งกลับแก้ไขแล้ว';
+                                        processedText.className = 'text-lg font-medium text-orange-600';
+                                        if (order.staff_note) {
+                                                processedText.innerHTML += `<br><span class="text-sm text-gray-500">สิ่งที่ต้องแก้ไข: ${order.staff_note}</span>`;
+                                        }
+                                } else if (order.status === 'SentToProcurement') {
+                                        processedText.textContent = '📤 ส่งให้พัสดุแล้ว';
+                                        processedText.className = 'text-lg font-medium text-purple-600';
+                                } else if (order.status === 'Closed') {
+                                        processedText.textContent = '✅ ปิดงานแล้ว';
+                                        processedText.className = 'text-lg font-medium text-green-600';
+                                } else {
+                                        processedText.textContent = `สถานะ: ${statusInfo.text}`;
+                                        processedText.className = 'text-lg font-medium text-gray-600';
+                                }
+                        }
+                }
+
+                // Show reject section
+                function showRejectSection() {
+                        document.getElementById('reasonSection').classList.remove('hidden');
+                        document.getElementById('actionButtons').classList.add('hidden');
+                        document.getElementById('rejectButtons').classList.remove('hidden');
+                }
+
+                // Hide reject section
+                function hideRejectSection() {
+                        document.getElementById('reasonSection').classList.add('hidden');
+                        document.getElementById('actionButtons').classList.remove('hidden');
+                        document.getElementById('rejectButtons').classList.add('hidden');
+                        document.getElementById('staffNote').value = '';
+                }
+
+                // Approve order
+                async function approveOrder() {
+                        const result = await Swal.fire({
+                                title: 'ยืนยันการอนุมัติ?',
+                                text: 'คุณต้องการอนุมัติใบสั่งซื้อนี้หรือไม่?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonColor: '#22c55e',
+                                cancelButtonColor: '#6b7280',
+                                confirmButtonText: 'อนุมัติ',
+                                cancelButtonText: 'ยกเลิก'
+                        });
+
+                        if (result.isConfirmed) {
+                                try {
+                                        const response = await fetch(`/api/orders/${orderId}/approve/`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ approver_id: currentUser.id })
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                                Swal.fire('สำเร็จ', data.message, 'success')
+                                                        .then(() => window.location.reload());
+                                        } else {
+                                                Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                        }
+                                } catch (error) {
+                                        Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                                }
+                        }
+                }
+
+                // Reject order
+                async function rejectOrder() {
+                        const staffNote = document.getElementById('staffNote').value.trim();
+
+                        if (!staffNote) {
+                                Swal.fire('กรุณาระบุเหตุผล', 'ต้องระบุเหตุผลในการปฏิเสธ', 'warning');
+                                return;
+                        }
+
+                        try {
+                                const response = await fetch(`/api/orders/${orderId}/reject/`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                                approver_id: currentUser.id,
+                                                staff_note: staffNote
+                                        })
+                                });
+
+                                const data = await response.json();
+
+                                if (response.ok) {
+                                        Swal.fire('สำเร็จ', data.message + `\nคืนงบประมาณ: ฿${data.released_budget.toLocaleString()}`, 'success')
+                                                .then(() => window.location.reload());
+                                } else {
+                                        Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                }
+                        } catch (error) {
+                                Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                        }
+                }
+
+                // Show correction section
+                function showCorrectionSection() {
+                        document.getElementById('actionButtons').classList.add('hidden');
+                        document.getElementById('correctionSection').classList.remove('hidden');
+                }
+
+                // Hide correction section
+                function hideCorrectionSection() {
+                        document.getElementById('actionButtons').classList.remove('hidden');
+                        document.getElementById('correctionSection').classList.add('hidden');
+                        document.getElementById('correctionNote').value = '';
+                }
+
+                // Request correction
+                async function requestCorrection() {
+                        const correctionNote = document.getElementById('correctionNote').value.trim();
+
+                        if (!correctionNote) {
+                                Swal.fire('กรุณาระบุสิ่งที่ต้องแก้ไข', 'ต้องระบุสิ่งที่ต้องให้ผู้สั่งแก้ไข', 'warning');
+                                return;
+                        }
+
+                        try {
+                                const response = await fetch(`/api/orders/${orderId}/correction/`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                                approver_id: currentUser.id,
+                                                staff_note: correctionNote
+                                        })
+                                });
+
+                                const data = await response.json();
+
+                                if (response.ok) {
+                                        Swal.fire('สำเร็จ', data.message + `\nคืนงบประมาณ: ฿${data.released_budget.toLocaleString()}`, 'success')
+                                                .then(() => window.location.reload());
+                                } else {
+                                        Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                }
+                        } catch (error) {
+                                Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                        }
+                }
+
+                // Boss Approve - หัวหน้าอนุมัติแล้ว
+                async function bossApprove() {
+                        const result = await Swal.fire({
+                                title: 'ยืนยันหัวหน้าอนุมัติแล้ว?',
+                                text: 'หัวหน้าได้เซ็นอนุมัติใบสั่งซื้อนี้แล้วหรือไม่?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonColor: '#22c55e',
+                                cancelButtonColor: '#6b7280',
+                                confirmButtonText: 'ยืนยัน',
+                                cancelButtonText: 'ยกเลิก'
+                        });
+
+                        if (result.isConfirmed) {
+                                try {
+                                        const response = await fetch(`/api/orders/${orderId}/boss-approve/`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({})
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                                Swal.fire('สำเร็จ', data.message, 'success')
+                                                        .then(() => window.location.reload());
+                                        } else {
+                                                Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                        }
+                                } catch (error) {
+                                        Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                                }
+                        }
+                }
+
+                // Send to Procurement - ส่งให้พัสดุ
+                async function sendToProcurement() {
+                        const result = await Swal.fire({
+                                title: 'ส่งให้พัสดุ?',
+                                text: 'คุณต้องการส่งใบสั่งซื้อนี้ให้พัสดุหรือไม่?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonColor: '#8b5cf6',
+                                cancelButtonColor: '#6b7280',
+                                confirmButtonText: 'ส่งให้พัสดุ',
+                                cancelButtonText: 'ยกเลิก'
+                        });
+
+                        if (result.isConfirmed) {
+                                try {
+                                        const response = await fetch(`/api/orders/${orderId}/send-to-procurement/`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({})
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                                Swal.fire('สำเร็จ', data.message, 'success')
+                                                        .then(() => window.location.reload());
+                                        } else {
+                                                Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                        }
+                                } catch (error) {
+                                        Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                                }
+                        }
+                }
+
+                // Show boss reject section
+                function showBossRejectSection() {
+                        document.getElementById('waitingBossButtons').classList.add('hidden');
+                        document.getElementById('bossRejectSection').classList.remove('hidden');
+                }
+
+                // Hide boss reject section
+                function hideBossRejectSection() {
+                        document.getElementById('waitingBossButtons').classList.remove('hidden');
+                        document.getElementById('bossRejectSection').classList.add('hidden');
+                        document.getElementById('bossRejectNote').value = '';
+                }
+
+                // Boss Reject - หัวหน้าไม่อนุมัติ
+                async function bossReject() {
+                        const bossRejectNote = document.getElementById('bossRejectNote').value.trim();
+
+                        if (!bossRejectNote) {
+                                Swal.fire('กรุณาระบุเหตุผล', 'ต้องระบุเหตุผลที่หัวหน้าไม่อนุมัติ', 'warning');
+                                return;
+                        }
+
+                        try {
+                                const response = await fetch(`/api/orders/${orderId}/boss-reject/`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                                boss_note: bossRejectNote
+                                        })
+                                });
+
+                                const data = await response.json();
+
+                                if (response.ok) {
+                                        Swal.fire('สำเร็จ', data.message + `\nคืนงบประมาณ: ฿${data.released_budget.toLocaleString()}`, 'success')
+                                                .then(() => window.location.reload());
+                                } else {
+                                        Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                }
+                        } catch (error) {
+                                Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                        }
+                }
+
+                // Print Order - พิมพ์ใบสั่งซื้อ
+                function printOrder() {
+                        // เปิดหน้าพิมพ์ใบสั่งซื้อในแท็บใหม่
+                        window.open(`/api/orders/${orderId}/print/`, '_blank');
+                }
+
+                // Show approved correction section
+                function showApprovedCorrectionSection() {
+                        document.getElementById('approvedButtons').classList.add('hidden');
+                        document.getElementById('approvedCorrectionSection').classList.remove('hidden');
+                }
+
+                // Hide approved correction section
+                function hideApprovedCorrectionSection() {
+                        document.getElementById('approvedButtons').classList.remove('hidden');
+                        document.getElementById('approvedCorrectionSection').classList.add('hidden');
+                        document.getElementById('approvedCorrectionNote').value = '';
+                }
+
+                // Approved Correction - ส่งกลับแก้ไข (จากสถานะ Approved)
+                async function approvedCorrection() {
+                        const correctionNote = document.getElementById('approvedCorrectionNote').value.trim();
+
+                        if (!correctionNote) {
+                                Swal.fire('กรุณาระบุเหตุผล', 'ต้องระบุเหตุผลที่ต้องส่งกลับแก้ไข', 'warning');
+                                return;
+                        }
+
+                        try {
+                                const response = await fetch(`/api/orders/${orderId}/approved-correction/`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                                staff_note: correctionNote
+                                        })
+                                });
+
+                                const data = await response.json();
+
+                                if (response.ok) {
+                                        Swal.fire('สำเร็จ', data.message + `\nคืนงบประมาณ: ฿${data.released_budget.toLocaleString()}`, 'success')
+                                                .then(() => window.location.reload());
+                                } else {
+                                        Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                }
+                        } catch (error) {
+                                Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                        }
+                }
+
+                // Logout
+                function logout() {
+                        localStorage.removeItem('user');
+                        window.location.href = '/api/login-page/';
+                }
+        </script>
+
+</body>
+
+</html>

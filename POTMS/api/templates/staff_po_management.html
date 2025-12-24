@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>รายการใบสั่งซื้อ (PO) - POTMS</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap"
+                rel="stylesheet">
+        <style>
+                body {
+                        font-family: 'Prompt', sans-serif;
+                }
+
+                /* Mobile responsive table */
+                @media (max-width: 768px) {
+                        .mobile-card {
+                                display: block !important;
+                        }
+
+                        .desktop-table {
+                                display: none !important;
+                        }
+
+                        .mobile-card-item {
+                                background: white;
+                                border-radius: 12px;
+                                padding: 16px;
+                                margin-bottom: 12px;
+                                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                                border: 1px solid #e5e7eb;
+                        }
+
+                        .mobile-card-row {
+                                display: flex;
+                                justify-content: space-between;
+                                padding: 8px 0;
+                                border-bottom: 1px solid #f3f4f6;
+                        }
+
+                        .mobile-card-row:last-child {
+                                border-bottom: none;
+                        }
+
+                        .mobile-card-label {
+                                color: #6b7280;
+                                font-size: 0.875rem;
+                        }
+
+                        .mobile-card-value {
+                                color: #1f2937;
+                                font-weight: 500;
+                                text-align: right;
+                        }
+                }
+
+                @media (min-width: 769px) {
+                        .mobile-card {
+                                display: none !important;
+                        }
+
+                        .desktop-table {
+                                display: block !important;
+                        }
+                }
+        </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+                <div
+                        class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                        <div>
+                                <h1 class="text-xl sm:text-2xl font-bold text-gray-800">รายการใบสั่งซื้อ (PO)</h1>
+                                <p class="text-xs sm:text-sm text-gray-500 mt-1">จัดการและติดตามสถานะใบสั่งซื้อทั้งหมด
+                                </p>
+                        </div>
+                        <a href="/api/staff-dashboard/"
+                                class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition flex items-center justify-center gap-2 text-sm sm:text-base">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                <span class="hidden sm:inline">กลับหน้าหลัก</span>
+                                <span class="sm:hidden">กลับ</span>
+                        </a>
+                </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+
+                <!-- Filter Section -->
+                <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                                <!-- Search -->
+                                <div>
+                                        <label class="block text-sm text-gray-600 mb-2">ค้นหา</label>
+                                        <div class="relative">
+                                                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                </svg>
+                                                <input type="text" id="searchInput"
+                                                        placeholder="ค้นหาตามเลขที่ PO, ชื่อผู้ขาย..."
+                                                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                                        </div>
+                                </div>
+
+                                <!-- Status Filter -->
+                                <div>
+                                        <label class="block text-sm text-gray-600 mb-2">สถานะ</label>
+                                        <select id="statusFilter"
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                                                <option value="">ทั้งหมด</option>
+                                                <option value="Draft">ร่าง</option>
+                                                <option value="Pending">รออนุมัติ</option>
+                                                <option value="WaitingBossApproval">รอหัวหน้าอนุมัติ</option>
+                                                <option value="Approved">อนุมัติแล้ว</option>
+                                                <option value="CorrectionNeeded">ต้องแก้ไข</option>
+                                                <option value="Rejected">ปฏิเสธ</option>
+                                                <option value="SentToProcurement">ส่งพัสดุแล้ว</option>
+                                                <option value="Closed">ปิดแล้ว</option>
+                                        </select>
+                                </div>
+
+                                <!-- Date From -->
+                                <div>
+                                        <label class="block text-sm text-gray-600 mb-2">วันที่สั่งซื้อ (จาก)</label>
+                                        <input type="date" id="dateFrom"
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                                </div>
+
+                                <!-- Date To -->
+                                <div>
+                                        <label class="block text-sm text-gray-600 mb-2">ถึง</label>
+                                        <input type="date" id="dateTo"
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                                </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-4">
+                                <button onclick="clearFilters()"
+                                        class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition text-sm">
+                                        ล้างตัวกรอง
+                                </button>
+                                <button onclick="loadOrders()"
+                                        class="w-full sm:w-auto px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition flex items-center justify-center gap-2 text-sm">
+                                        <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        ค้นหา
+                                </button>
+                        </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-end gap-3 mb-4">
+                        <button onclick="exportCSV()"
+                                class="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-2 text-sm">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Export CSV
+                        </button>
+                </div>
+
+                <!-- Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <!-- Desktop Table -->
+                        <div class="desktop-table overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                                <tr>
+                                                        <th
+                                                                class="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-600 uppercase">
+                                                                เลขที่ PO</th>
+                                                        <th
+                                                                class="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-600 uppercase">
+                                                                โครงการ</th>
+                                                        <th
+                                                                class="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-600 uppercase">
+                                                                ชื่อผู้ขาย</th>
+                                                        <th
+                                                                class="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-600 uppercase">
+                                                                วันที่สั่งซื้อ</th>
+                                                        <th
+                                                                class="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs font-semibold text-gray-600 uppercase">
+                                                                ยอดเงินรวม</th>
+                                                        <th
+                                                                class="px-4 sm:px-6 py-3 sm:py-4 text-center text-xs font-semibold text-gray-600 uppercase">
+                                                                สถานะ</th>
+                                                        <th
+                                                                class="px-4 sm:px-6 py-3 sm:py-4 text-center text-xs font-semibold text-gray-600 uppercase">
+                                                                การกระทำ</th>
+                                                </tr>
+                                        </thead>
+                                        <tbody id="ordersTable" class="divide-y divide-gray-200">
+                                                <!-- Data will be loaded here -->
+                                        </tbody>
+                                </table>
+                        </div>
+
+                        <!-- Mobile Card View -->
+                        <div id="mobileCards" class="mobile-card p-4">
+                                <!-- Mobile cards will be loaded here -->
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="emptyState" class="hidden text-center py-12">
+                                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <p class="text-gray-500">ไม่พบข้อมูลใบสั่งซื้อ</p>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div
+                                class="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-3">
+                                <span id="paginationInfo" class="text-xs sm:text-sm text-gray-500">แสดง 0 รายการ</span>
+                                <div class="flex gap-2">
+                                        <button onclick="prevPage()" id="prevBtn"
+                                                class="px-3 py-1 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                                                disabled>
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M15 19l-7-7 7-7" />
+                                                </svg>
+                                        </button>
+                                        <span id="pageNumbers" class="flex gap-1"></span>
+                                        <button onclick="nextPage()" id="nextBtn"
+                                                class="px-3 py-1 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                                                disabled>
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M9 5l7 7-7 7" />
+                                                </svg>
+                                        </button>
+                                </div>
+                        </div>
+                </div>
+        </main>
+
+        <script>
+                // Data
+                let allOrders = [];
+                let filteredOrders = [];
+                let currentPage = 1;
+                const itemsPerPage = 10;
+
+                // Status mapping
+                const statusMap = {
+                        'Draft': { text: 'ร่าง', class: 'bg-gray-100 text-gray-600' },
+                        'Pending': { text: 'รออนุมัติ', class: 'bg-yellow-100 text-yellow-700' },
+                        'WaitingBossApproval': { text: 'รอหัวหน้าเซ็นอนุมัติ', class: 'bg-purple-100 text-purple-700' },
+                        'Approved': { text: 'หัวหน้าเซ็นอนุมัติแล้ว', class: 'bg-green-100 text-green-700' },
+                        'CorrectionNeeded': { text: 'ต้องแก้ไข', class: 'bg-orange-100 text-orange-700' },
+                        'Rejected': { text: 'ปฏิเสธ', class: 'bg-red-100 text-red-700' },
+                        'SentToProcurement': { text: 'ส่งรายการให้พัสดุแล้ว', class: 'bg-indigo-100 text-indigo-700' },
+                        'Closed': { text: 'ปิดแล้ว', class: 'bg-gray-200 text-gray-500' }
+                };
+
+                // Initialize
+                document.addEventListener('DOMContentLoaded', function () {
+                        checkAuth();
+                        loadOrders();
+                });
+
+                // Check authentication
+                function checkAuth() {
+                        const user = JSON.parse(localStorage.getItem('user') || 'null');
+                        if (!user || (user.role || '').toLowerCase() !== 'staff') {
+                                Swal.fire('ไม่มีสิทธิ์', 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้', 'error')
+                                        .then(() => window.location.href = '/api/login-page/');
+                        }
+                }
+
+                // Load orders
+                async function loadOrders() {
+                        try {
+                                const res = await fetch('/api/staff/orders/');
+                                if (!res.ok) throw new Error('ไม่สามารถโหลดข้อมูลได้');
+
+                                allOrders = await res.json();
+
+                                // Load project data for each order
+                                for (let order of allOrders) {
+                                        if (order.project_id) {
+                                                try {
+                                                        const projectRes = await fetch(`/api/projects/${order.project_id}/`);
+                                                        if (projectRes.ok) {
+                                                                const project = await projectRes.json();
+                                                                order.project_name = project.project_name;
+                                                        }
+                                                } catch (e) {
+                                                        order.project_name = '-';
+                                                }
+                                        } else {
+                                                order.project_name = '-';
+                                        }
+                                }
+
+                                applyFilters();
+                        } catch (error) {
+                                console.error('Error:', error);
+                                Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                        }
+                }
+
+                // Apply filters
+                function applyFilters() {
+                        const search = document.getElementById('searchInput').value.toLowerCase();
+                        const status = document.getElementById('statusFilter').value;
+                        const dateFrom = document.getElementById('dateFrom').value;
+                        const dateTo = document.getElementById('dateTo').value;
+
+                        filteredOrders = allOrders.filter(order => {
+                                // Search filter
+                                const searchMatch = !search ||
+                                        (order.order_no || '').toLowerCase().includes(search) ||
+                                        (order.vendor_name || '').toLowerCase().includes(search) ||
+                                        (order.project_name || '').toLowerCase().includes(search);
+
+                                // Status filter
+                                const statusMatch = !status || order.status === status;
+
+                                // Date filter
+                                let dateMatch = true;
+                                if (dateFrom || dateTo) {
+                                        const orderDate = order.created_at ?
+                                                new Date(order.created_at._seconds * 1000 || order.created_at) : null;
+
+                                        if (orderDate) {
+                                                if (dateFrom && orderDate < new Date(dateFrom)) dateMatch = false;
+                                                if (dateTo && orderDate > new Date(dateTo + 'T23:59:59')) dateMatch = false;
+                                        }
+                                }
+
+                                return searchMatch && statusMatch && dateMatch;
+                        });
+
+                        currentPage = 1;
+                        renderTable();
+                }
+
+                // Render table
+                function renderTable() {
+                        const tbody = document.getElementById('ordersTable');
+                        const mobileCards = document.getElementById('mobileCards');
+                        const emptyState = document.getElementById('emptyState');
+
+                        if (filteredOrders.length === 0) {
+                                tbody.innerHTML = '';
+                                mobileCards.innerHTML = '';
+                                emptyState.classList.remove('hidden');
+                                updatePagination();
+                                return;
+                        }
+
+                        emptyState.classList.add('hidden');
+
+                        // Pagination
+                        const start = (currentPage - 1) * itemsPerPage;
+                        const end = start + itemsPerPage;
+                        const pageOrders = filteredOrders.slice(start, end);
+
+                        // Desktop table
+                        tbody.innerHTML = pageOrders.map(order => {
+                                const status = statusMap[order.status] || { text: order.status, class: 'bg-gray-100 text-gray-600' };
+
+                                // Format date
+                                const date = order.created_at ?
+                                        new Date(order.created_at._seconds * 1000 || order.created_at).toLocaleDateString('th-TH') : '-';
+
+                                // Format price
+                                const price = parseFloat(order.total_estimated_price || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+
+                                return `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium text-gray-800">${order.order_no || order.id}</td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm text-gray-600">${order.project_name || '-'}</td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm text-gray-600">${order.vendor_name || '-'}</td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm text-gray-600">${date}</td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm text-gray-800 text-right font-medium">฿${price}</td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                            <span class="px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${status.class}">
+                                ${status.text}
+                            </span>
+                        </td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                            <button onclick="viewOrder('${order.id}')"
+                                class="px-3 py-1.5 bg-cyan-500 text-white text-sm rounded-lg hover:bg-cyan-600 transition">
+                                ดูรายละเอียด
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                        }).join('');
+
+                        // Mobile cards
+                        mobileCards.innerHTML = pageOrders.map(order => {
+                                const status = statusMap[order.status] || { text: order.status, class: 'bg-gray-100 text-gray-600' };
+                                const date = order.created_at ?
+                                        new Date(order.created_at._seconds * 1000 || order.created_at).toLocaleDateString('th-TH') : '-';
+                                const price = parseFloat(order.total_estimated_price || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+
+                                return `
+                    <div class="mobile-card-item">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <div class="text-sm font-semibold text-cyan-600">${order.order_no || order.id}</div>
+                                <div class="text-xs text-gray-500 mt-1">${date}</div>
+                            </div>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${status.class}">
+                                ${status.text}
+                            </span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">โครงการ</span>
+                            <span class="mobile-card-value">${order.project_name || '-'}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">ผู้ขาย</span>
+                            <span class="mobile-card-value">${order.vendor_name || '-'}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">ยอดเงินรวม</span>
+                            <span class="mobile-card-value text-cyan-600 font-semibold">฿${price}</span>
+                        </div>
+                        <button onclick="viewOrder('${order.id}')"
+                            class="w-full mt-3 px-4 py-2 bg-cyan-500 text-white text-sm rounded-lg hover:bg-cyan-600 transition">
+                            ดูรายละเอียด
+                        </button>
+                    </div>
+                `;
+                        }).join('');
+
+                        updatePagination();
+                }
+
+                // Update pagination
+                function updatePagination() {
+                        const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+                        const start = (currentPage - 1) * itemsPerPage + 1;
+                        const end = Math.min(currentPage * itemsPerPage, filteredOrders.length);
+
+                        document.getElementById('paginationInfo').textContent =
+                                filteredOrders.length > 0 ? `แสดง ${start}-${end} จาก ${filteredOrders.length} รายการ` : 'แสดง 0 รายการ';
+
+                        document.getElementById('prevBtn').disabled = currentPage === 1;
+                        document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+
+                        // Page numbers
+                        const pageNumbers = document.getElementById('pageNumbers');
+                        pageNumbers.innerHTML = '';
+                        for (let i = 1; i <= totalPages && i <= 5; i++) {
+                                const btn = document.createElement('button');
+                                btn.textContent = i;
+                                btn.className = `px-3 py-1 rounded-lg ${i === currentPage ? 'bg-cyan-500 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'}`;
+                                btn.onclick = () => { currentPage = i; renderTable(); };
+                                pageNumbers.appendChild(btn);
+                        }
+                }
+
+                // Navigation
+                function prevPage() { if (currentPage > 1) { currentPage--; renderTable(); } }
+                function nextPage() { const totalPages = Math.ceil(filteredOrders.length / itemsPerPage); if (currentPage < totalPages) { currentPage++; renderTable(); } }
+
+                // View order detail
+                function viewOrder(orderId) {
+                        window.location.href = `/api/staff/orders/${orderId}/detail/`;
+                }
+
+                // Clear filters
+                function clearFilters() {
+                        document.getElementById('searchInput').value = '';
+                        document.getElementById('statusFilter').value = '';
+                        document.getElementById('dateFrom').value = '';
+                        document.getElementById('dateTo').value = '';
+                        applyFilters();
+                }
+
+                // Export CSV with item details for procurement
+                async function exportCSV() {
+                        if (filteredOrders.length === 0) {
+                                Swal.fire('ไม่มีข้อมูล', 'ไม่มีรายการให้ส่งออก', 'warning');
+                                return;
+                        }
+
+                        // Show loading
+                        Swal.fire({
+                                title: 'กำลังเตรียมข้อมูล...',
+                                text: 'กรุณารอสักครู่',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                        Swal.showLoading();
+                                }
+                        });
+
+                        try {
+                                // Build CSV content with item details
+                                const headers = [
+                                        'เลขที่ PO',
+                                        'โครงการ',
+                                        'ชื่อผู้ขาย',
+                                        'วันที่สั่งซื้อ',
+                                        'ลำดับรายการ',
+                                        'ชื่อรายการ/สินค้า',
+                                        'จำนวน',
+                                        'หน่วย',
+                                        'ราคาต่อหน่วย',
+                                        'ราคารวม (รายการ)',
+                                        'ยอดเงินรวมทั้งหมด'
+                                ];
+
+                                let csvRows = [];
+                                csvRows.push(headers.map(h => escapeCSV(h)).join(','));
+
+                                // Process each order
+                                for (const order of filteredOrders) {
+                                        // Format date as dd/mm/yyyy for Excel (force as text)
+                                        let date = '-';
+                                        if (order.created_at) {
+                                                const d = new Date(order.created_at._seconds * 1000 || order.created_at);
+                                                const day = String(d.getDate()).padStart(2, '0');
+                                                const month = String(d.getMonth() + 1).padStart(2, '0');
+                                                const year = d.getFullYear() + 543; // Buddhist year
+                                                date = `${day}-${month}-${year}`; // Use dash instead of slash
+                                        }
+                                        const orderNo = order.order_no || order.id;
+                                        const projectName = order.project_name || '-';
+                                        const vendorName = order.vendor_name || '-';
+                                        const totalPrice = parseFloat(order.total_estimated_price || 0).toFixed(2);
+
+                                        // Get items from order
+                                        const items = order.items || [];
+
+                                        if (items.length === 0) {
+                                                // Order with no items - still show one row
+                                                const row = [
+                                                        escapeCSV(orderNo),
+                                                        escapeCSV(projectName),
+                                                        escapeCSV(vendorName),
+                                                        escapeCSV(date),
+                                                        '0',
+                                                        'ไม่มีรายการสินค้า',
+                                                        '0',
+                                                        '-',
+                                                        '0',
+                                                        '0',
+                                                        escapeCSV(totalPrice)
+                                                ];
+                                                csvRows.push(row.join(','));
+                                        } else {
+                                                // One row per item - this is what procurement needs!
+                                                items.forEach((item, index) => {
+                                                        const qty = parseFloat(item.quantity_requested || item.quantity || 0);
+                                                        const unitPrice = parseFloat(item.estimated_unit_price || item.unit_price || 0);
+                                                        const itemTotal = qty * unitPrice;
+
+                                                        const row = [
+                                                                escapeCSV(orderNo),
+                                                                escapeCSV(projectName),
+                                                                escapeCSV(vendorName),
+                                                                escapeCSV(date),
+                                                                (index + 1).toString(),
+                                                                escapeCSV(item.item_name || item.name || item.product_name || '-'),
+                                                                qty.toString(),
+                                                                escapeCSV(item.unit || 'ชิ้น'),
+                                                                unitPrice.toFixed(2),
+                                                                itemTotal.toFixed(2),
+                                                                totalPrice
+                                                        ];
+                                                        csvRows.push(row.join(','));
+                                                });
+                                        }
+                                }
+
+                                // Count total items
+                                let totalItems = 0;
+                                filteredOrders.forEach(order => {
+                                        totalItems += (order.items || []).length || 1;
+                                });
+
+                                // Add BOM for UTF-8 (Thai support in Excel)
+                                const BOM = '\uFEFF';
+                                const csvContent = BOM + csvRows.join('\n');
+
+                                // Download
+                                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(blob);
+                                link.download = `รายการสั่งซื้อพัสดุ_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.csv`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(link.href);
+
+                                Swal.fire({
+                                        icon: 'success',
+                                        title: 'ส่งออกสำเร็จ!',
+                                        html: `ส่งออก <b>${filteredOrders.length}</b> ใบสั่งซื้อ<br/><b>${totalItems}</b> รายการสินค้า`,
+                                        timer: 2500,
+                                        showConfirmButton: false
+                                });
+
+                        } catch (error) {
+                                console.error('Export error:', error);
+                                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถส่งออกข้อมูลได้', 'error');
+                        }
+                }
+
+                // Helper function to escape CSV values
+                function escapeCSV(value) {
+                        if (value === null || value === undefined) return '';
+                        const str = String(value);
+                        if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+                                return '"' + str.replace(/"/g, '""') + '"';
+                        }
+                        return str;
+                }
+        </script>
+
+</body>
+
+</html>

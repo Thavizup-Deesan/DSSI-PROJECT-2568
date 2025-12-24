@@ -1,118 +1,114 @@
 @startuml
-hide circle
-
+' ตั้งค่าการแสดงผล
 skinparam linetype ortho
+hide circle
+skinparam packageStyle rectangle
 
-entity "Users" as users {
-  *user_id : int <<PK>>
+' --- Master Data Entities ---
+
+entity "User (ผู้ใช้งาน)" as User {
+  *user_id : INT <<PK>>
   --
-  full_name : varchar
-  username : varchar
-  email : varchar
-  password : varchar
-  role : varchar
-  status : varchar
-  department : varchar
+  username : VARCHAR
+  role : ENUM (User, Staff, Admin)
+  department : VARCHAR
 }
 
-entity "Projects" as projects {
-  *project_id : int <<PK>>
+entity "Project (โครงการ)" as Project {
+  *project_id : INT <<PK>>
   --
-  project_code : varchar
-  project_name : varchar
-  budget_total : decimal
-  status : varchar
+  project_name : VARCHAR
+  budget_total : DECIMAL(10,2) (งบทั้งหมด)
+  budget_reserved : DECIMAL(10,2) (งบที่ถูกจอง)
+  budget_spent : DECIMAL(10,2) (งบจ่ายจริง)
+  status : ENUM (Active, Completed, Cancelled) << เพิ่ม: สถานะโครงการ >>
+  created_at : DATETIME
 }
 
-entity "Vendors" as vendors {
-  *vendor_id : int <<PK>>
+' --- Project Assignment (กำหนดผู้รับผิดชอบโครงการ) ---
+
+entity "ProjectAssignment (มอบหมายโครงการ)" as ProjectAssignment {
+  *assignment_id : INT <<PK>>
   --
-  vendor_name : varchar
-  phone : varchar
-  email : varchar
-}
-
-entity "Master_Items" as master_items {
-  *item_id : int <<PK>>
+  *project_id : INT <<FK>> (โครงการ)
+  *user_id : INT <<FK>> (User ที่รับผิดชอบ)
   --
-  item_code : varchar
-  item_name : varchar
-  standard_unit : varchar
+  assigned_by : INT <<FK>> (Staff ที่กำหนด)
+  assigned_at : DATETIME
+  note : TEXT (หมายเหตุ)
 }
 
-entity "Purchase_Requests" as pr {
-  *pr_id : int <<PK>>
+' --- Transaction Entities ---
+
+entity "MainOrder (ใบสั่งซื้อหลัก)" as MainOrder {
+  *order_id : INT <<PK>>
   --
-  pr_code : varchar
-  request_date : datetime
-  subject : varchar
-  #requester_id : int <<FK>>
-  #project_id : int <<FK>>
-  total_amount_estimate : decimal
-  status : varchar
-  description : text
-  rejection_reason : text
-}
-
-entity "Purchase_Request_Items" as pr_items {
-  *pr_item_id : int <<PK>>
+  *project_id : INT <<FK>>
+  *requester_id : INT <<FK>> (User ผู้สั่ง)
+  *approver_id : INT <<FK>> (Staff ผู้อนุมัติ)
   --
-  #pr_id : int <<FK>>
-  item_name : varchar
-  quantity : int
-  unit : varchar
-  #master_item_id : int <<FK>>
-  '-- เพิ่มคอลัมน์ใหม่ --'
-  estimated_price : decimal
+  order_no : VARCHAR (เลขที่เอกสาร)
+  vendor_name : VARCHAR (ชื่อร้านค้า/บริษัท)
+  status : ENUM (Draft, Ordered, CorrectionNeeded, SentToProcurement, Closed)
+  total_estimated_price : DECIMAL (ราคารวมประมาณการ)
+  inspection_committee : TEXT (รายชื่อกรรมการตรวจรับ)
+  staff_note : TEXT (บันทึกสิ่งที่ต้องแก้ไขจาก Staff)
+  created_at : DATETIME
+  updated_at : DATETIME
 }
 
-
-entity "Request_Attachments" as attachments {
-    *attachment_id : int <<PK>>
-    --
-    #pr_id : int <<FK>>
-    file_name : varchar
-    file_path : varchar
-}
-
-
-entity "Purchase_Orders" as po {
-  *po_id : int <<PK>>
+entity "OrderItem (รายการสินค้า)" as OrderItem {
+  *item_id : INT <<PK>>
   --
-  po_code : varchar
-  order_date : date
-  #pr_id : int <<FK>>
-  #vendor_id : int <<FK>>
-  #staff_id : int <<FK>>
-  total_amount : decimal
-  actual_expense : decimal
-  status : enum('Pending', 'Approved')
-}
-
-entity "Purchase_Order_Items" as po_items {
-  *po_item_id : int <<PK>>
+  *order_id : INT <<FK>>
   --
-  #po_id : int <<FK>>
-  item_name : varchar
-  quantity : int
-  unit : varchar
-  unit_price : decimal
-  line_total : decimal
-  #master_item_id : int <<FK>>
+  item_name : VARCHAR
+  quantity_requested : INT
+  unit : VARCHAR
+  estimated_unit_price : DECIMAL
+  status : ENUM (Pending, Received, Cancelled)
 }
 
-users ||--o{ pr
-projects ||--o{ pr
-pr ||--|{ pr_items
-master_items }o--o{ pr_items
+entity "SubOrder (ใบตรวจรับ/รับของ)" as SubOrder {
+  *sub_order_id : INT <<PK>>
+  --
+  *main_order_id : INT <<FK>>
+  *receiver_id : INT <<FK>>
+  --
+  sub_order_no : VARCHAR
+  received_date : DATETIME
+  status : ENUM (WaitingInspection, Inspected, HandedOver)
+  note : TEXT
+}
 
+entity "InspectionDetail (รายละเอียดการรับของ)" as InspectionDetail {
+  *inspection_id : INT <<PK>>
+  --
+  *sub_order_id : INT <<FK>>
+  *item_id : INT <<FK>>
+  --
+  qty_received : INT
+  actual_unit_price : DECIMAL
+  total_actual_price : DECIMAL
+  qr_code : VARCHAR
+  is_verified : BOOLEAN
+}
 
-pr ||--o{ attachments
+' --- Relationships ---
 
-pr }o..o| po
-vendors ||--o{ po
-users ||--o{ po
-po ||--|{ po_items
-master_items }o--o{ po_items
+' User & Project Assignment (Many-to-Many ผ่าน ProjectAssignment)
+Project ||..o{ ProjectAssignment : "Has Assignees"
+User ||..o{ ProjectAssignment : "Assigned By (Staff)"
+
+' Orders
+User ||..o{ MainOrder : "Creates (Requester)"
+User ||..o{ SubOrder : "Receives Items (Staff)"
+Project ||..o{ MainOrder : "Has"
+
+MainOrder ||..|{ OrderItem : "Contains"
+MainOrder ||..o{ SubOrder : "Splits into"
+
+SubOrder ||..|{ InspectionDetail : "Includes"
+OrderItem ||..o{ InspectionDetail : "Fulfilled by"
 
 @enduml

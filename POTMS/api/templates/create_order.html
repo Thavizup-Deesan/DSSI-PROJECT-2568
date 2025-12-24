@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>สร้างใบขอซื้อใหม่ - POTMS</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap"
+                rel="stylesheet">
+        <style>
+                body {
+                        font-family: 'Prompt', sans-serif;
+                }
+        </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+
+        <!-- Header -->
+        <header class="bg-white border-b border-gray-200">
+                <div class="max-w-5xl mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
+                        <div class="flex items-center gap-2 sm:gap-3">
+                                <a href="/api/select_project/" class="text-gray-500 hover:text-gray-700">
+                                        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                        </svg>
+                                </a>
+                                <h1 class="text-base sm:text-xl font-bold text-gray-800">สร้างใบขอซื้อใหม่</h1>
+                        </div>
+                        <div class="flex items-center gap-2">
+                                <span class="text-xs sm:text-sm text-gray-500 hidden sm:inline">สถานะ:</span>
+                                <span id="status-badge"
+                                        class="px-2 sm:px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs sm:text-sm font-medium">ร่าง</span>
+                        </div>
+                </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-5xl mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+
+                <!-- Section 1: ข้อมูลโครงการ -->
+                <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+                        <div class="flex items-center gap-2 mb-3 sm:mb-4">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                                <h2 class="text-base sm:text-lg font-bold text-blue-600">ข้อมูลโครงการ</h2>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                                <!-- ชื่อโครงการ (แสดงอัตโนมัติ) -->
+                                <div>
+                                        <label class="block text-sm text-gray-600 mb-1">โครงการ</label>
+                                        <input type="text" id="project_name" readonly
+                                                class="w-full px-4 py-2 border border-blue-300 rounded-lg bg-blue-50 text-blue-700 font-medium"
+                                                placeholder="กำลังโหลด...">
+                                        <input type="hidden" id="project_id">
+                                </div>
+                                <!-- งบประมาณ -->
+                                <div>
+                                        <label class="block text-sm text-gray-600 mb-1">งบประมาณ</label>
+                                        <input type="text" id="budget" readonly
+                                                class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500"
+                                                placeholder="กำลังโหลด...">
+                                </div>
+                                <!-- งบประมาณคงเหลือ -->
+                                <div>
+                                        <label class="block text-sm text-gray-600 mb-1">งบประมาณคงเหลือ</label>
+                                        <div class="flex items-center gap-2">
+                                                <input type="text" id="budget_remaining" readonly
+                                                        class="w-full px-4 py-2 border border-green-300 rounded-lg bg-green-50 text-green-600 font-medium"
+                                                        placeholder="กำลังโหลด...">
+                                                <span class="text-green-500"></span>
+                                        </div>
+                                </div>
+                        </div>
+                </div>
+
+                <!-- Section 2: ข้อมูลใบขอซื้อ -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <div class="flex items-center gap-2 mb-4">
+                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <h2 class="text-lg font-bold text-blue-600">ข้อมูลใบขอซื้อ</h2>
+                        </div>
+
+                        <!-- เรื่อง -->
+                        <div class="mb-4">
+                                <label class="block text-sm text-gray-600 mb-1">เรื่อง *</label>
+                                <input type="text" id="order_title"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        placeholder="ระบุเรื่องที่ต้องการขอซื้อ">
+                        </div>
+
+                        <!-- รายละเอียด -->
+                        <div class="mb-4">
+                                <label class="block text-sm text-gray-600 mb-1">รายละเอียด</label>
+                                <textarea id="order_description" rows="3"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        placeholder="ระบุรายละเอียดเพิ่มเติม หรือวัตถุประสงค์การขอซื้อ..."></textarea>
+                        </div>
+
+                        <!-- วันที่ต้องการใช้งาน + ชื่อร้านค้า -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                        <label class="block text-sm text-gray-600 mb-1">วันที่ต้องการใช้งาน</label>
+                                        <input type="date" id="required_date"
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                        <label class="block text-sm text-gray-600 mb-1">ชื่อร้านค้า/บริษัท</label>
+                                        <input type="text" id="vendor_name"
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                placeholder="ระบุชื่อร้านค้า (ถ้ามี)">
+                                </div>
+                        </div>
+                </div>
+
+                <!-- Section 3: รายการพัสดุ -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <div class="flex items-center gap-2 mb-4">
+                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                </svg>
+                                <h2 class="text-lg font-bold text-blue-600">รายการพัสดุ</h2>
+                        </div>
+
+                        <!-- Table Header -->
+                        <div class="grid grid-cols-12 gap-2 mb-2 text-sm text-gray-500 font-medium">
+                                <div class="col-span-5">รายการ</div>
+                                <div class="col-span-2 text-center">จำนวน</div>
+                                <div class="col-span-2 text-center">หน่วย</div>
+                                <div class="col-span-2 text-center">ราคา/หน่วย</div>
+                                <div class="col-span-1 text-center">ลบ</div>
+                        </div>
+
+                        <!-- Items Container -->
+                        <div id="items-container" class="space-y-2">
+                                <!-- Items will be added here -->
+                        </div>
+
+                        <!-- Add Item Button -->
+                        <button onclick="addItem()"
+                                class="mt-4 px-4 py-2 border-2 border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition flex items-center gap-2 font-medium">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 4v16m8-8H4" />
+                                </svg>
+                                เพิ่มรายการ
+                        </button>
+
+                        <!-- Total -->
+                        <div class="mt-6 pt-4 border-t border-gray-200 flex justify-end items-center gap-4">
+                                <span class="text-gray-600 font-medium">ยอดรวมประมาณการ:</span>
+                                <span id="total-amount" class="text-2xl font-bold text-blue-600">฿0.00</span>
+                        </div>
+                </div>
+
+                <!-- Section 4: เอกสารแนบ -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <div class="flex items-center gap-2 mb-4">
+                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
+                                <h2 class="text-lg font-bold text-blue-600">เอกสารแนบ</h2>
+                        </div>
+
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition cursor-pointer"
+                                onclick="document.getElementById('file-input').click()">
+                                <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <p class="text-gray-500 mb-2">ลากและวางไฟล์ที่นี่</p>
+                                <p class="text-gray-400 text-sm mb-3">หรือ</p>
+                                <button type="button"
+                                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                                        เลือกไฟล์
+                                </button>
+                                <input type="file" id="file-input" multiple class="hidden"
+                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png">
+                        </div>
+                        <div id="file-list" class="mt-4 space-y-2"></div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 flex justify-end gap-4">
+                        <button onclick="saveDraft()"
+                                class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition font-medium flex items-center gap-2">
+                                บันทึกฉบับร่าง
+                        </button>
+                        <button onclick="submitOrder()"
+                                class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium flex items-center gap-2">
+                                ส่งเพื่อขออนุมัติ
+                        </button>
+                </div>
+
+        </main>
+
+        <script>
+                // ตัวแปร Global
+                let itemCount = 0;
+                let projectId = null;
+                let projectData = null;
+                let currentEditOrderId = null; // สำหรับ Edit Mode
+
+                // โหลดข้อมูลเมื่อหน้าเว็บเปิด
+                document.addEventListener('DOMContentLoaded', async () => {
+                        // ตั้งค่าวันที่เริ่มต้น
+                        const today = new Date().toISOString().split('T')[0];
+                        document.getElementById('required_date').value = today;
+
+                        // ดึง project_id และ edit mode จาก URL
+                        const urlParams = new URLSearchParams(window.location.search);
+                        projectId = urlParams.get('project_id');
+                        const mode = urlParams.get('mode');
+                        const editOrderId = urlParams.get('order_id');
+
+                        // ถ้าเป็น edit mode ให้ดึง project_id จาก order
+                        if (mode === 'edit' && editOrderId) {
+                                try {
+                                        const res = await fetch(`/api/orders/${editOrderId}/`);
+                                        const order = await res.json();
+                                        if (res.ok && order.project_id) {
+                                                projectId = order.project_id;
+                                        }
+                                } catch (e) {
+                                        console.error('Error fetching order:', e);
+                                }
+                        }
+
+                        // ถ้าไม่มี project_id ให้กลับไปหน้าเลือกโครงการ
+                        if (!projectId) {
+                                Swal.fire({
+                                        icon: 'warning',
+                                        title: 'กรุณาเลือกโครงการก่อน',
+                                        text: 'คุณต้องเลือกโครงการจากหน้ารายการโครงการ',
+                                        confirmButtonText: 'ไปเลือกโครงการ'
+                                }).then(() => {
+                                        window.location.href = '/api/select_project/';
+                                });
+                                return;
+                        }
+
+                        // โหลดข้อมูลโครงการ
+                        await loadProjectInfo();
+
+                        // ตรวจสอบ edit mode (ใช้ตัวแปรจากข้างบน)
+                        if (mode === 'edit' && editOrderId) {
+                                await loadOrderForEdit(editOrderId);
+                        } else {
+                                // เพิ่มรายการสินค้าเริ่มต้น 1 รายการ
+                                addItem();
+                        }
+                });
+
+                // โหลดข้อมูลโครงการจาก API
+                async function loadProjectInfo() {
+                        try {
+                                const res = await fetch(`/api/projects/${projectId}/`);
+                                if (!res.ok) throw new Error('ไม่พบโครงการ');
+
+                                projectData = await res.json();
+
+                                // แสดงข้อมูลโครงการ
+                                document.getElementById('project_id').value = projectId;
+                                document.getElementById('project_name').value = projectData.project_name || projectData.name || 'ไม่พบชื่อโครงการ';
+
+                                const budgetTotal = parseFloat(projectData.budget_total || projectData.budget || 0);
+                                const budgetReserved = parseFloat(projectData.budget_reserved || 0);
+                                const budgetSpent = parseFloat(projectData.budget_spent || 0);
+                                const budgetRemaining = budgetTotal - budgetReserved - budgetSpent;
+
+                                document.getElementById('budget').value = `฿${budgetTotal.toLocaleString()}`;
+                                document.getElementById('budget_remaining').value = `฿${budgetRemaining.toLocaleString()}`;
+
+
+                        } catch (e) {
+                                console.error('Error loading project:', e);
+                                Swal.fire({
+                                        icon: 'error',
+                                        title: 'เกิดข้อผิดพลาด',
+                                        text: 'ไม่สามารถโหลดข้อมูลโครงการได้',
+                                        confirmButtonText: 'กลับไปเลือกโครงการ'
+                                }).then(() => {
+                                        window.location.href = '/api/select_project/';
+                                });
+                        }
+                }
+
+                // โหลดข้อมูล Order สำหรับแก้ไข
+                async function loadOrderForEdit(orderId) {
+                        try {
+                                const res = await fetch(`/api/orders/${orderId}/`);
+                                const order = await res.json();
+
+                                if (!res.ok) {
+                                        throw new Error(order.error || 'ไม่สามารถโหลดข้อมูลได้');
+                                }
+
+                                // ตรวจสอบว่าเป็น Draft
+                                if (order.status !== 'Draft') {
+                                        Swal.fire('Error', 'ไม่สามารถแก้ไขใบสั่งซื้อที่ส่งแล้ว', 'error')
+                                                .then(() => window.location.href = '/api/my-orders/');
+                                        return;
+                                }
+
+                                // โหลดข้อมูลเข้าฟอร์ม
+                                document.getElementById('order_title').value = order.order_title || '';
+                                document.getElementById('order_description').value = order.order_description || '';
+                                document.getElementById('required_date').value = order.required_date || '';
+                                document.getElementById('vendor_name').value = order.vendor_name || '';
+
+                                // โหลดรายการสินค้า
+                                if (order.items && order.items.length > 0) {
+                                        // ล้าง container
+                                        const container = document.getElementById('items-container');
+                                        if (container) container.innerHTML = '';
+
+                                        order.items.forEach(item => {
+                                                addItem(); // เพิ่มแถว
+                                                const rows = container.children;
+                                                const lastRow = rows[rows.length - 1];
+
+                                                if (lastRow) {
+                                                        const inputs = lastRow.querySelectorAll('input');
+                                                        if (inputs.length >= 4) {
+                                                                inputs[0].value = item.item_name || '';  // ชื่อสินค้า
+                                                                inputs[1].value = item.quantity_requested || 0;  // จำนวน
+                                                                inputs[2].value = item.unit || '';  // หน่วย
+                                                                inputs[3].value = item.estimated_unit_price || 0;  // ราคา
+                                                        }
+                                                }
+                                        });
+                                }
+
+                                // เก็บ order_id สำหรับการ update
+                                currentEditOrderId = orderId;
+
+                                // เปลี่ยนข้อความปุ่ม
+                                const saveButtons = document.querySelectorAll('button');
+                                saveButtons.forEach(btn => {
+                                        if (btn.textContent.includes('บันทึกฉบับร่าง')) {
+                                                btn.innerHTML = '💾 อัปเดตร่าง';
+                                        }
+                                });
+
+                        } catch (e) {
+                                console.error('Error loading order:', e);
+                                Swal.fire('Error', e.message, 'error')
+                                        .then(() => window.location.href = '/api/my-orders/');
+                        }
+                }
+
+
+                // เพิ่มรายการสินค้า
+                function addItem() {
+                        itemCount++;
+                        const container = document.getElementById('items-container');
+                        const row = document.createElement('div');
+                        row.id = `item-${itemCount}`;
+                        row.className = 'grid grid-cols-12 gap-2 items-center';
+                        row.innerHTML = `
+                <div class="col-span-5">
+                    <input type="text" class="item-name w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="ระบุรายการพัสดุ">
+                </div>
+                <div class="col-span-2">
+                    <input type="number" class="item-qty w-full px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500" value="1" min="1" onchange="calculateTotal()">
+                </div>
+                <div class="col-span-2">
+                    <input type="text" class="item-unit w-full px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500" placeholder="อัน">
+                </div>
+                <div class="col-span-2">
+                    <input type="number" class="item-price w-full px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500" value="0" min="0" step="0.01" onchange="calculateTotal()">
+                </div>
+                <div class="col-span-1 text-center">
+                    <button onclick="removeItem(${itemCount})" class="text-red-400 hover:text-red-600 p-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+                        container.appendChild(row);
+                }
+
+                // ลบรายการ
+                function removeItem(id) {
+                        document.getElementById(`item-${id}`)?.remove();
+                        calculateTotal();
+                }
+
+                // คำนวณยอดรวม
+                function calculateTotal() {
+                        let total = 0;
+                        document.querySelectorAll('#items-container > div').forEach(row => {
+                                const qty = parseFloat(row.querySelector('.item-qty')?.value) || 0;
+                                const price = parseFloat(row.querySelector('.item-price')?.value) || 0;
+                                total += qty * price;
+                        });
+                        document.getElementById('total-amount').textContent = `฿${total.toLocaleString()}`;
+                        return total;  // เพิ่ม return เพื่อใช้ใน submitOrder
+                }
+
+                // รวบรวมข้อมูลรายการ
+                function getItems() {
+                        const items = [];
+                        document.querySelectorAll('#items-container > div').forEach(row => {
+                                const item_name = row.querySelector('.item-name')?.value || '';
+                                const quantity_requested = parseFloat(row.querySelector('.item-qty')?.value) || 0;
+                                const unit = row.querySelector('.item-unit')?.value || 'อัน';
+                                const estimated_unit_price = parseFloat(row.querySelector('.item-price')?.value) || 0;
+
+                                if (item_name && quantity_requested > 0) {
+                                        items.push({
+                                                item_name,
+                                                quantity_requested,
+                                                unit,
+                                                estimated_unit_price,
+                                                status: 'Pending'
+                                        });
+                                }
+                        });
+                        return items;
+                }
+
+                // บันทึกร่าง
+                async function saveDraft() {
+                        const items = getItems();
+                        if (items.length === 0) {
+                                Swal.fire('Warning', 'กรุณาเพิ่มรายการพัสดุอย่างน้อย 1 รายการ', 'warning');
+                                return;
+                        }
+
+                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                        const total = items.reduce((sum, item) => sum + (item.quantity_requested * item.estimated_unit_price), 0);
+
+                        const orderData = {
+                                project_id: document.getElementById('project_id').value,
+                                requester_id: user.id,
+                                order_title: document.getElementById('order_title').value,
+                                order_description: document.getElementById('order_description').value,
+                                required_date: document.getElementById('required_date').value,
+                                vendor_name: document.getElementById('vendor_name').value,
+                                items: items,
+                                total_estimated_price: total,
+                                status: 'Draft'
+                        };
+
+                        try {
+                                const res = await fetch('/api/orders/', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(orderData)
+                                });
+                                const data = await res.json();
+
+                                if (res.ok) {
+                                        Swal.fire('สำเร็จ', 'บันทึกฉบับร่างเรียบร้อย', 'success')
+                                                .then(() => window.location.href = '/api/my-orders/');
+                                } else {
+                                        Swal.fire('Error', data.error, 'error');
+                                }
+                        } catch (e) {
+                                Swal.fire('Error', e.message, 'error');
+                        }
+                }
+
+                // ส่งเพื่อขออนุมัติ (พร้อมตรวจสอบงบประมาณ)
+                async function submitOrder() {
+                        try {
+                                const items = getItems();
+
+                                if (items.length === 0) {
+                                        Swal.fire('Warning', 'กรุณาเพิ่มรายการพัสดุอย่างน้อย 1 รายการ', 'warning');
+                                        return;
+                                }
+
+                                // ใช้ตัวแปร global projectId แทน getElementById
+                                if (!projectId) {
+                                        Swal.fire('Warning', 'กรุณาเลือกโครงการ', 'warning');
+                                        return;
+                                }
+
+                                const title = document.getElementById('order_title').value;
+                                console.log('title:', title);
+
+                                if (!title) {
+                                        Swal.fire('Warning', 'กรุณาระบุเรื่อง', 'warning');
+                                        return;
+                                }
+
+                                // ยืนยันก่อนส่ง
+                                const result = await Swal.fire({
+                                        title: 'ยืนยันการส่งเพื่อขออนุมัติ?',
+                                        html: `
+                                        <p>ยอดรวม: <strong>฿${calculateTotal().toLocaleString()}</strong></p>
+                                        <p class="text-sm text-gray-500 mt-2">เมื่อส่งแล้วระบบจะตัดงบสำรองอัตโนมัติ</p>
+                                `,
+                                        icon: 'question',
+                                        showCancelButton: true,
+                                        confirmButtonText: 'ส่งเลย',
+                                        cancelButtonText: 'ยกเลิก'
+                                });
+
+                                if (!result.isConfirmed) return;
+
+                                try {
+                                        // ขั้นตอน 1: บันทึก Draft ก่อน (ถ้ายังไม่มี order)
+                                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                                        const orderData = {
+                                                project_id: projectId,
+                                                requester_id: user.id,
+                                                order_title: title,
+                                                order_description: document.getElementById('order_description').value,
+                                                required_date: document.getElementById('required_date').value,
+                                                vendor_name: document.getElementById('vendor_name').value,
+                                                items: items,
+                                                total_estimated_price: calculateTotal(),
+                                                status: 'Draft'
+                                        };
+
+                                        // บันทึก Draft
+                                        const saveRes = await fetch('/api/orders/', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify(orderData)
+                                        });
+                                        const saveData = await saveRes.json();
+
+                                        if (!saveRes.ok) {
+                                                Swal.fire('Error', saveData.error || 'ไม่สามารถบันทึกได้', 'error');
+                                                return;
+                                        }
+
+                                        const orderId = saveData.id;  // API returns 'id' not 'order_id'
+
+                                        // ขั้นตอน 2: ส่งเพื่อขออนุมัติ (ตรวจสอบงบประมาณ)
+                                        const submitRes = await fetch(`/api/orders/${orderId}/submit/`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' }
+                                        });
+                                        const submitData = await submitRes.json();
+
+                                        if (submitRes.ok) {
+                                                Swal.fire({
+                                                        icon: 'success',
+                                                        title: 'สั่งซื้อสำเร็จ',
+                                                        html: `
+                                                        <p>ระบบตัดงบสำรองเรียบร้อย</p>
+                                                        <p class="text-sm text-gray-500">จำนวน ฿${submitData.reserved_amount?.toLocaleString()}</p>
+                                                `,
+                                                        confirmButtonText: 'ไปดูรายการ'
+                                                }).then(() => window.location.href = '/api/my-orders/');
+                                        } else {
+                                                // แสดง error (งบไม่พอ)
+                                                Swal.fire({
+                                                        icon: 'error',
+                                                        title: submitData.error || 'เกิดข้อผิดพลาด',
+                                                        html: submitData.budget_remaining !== undefined ? `
+                                                        <p>งบคงเหลือ: <strong>฿${submitData.budget_remaining?.toLocaleString()}</strong></p>
+                                                        <p>ยอดสั่งซื้อ: <strong>฿${submitData.order_total?.toLocaleString()}</strong></p>
+                                                        <p class="text-sm text-red-500 mt-2">กรุณาปรับลดยอดหรือติดต่อ Staff</p>
+                                                ` : submitData.error
+                                                });
+                                        }
+                                } catch (e) {
+                                        console.error('Submit error:', e);
+                                        Swal.fire('Error', e.message, 'error');
+                                }
+                        } catch (outerError) {
+                                console.error('Outer error:', outerError);
+                                alert('เกิดข้อผิดพลาด: ' + outerError.message);
+                        }
+                }
+
+                // File upload handling
+                document.getElementById('file-input').addEventListener('change', function (e) {
+                        const fileList = document.getElementById('file-list');
+                        Array.from(e.target.files).forEach(file => {
+                                const div = document.createElement('div');
+                                div.className = 'flex items-center justify-between bg-gray-50 px-4 py-2 rounded-lg';
+                                div.innerHTML = `
+                    <span class="text-sm text-gray-600">📎 ${file.name}</span>
+                    <button class="text-red-500 text-sm hover:underline">ลบ</button>
+                `;
+                                fileList.appendChild(div);
+                        });
+                });
+        </script>
+</body>
+
+</html>
