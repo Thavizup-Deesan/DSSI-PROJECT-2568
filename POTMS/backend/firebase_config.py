@@ -1,22 +1,27 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 import os
+import json
 from pathlib import Path
 
-# กำหนด Path ไปยังไฟล์ Base Directory (โฟลเดอร์ที่มี manage.py)
-# หมายเหตุ: การคำนวณ path อาจต่างกันเล็กน้อยตามโครงสร้าง แต่ถ้าไฟล์ json อยู่คู่กับ settings.py ให้ใช้แบบนี้
+# กำหนด Path ไปยังไฟล์ Base Directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ชื่อไฟล์ Key ที่คุณโหลดมา (แก้ชื่อให้ตรงกับไฟล์ของคุณ)
-KEY_FILE_NAME = 'firebase-key.json' 
-
-# สร้าง Path เต็มไปยังไฟล์ Key
-# สมมติว่าไฟล์ key อยู่ในโฟลเดอร์ backend (ที่เดียวกับไฟล์นี้)
-CERTIFICATE_PATH = os.path.join(BASE_DIR, 'backend', KEY_FILE_NAME)
-
-# ตรวจสอบว่าเคย Initialize ไปแล้วหรือยัง (เพื่อป้องกัน Error เวลา Run ซ้ำ)
+# ตรวจสอบว่าเคย Initialize ไปแล้วหรือยัง
 if not firebase_admin._apps:
-    cred = credentials.Certificate(CERTIFICATE_PATH)
+    # ลองอ่านจาก Environment Variable ก่อน (สำหรับ Vercel/Production)
+    firebase_key_json = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
+    
+    if firebase_key_json:
+        # ใช้ Environment Variable
+        cred_dict = json.loads(firebase_key_json)
+        cred = credentials.Certificate(cred_dict)
+    else:
+        # ใช้ไฟล์ JSON (สำหรับ Local Development)
+        KEY_FILE_NAME = 'firebase-key.json'
+        CERTIFICATE_PATH = os.path.join(BASE_DIR, 'backend', KEY_FILE_NAME)
+        cred = credentials.Certificate(CERTIFICATE_PATH)
+    
     firebase_admin.initialize_app(cred)
 
 # สร้างตัวแปร db เพื่อเอาไปใช้ใน views.py

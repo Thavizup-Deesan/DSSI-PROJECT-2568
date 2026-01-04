@@ -272,6 +272,10 @@
                         'CorrectionNeeded': { text: 'ต้องแก้ไข', class: 'bg-orange-100 text-orange-700' },
                         'Rejected': { text: 'ปฏิเสธ', class: 'bg-red-100 text-red-700' },
                         'SentToProcurement': { text: 'ส่งรายการให้พัสดุแล้ว', class: 'bg-indigo-100 text-indigo-700' },
+                        'ReceivedFromProcurement': { text: 'รับของจากพัสดุแล้ว', class: 'bg-teal-100 text-teal-700' },
+                        'WaitingInspection': { text: 'รอตรวจรับ', class: 'bg-cyan-100 text-cyan-700' },
+                        'Inspected': { text: 'ตรวจรับแล้ว', class: 'bg-green-100 text-green-700' },
+                        'Received': { text: 'รับของแล้ว', class: 'bg-blue-100 text-blue-700' },
                         'Closed': { text: 'ปิดแล้ว', class: 'bg-gray-200 text-gray-500' }
                 };
 
@@ -398,7 +402,7 @@
                         <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm text-gray-600">${date}</td>
                         <td class="px-4 sm:px-6 py-3 sm:py-4 text-sm text-gray-800 text-right font-medium">฿${price}</td>
                         <td class="px-4 sm:px-6 py-3 sm:py-4 text-center">
-                            <span class="px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${status.class}">
+                            <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${status.class}">
                                 ${status.text}
                             </span>
                         </td>
@@ -481,9 +485,9 @@
                 function prevPage() { if (currentPage > 1) { currentPage--; renderTable(); } }
                 function nextPage() { const totalPages = Math.ceil(filteredOrders.length / itemsPerPage); if (currentPage < totalPages) { currentPage++; renderTable(); } }
 
-                // View order detail
+                // View order detail (read-only page)
                 function viewOrder(orderId) {
-                        window.location.href = `/api/staff/orders/${orderId}/detail/`;
+                        window.location.href = `/api/staff/po/${orderId}/detail/`;
                 }
 
                 // Clear filters

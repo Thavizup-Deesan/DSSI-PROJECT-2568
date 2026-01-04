@@ -1,11 +1,40 @@
-from django.contrib.auth.hashers import make_password, check_password  # เพิ่มบรรทัดนี้ด้านบนสุด
+from django.contrib.auth.hashers import make_password, check_password
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from backend.firebase_config import db  # ดึงตัวเชื่อมต่อ DB ที่เราทำเมื่อกี้มาใช้
+from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission
+from backend.firebase_config import db
 import datetime
 from django.shortcuts import render
 import pandas as pd
+from django_ratelimit.decorators import ratelimit
+from django.utils.decorators import method_decorator
+
+# Import security validators
+from api.utils.validators import (
+    validate_order_items,
+    validate_order_description,
+    validate_order_title,
+    validate_status_transition,
+    validate_budget_amount
+)
+
+# Import audit logging
+from api.utils.audit import log_audit, get_client_ip, AUDIT_ACTIONS
+
+# Import authorization utilities
+from api.utils.authz import verify_staff_project_access, verify_order_ownership
+
+# Custom Permission Class for Staff-only actions
+class IsStaff(BasePermission):
+    """
+    Custom permission to only allow Staff users to access.
+    """
+    def has_permission(self, request, view):
+        # For session-based auth (current implementation)
+        user_role = request.session.get('user_role', '')
+        return user_role == 'Staff'
+
 
 class ProjectAPIView(APIView):
     # ฟังก์ชันดึงข้อมูล (Read) -- เพิ่มส่วนนี้ครับ --
@@ -181,8 +210,12 @@ class UserRegisterAPIView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(ratelimit(key='ip', rate='5/m', method='POST'), name='post')
 class UserLoginAPIView(APIView):
-    # ฟังก์ชันเข้าสู่ระบบ (Login)
+    """
+    User Login API
+    Rate Limit: 5 attempts per minute per IP
+    """
     def post(self, request):
         try:
             data = request.data
@@ -246,20 +279,46 @@ def register_page(request):
 
 
 class StatsAPIView(APIView):
-    """API สำหรับดึงสถิติแดชบอร์ด"""
+    """API สำหรับดึงสถิติแดชบอร์ด (นับจากฐานข้อมูลจริง)"""
     def get(self, request):
         try:
-            # นับจำนวนโครงการทั้งหมด
+            # 1. นับจำนวนโครงการทั้งหมด
+            # stream() คือการดึงข้อมูลทั้งหมดใน collection มา
             projects_ref = db.collection('projects').stream()
             total_projects = len(list(projects_ref))
 
-            # ในอนาคตสามารถเพิ่มการนับสถานะต่างๆ ได้
-            # ตอนนี้ใช้ค่า placeholder ก่อน (จะเปลี่ยนเมื่อมี field status ในโครงการ)
+            # 2. ดึงใบสั่งซื้อทั้งหมดมาเพื่อนับแยกสถานะ
+            orders_ref = db.collection('orders').stream()
+            
+            # สร้างตัวแปรเก็บตัวนับ
+            pending = 0
+            approved = 0
+            in_progress = 0
+            completed = 0
+            
+            # วนลูปดูใบสั่งซื้อทีละใบ
+            for doc in orders_ref:
+                data = doc.to_dict()
+                status = data.get('status')
+                
+                # เช็คเงื่อนไขและนับ
+                if status == 'Pending':
+                    pending += 1
+                elif status == 'Approved':
+                    approved += 1
+                # สถานะเหล่านี้ถือว่าเป็น "กำลังดำเนินการ" (รอหัวหน้า, รอแก้, ส่งพัสดุ)
+                elif status in ['WaitingBossApproval', 'CorrectionNeeded', 'SentToProcurement']:
+                    in_progress += 1
+                # สถานะนี้ถือว่า "เสร็จสิ้น" (รับของแล้ว)
+                elif status == 'ReceivedFromProcurement':
+                    completed += 1
+
+            # 3. ส่งผลลัพธ์กลับไปที่หน้าเว็บ
             stats = {
-                'pending': 0,           # รอดำเนินการ
-                'approved': 0,          # อนุมัติแล้ว
-                'in_progress': 0,       # กำลังดำเนินการ
-                'completed': total_projects,  # เสร็จสิ้น (นับจากจำนวนโครงการทั้งหมด)
+                'pending': pending,
+                'approved': approved,
+                'in_progress': in_progress,
+                'completed': completed,
                 'total_projects': total_projects
             }
 
@@ -565,7 +624,12 @@ def user_dashboard(request):
     """
     return render(request, 'user_dashboard.html')
 
+@method_decorator(ratelimit(key='user_or_ip', rate='10/h', method='POST'), name='post')
 class OrderAPIView(APIView):
+    """
+    Order Creation API
+    Rate Limit: 10 orders per hour per user/IP
+    """
     """
     API สำหรับจัดการรายการสั่งซื้อ
     
@@ -607,6 +671,19 @@ class OrderAPIView(APIView):
         try:
             data = request.data
             
+            # ✅ SECURITY: Validate inputs
+            items = data.get('items', [])
+            validate_order_items(items)  # Prevent XSS, negative values
+            
+            order_title = validate_order_title(data.get('order_title', ''))
+            order_description = validate_order_description(data.get('order_description', ''))
+            
+            # Validate total price
+            total_price = validate_budget_amount(
+                data.get('total_estimated_price', 0),
+                'Total price'
+            )
+            
             # สร้าง Order Number อัตโนมัติ (Format: PO-YYYYMMDD-XXX)
             today = datetime.datetime.now()
             date_str = today.strftime('%Y%m%d')
@@ -631,19 +708,19 @@ class OrderAPIView(APIView):
                 'requester_id': data.get('requester_id'),  # User ผู้สั่ง
                 'approver_id': None,  # Staff ผู้อนุมัติ (จะกำหนดทีหลัง)
                 
-                # Order Info
-                'order_no': order_no,  # สร้างอัตโนมัติ: PO-YYYYMMDD-XXX
-                'order_title': data.get('order_title', ''),
-                'order_description': data.get('order_description', ''),
+                # Order Info (sanitized)
+                'order_no': order_no,
+                'order_title': order_title,
+                'order_description': order_description,
                 'required_date': data.get('required_date'),
                 'vendor_name': data.get('vendor_name', ''),
                 
-                # Items & Total
-                'items': data.get('items', []),
-                'total_estimated_price': data.get('total_estimated_price', 0),
+                # Items & Total (validated)
+                'items': items,
+                'total_estimated_price': float(total_price),
                 
                 # Status
-                'status': data.get('status', 'Draft'),
+                'status': 'Draft',  # Always start as Draft
                 
                 # Metadata
                 'inspection_committee': '',
@@ -657,11 +734,17 @@ class OrderAPIView(APIView):
             
             return Response({
                 'id': doc_ref.id,
+                'order_no': order_no,
                 'message': 'สร้างรายการสั่งซื้อสำเร็จ'
             }, status=status.HTTP_201_CREATED)
             
-        except Exception as e:
+        except ValueError as e:
+            # Validation errors
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            # Log error but don't expose details
+            print(f"Order creation error: {str(e)}")
+            return Response({'error': 'Failed to create order'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 def create_order_view(request):
@@ -697,7 +780,12 @@ def my_orders_view(request):
     return render(request, 'my_orders.html')
 
 
+@method_decorator(ratelimit(key='user_or_ip', rate='20/h', method='POST'), name='post')
 class OrderSubmitAPIView(APIView):
+    """
+    Order Submission API
+    Rate Limit: 20 submissions per hour per user/IP
+    """
     """
     ===================================================================
     OrderSubmitAPIView - ส่งใบสั่งซื้อ (ตรวจสอบงบประมาณ)
@@ -718,63 +806,102 @@ class OrderSubmitAPIView(APIView):
     def post(self, request, order_id):
         try:
             # 1. ดึงข้อมูล Order
-            order_doc = db.collection('orders').document(order_id).get()
+            order_ref = db.collection('orders').document(order_id)
+            order_doc = order_ref.get()
             if not order_doc.exists:
                 return Response({'error': 'ไม่พบใบสั่งซื้อ'}, status=status.HTTP_404_NOT_FOUND)
             
             order_data = order_doc.to_dict()
+            current_status = order_data.get('status')
             
-            # ตรวจสอบว่าเป็น Draft เท่านั้น
-            if order_data.get('status') != 'Draft':
-                return Response({'error': 'ใบสั่งซื้อนี้ถูกส่งแล้ว'}, status=status.HTTP_400_BAD_REQUEST)
+            # ✅ SECURITY: Validate status transition
+            validate_status_transition(current_status, 'Pending')
             
             # 2. ดึงข้อมูล Project
             project_id = order_data.get('project_id')
-            project_doc = db.collection('projects').document(project_id).get()
+            project_ref = db.collection('projects').document(project_id)
             
-            if not project_doc.exists:
-                return Response({'error': 'ไม่พบโครงการ'}, status=status.HTTP_404_NOT_FOUND)
+            # Validate order total
+            order_total = validate_budget_amount(order_data.get('total_estimated_price', 0))
             
-            project_data = project_doc.to_dict()
+            # ✅ FIX RACE CONDITION: Use Firestore Transaction
+            # This ensures atomic read-check-write operation
+            from google.cloud.firestore_v1 import transactional
             
-            # 3. คำนวณงบคงเหลือ
-            budget_total = float(project_data.get('budget_total', 0))
-            budget_reserved = float(project_data.get('budget_reserved', 0))
-            budget_spent = float(project_data.get('budget_spent', 0))
-            budget_remaining = budget_total - budget_reserved - budget_spent
+            @transactional
+            def reserve_budget_atomic(transaction):
+                """
+                Atomic budget reservation with transaction
+                Prevents race condition when multiple users submit simultaneously
+                """
+                # Read in transaction
+                project_snapshot = project_ref.get(transaction=transaction)
+                
+                if not project_snapshot.exists:
+                    raise ValueError('ไม่พบโครงการ')
+                
+                project_data = project_snapshot.to_dict()
+                
+                # Calculate budget (atomic read)
+                budget_total = validate_budget_amount(project_data.get('budget_total', 0))
+                budget_reserved = validate_budget_amount(project_data.get('budget_reserved', 0))
+                budget_spent = validate_budget_amount(project_data.get('budget_spent', 0))
+                budget_remaining = budget_total - budget_reserved - budget_spent
+                
+                # Check if enough budget
+                if order_total > budget_remaining:
+                    raise ValueError(
+                        f'งบประมาณไม่เพียงพอ: คงเหลือ ฿{float(budget_remaining):,.2f} '
+                        f'แต่ต้องการ ฿{float(order_total):,.2f}'
+                    )
+                
+                # Update atomically (all or nothing)
+                new_budget_reserved = budget_reserved + order_total
+                
+                transaction.update(project_ref, {
+                    'budget_reserved': float(new_budget_reserved),
+                    'updated_at': datetime.datetime.now()
+                })
+                
+                transaction.update(order_ref, {
+                    'status': 'Pending',
+                    'submitted_at': datetime.datetime.now(),
+                    'updated_at': datetime.datetime.now()
+                })
+                
+                return float(new_budget_reserved)
             
-            # 4. ตรวจสอบงบประมาณ
-            order_total = float(order_data.get('total_estimated_price', 0))
-            
-            if order_total > budget_remaining:
-                return Response({
-                    'error': 'งบประมาณไม่เพียงพอ',
-                    'budget_remaining': budget_remaining,
-                    'order_total': order_total
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # 5. อัปเดตสถานะ Order เป็น Pending (ยังไม่หักงบ - รอหัวหน้าอนุมัติก่อน)
-            db.collection('orders').document(order_id).update({
-                'status': 'Pending',
-                'submitted_at': datetime.datetime.now(),
-                'updated_at': datetime.datetime.now()
-            })
+            # Execute transaction
+            transaction = db.transaction()
+            new_budget_reserved = reserve_budget_atomic(transaction)
             
             return Response({
                 'message': 'ส่งใบสั่งซื้อเรียบร้อย กรุณารอการอนุมัติ',
                 'order_id': order_id,
-                'new_status': 'Pending'
+                'new_status': 'Pending',
+                'budget_reserved': new_budget_reserved
             }, status=status.HTTP_200_OK)
             
-        except Exception as e:
+        except ValueError as e:
+            # Validation or budget error
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Submit order error: {str(e)}")
+            return Response({'error': 'Failed to submit order'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ==========================================================================
 # ORDER APPROVAL APIs - ระบบอนุมัติ/ปฏิเสธใบสั่งซื้อ (Staff)
 # ==========================================================================
 
+@method_decorator(ratelimit(key='user', rate='50/h', method='POST'), name='post')
 class OrderApproveAPIView(APIView):
+    """
+    Staff Order Approval API
+    Rate Limit: 50 approvals per hour per user
+    """
+    permission_classes = [IsStaff]  # ✅ Only Staff can approve
+    
     """
     ===================================================================
     OrderApproveAPIView - Staff อนุมัติใบสั่งซื้อ (ขั้นแรก)
@@ -796,10 +923,18 @@ class OrderApproveAPIView(APIView):
                 return Response({'error': 'ไม่พบใบสั่งซื้อ'}, status=status.HTTP_404_NOT_FOUND)
             
             order_data = order_doc.to_dict()
+            current_status = order_data.get('status')
+            project_id = order_data.get('project_id')
             
-            # 2. ตรวจสอบว่าเป็น Pending เท่านั้น
-            if order_data.get('status') != 'Pending':
-                return Response({'error': 'ใบสั่งซื้อนี้ไม่อยู่ในสถานะรออนุมัติ'}, status=status.HTTP_400_BAD_REQUEST)
+            # ✅ SECURITY: Validate status transition
+            validate_status_transition(current_status, 'WaitingBossApproval')
+            
+            # ✅ SECURITY: Verify staff has access to this project
+            staff_id = request.session.get('user_id', approver_id)
+            if not verify_staff_project_access(staff_id, project_id):
+                return Response({
+                    'error': 'คุณไม่มีสิทธิ์อนุมัติใบสั่งซื้อจากโครงการนี้'
+                }, status=status.HTTP_403_FORBIDDEN)
             
             # 3. ดึง approver_id จาก request
             approver_id = request.data.get('approver_id', '')
@@ -811,17 +946,31 @@ class OrderApproveAPIView(APIView):
                 'updated_at': datetime.datetime.now()
             })
             
+            # ✅ AUDIT: Log approval action
+            log_audit(
+                action=AUDIT_ACTIONS['ORDER_APPROVED'],
+                user_id=request.session.get('user_id', approver_id),
+                resource_type='order',
+                resource_id=order_id,
+                details={'new_status': 'WaitingBossApproval'},
+                ip_address=get_client_ip(request)
+            )
+            
             return Response({
                 'message': 'ส่งเรื่องรอหัวหน้าอนุมัติเรียบร้อย กรุณาพิมพ์ใบสั่งซื้อและเสนอหัวหน้าเซ็น',
                 'order_id': order_id,
                 'new_status': 'WaitingBossApproval'
             }, status=status.HTTP_200_OK)
             
-        except Exception as e:
+        except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Approval error: {str(e)}")
+            return Response({'error': 'Failed to approve order'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class OrderRejectAPIView(APIView):
+    permission_classes = [IsStaff]  # ✅ Only Staff can reject
     """
     ===================================================================
     OrderRejectAPIView - ปฏิเสธใบสั่งซื้อ
@@ -967,6 +1116,8 @@ class OrderCorrectionAPIView(APIView):
 
 
 class OrderBossApproveAPIView(APIView):
+    permission_classes = [IsStaff]  # ✅ Only Staff can mark as boss approved
+    
     """
     ===================================================================
     OrderBossApproveAPIView - หัวหน้าอนุมัติใบสั่งซื้อ (ขั้นสอง)
@@ -988,41 +1139,41 @@ class OrderBossApproveAPIView(APIView):
                 return Response({'error': 'ไม่พบใบสั่งซื้อ'}, status=status.HTTP_404_NOT_FOUND)
             
             order_data = order_doc.to_dict()
+            current_status = order_data.get('status')
             
-            # 2. ตรวจสอบว่าเป็น WaitingBossApproval เท่านั้น
-            if order_data.get('status') != 'WaitingBossApproval':
-                return Response({'error': 'ใบสั่งซื้อนี้ไม่อยู่ในสถานะรอหัวหน้าอนุมัติ'}, status=status.HTTP_400_BAD_REQUEST)
+            # ✅ SECURITY: Validate status transition 
+            validate_status_transition(current_status, 'Approved')
             
-            # 3. ตัดงบสำรอง (Reserve) - หักงบตอนหัวหน้าอนุมัติ
-            project_id = order_data.get('project_id')
-            order_total = float(order_data.get('total_estimated_price', 0))
-            
-            project_doc = db.collection('projects').document(project_id).get()
-            if project_doc.exists:
-                project_data = project_doc.to_dict()
-                budget_reserved = float(project_data.get('budget_reserved', 0))
-                new_reserved = budget_reserved + order_total
-                
-                db.collection('projects').document(project_id).update({
-                    'budget_reserved': new_reserved
-                })
-            
-            # 4. อัปเดตสถานะ Order เป็น Approved
+            # 3. อัปเดตสถานะ Order เป็น Approved เท่านั้น
+            # ⚠️ FIX: ไม่ตัดงบที่นี่ - จะตัดตอน Inspection เมื่อทราบราคาจ่ายจริง
             db.collection('orders').document(order_id).update({
                 'status': 'Approved',
                 'approved_at': datetime.datetime.now(),
                 'updated_at': datetime.datetime.now()
             })
             
+            # ✅ AUDIT: Log boss approval
+            log_audit(
+                action=AUDIT_ACTIONS['ORDER_BOSS_APPROVED'],
+                user_id=request.session.get('user_id', 'boss'),
+                resource_type='order',
+                resource_id=order_id,
+                details={'new_status': 'Approved'},
+                ip_address=get_client_ip(request)
+            )
+            
             return Response({
-                'message': 'หัวหน้าเซ็นอนุมัติเรียบร้อย งบประมาณถูกจองแล้ว',
+                'message': 'หัวหน้าเซ็นอนุมัติเรียบร้อย',
                 'order_id': order_id,
                 'new_status': 'Approved',
-                'reserved_amount': order_total
+                'note': 'งบประมาณจะถูกย้ายจาก Reserved → Spent ตอนตรวจรับสินค้า'
             }, status=status.HTTP_200_OK)
             
-        except Exception as e:
+        except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Boss approval error: {str(e)}")
+            return Response({'error': 'Failed to approve order'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class OrderSendToProcurementAPIView(APIView):
@@ -1062,6 +1213,435 @@ class OrderSendToProcurementAPIView(APIView):
                 'message': 'ส่งให้พัสดุเรียบร้อย',
                 'order_id': order_id,
                 'new_status': 'SentToProcurement'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==========================================================================
+# RECEIVE FROM PROCUREMENT API - รับของจากพัสดุ (Phase 4)
+# ==========================================================================
+
+class OrderReceiveFromProcurementAPIView(APIView):
+    """
+    ===================================================================
+    OrderReceiveFromProcurementAPIView - รับของจากพัสดุ
+    ===================================================================
+    
+    Staff บันทึกเมื่อพัสดุส่งของมา
+    
+    Flow: SentToProcurement → ReceivedFromProcurement
+    
+    Method: POST /api/orders/<order_id>/receive-procurement/
+    
+    Actions:
+    - เปลี่ยนสถานะ: SentToProcurement → ReceivedFromProcurement
+    - บันทึก received_from_procurement_at (timestamp)
+    ===================================================================
+    """
+    def post(self, request, order_id):
+        try:
+            # 1. ดึงข้อมูล Order
+            order_doc = db.collection('orders').document(order_id).get()
+            if not order_doc.exists:
+                return Response({'error': 'ไม่พบใบสั่งซื้อ'}, status=status.HTTP_404_NOT_FOUND)
+            
+            order_data = order_doc.to_dict()
+            
+            # 2. ตรวจสอบว่าเป็น SentToProcurement เท่านั้น
+            if order_data.get('status') != 'SentToProcurement':
+                return Response({'error': 'ใบสั่งซื้อนี้ยังไม่ได้ส่งให้พัสดุ'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 3. อัปเดตสถานะ Order เป็น ReceivedFromProcurement
+            db.collection('orders').document(order_id).update({
+                'status': 'ReceivedFromProcurement',
+                'received_from_procurement_at': datetime.datetime.now(),
+                'updated_at': datetime.datetime.now()
+            })
+            
+            return Response({
+                'message': 'บันทึกการรับของจากพัสดุเรียบร้อย',
+                'order_id': order_id,
+                'new_status': 'ReceivedFromProcurement'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==========================================================================
+# SUB-ORDER CREATE API - สร้าง Sub-order (Phase 4)
+# ==========================================================================
+
+class SubOrderCreateAPIView(APIView):
+    """
+    ===================================================================
+    SubOrderCreateAPIView - สร้าง Sub-order
+    ===================================================================
+    
+    Staff สร้าง Sub-order เพื่อแยกรายการที่ได้รับจากพัสดุ
+    (กรณีของมาไม่ครบงวดเดียว)
+    
+    Flow: ReceivedFromProcurement → WaitingInspection
+    
+    Method: POST /api/orders/<order_id>/create-suborder/
+    
+    Body: {
+        "items": [
+            {"item_name": "...", "quantity": 5, "unit": "ชิ้น"},
+            ...
+        ],
+        "notes": "หมายเหตุ (optional)"
+    }
+    
+    Actions:
+    - สร้าง sub_order document ใน Firebase collection 'sub_orders'
+    - Generate suborder_no อัตโนมัติ (SUB-0001, SUB-0002, ...)
+    - เปลี่ยนสถานะ order → WaitingInspection
+    ===================================================================
+    """
+    def post(self, request, order_id):
+        try:
+            # 1. ดึงข้อมูล Order
+            order_doc = db.collection('orders').document(order_id).get()
+            if not order_doc.exists:
+                return Response({'error': 'ไม่พบใบสั่งซื้อ'}, status=status.HTTP_404_NOT_FOUND)
+            
+            order_data = order_doc.to_dict()
+            
+            # 2. ตรวจสอบสถานะ - ต้องเป็น ReceivedFromProcurement เท่านั้น
+            if order_data.get('status') != 'ReceivedFromProcurement':
+                return Response({
+                    'error': 'ใบสั่งซื้อนี้ยังไม่ได้รับของจากพัสดุ'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 3. รับข้อมูลจาก request
+            items = request.data.get('items', [])
+            notes = request.data.get('notes', '')
+            
+            if not items:
+                return Response({'error': 'กรุณาเลือกรายการสินค้า'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 4. Generate suborder_no
+            # นับจำนวน sub_orders ที่มีอยู่ของ order นี้
+            existing_suborders = db.collection('sub_orders').where(
+                'parent_order_id', '==', order_id
+            ).get()
+            suborder_count = len(list(existing_suborders)) + 1
+            suborder_no = f"SUB-{order_data.get('order_no', order_id[-4:])}-{suborder_count:03d}"
+            
+            # 5. คำนวณยอดรวมของ Sub-order และ Normalize field names
+            total_amount = 0
+            normalized_items = []
+            for item in items:
+                qty = float(item.get('quantity', item.get('quantity_requested', 0)))
+                price = float(item.get('unit_price', item.get('estimated_unit_price', 0)))
+                total_amount += qty * price
+                
+                # Normalize item data to ensure consistent field names
+                normalized_item = {
+                    'item_name': item.get('item_name', item.get('name', '-')),
+                    'quantity': qty,
+                    'unit': item.get('unit', '-'),
+                    'unit_price': price,
+                    'subtotal': qty * price
+                }
+                normalized_items.append(normalized_item)
+            
+            # 6. สร้าง Sub-order document
+            suborder_data = {
+                'parent_order_id': order_id,
+                'suborder_no': suborder_no,
+                'items': normalized_items,  # Use normalized items
+                'total_amount': total_amount,
+                'notes': notes,
+                'status': 'WaitingInspection',
+                'created_at': datetime.datetime.now(),
+                'updated_at': datetime.datetime.now()
+            }
+            
+            # เพิ่มเข้า Firestore
+            suborder_ref = db.collection('sub_orders').add(suborder_data)
+            suborder_id = suborder_ref[1].id
+            
+            # 7. อัปเดตสถานะ Order เป็น WaitingInspection และเก็บ suborder_id
+            db.collection('orders').document(order_id).update({
+                'status': 'WaitingInspection',
+                'current_suborder_id': suborder_id,  # เก็บ suborder_id สำหรับตรวจรับ
+                'updated_at': datetime.datetime.now()
+            })
+            
+            return Response({
+                'message': 'สร้าง Sub-order เรียบร้อย',
+                'suborder_id': suborder_id,
+                'suborder_no': suborder_no,
+                'order_status': 'WaitingInspection'
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==========================================================================
+# INSPECTION API - ตรวจรับสินค้า + สร้าง QR Code (Phase 4)
+# ==========================================================================
+
+class InspectionAPIView(APIView):
+    """
+    ===================================================================
+    InspectionAPIView - ตรวจรับสินค้า + สร้าง QR Code
+    ===================================================================
+    
+    Staff ตรวจรับสินค้าจาก Sub-order พร้อมสร้าง QR Code
+    
+    Flow: WaitingInspection → Inspected
+    
+    Method: POST /api/suborders/<suborder_id>/inspection/
+    
+    Body: {
+        "actual_cost": 50000,
+        "inspector_name": "ชื่อผู้ตรวจรับ",
+        "notes": "หมายเหตุ (optional)"
+    }
+    
+    Actions:
+    - ตรวจสอบ Sub-order
+    - สร้าง QR Code (base64)
+    - บันทึก actual_cost
+    - ปรับงบประมาณ (ถ้า actual ≠ estimated)
+    - เปลี่ยนสถานะ → Inspected
+    ===================================================================
+    """
+    def post(self, request, suborder_id):
+        try:
+            import qrcode
+            import io
+            import base64
+            import json
+            
+            # 1. ดึงข้อมูล Sub-order
+            suborder_doc = db.collection('sub_orders').document(suborder_id).get()
+            if not suborder_doc.exists:
+                return Response({'error': 'ไม่พบ Sub-order'}, status=status.HTTP_404_NOT_FOUND)
+            
+            suborder_data = suborder_doc.to_dict()
+            
+            # 2. ตรวจสอบสถานะ - ต้องเป็น WaitingInspection เท่านั้น
+            if suborder_data.get('status') != 'WaitingInspection':
+                return Response({
+                    'error': 'Sub-order นี้ไม่อยู่ในสถานะรอตรวจรับ'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 3. รับข้อมูลจาก request
+            actual_cost = float(request.data.get('actual_cost', 0))
+            inspector_name = request.data.get('inspector_name', '')
+            notes = request.data.get('notes', '')
+            
+            if actual_cost <= 0:
+                return Response({'error': 'กรุณาระบุยอดจ่ายจริง'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not inspector_name:
+                return Response({'error': 'กรุณาระบุชื่อผู้ตรวจรับ'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 4. สร้าง QR Code - ใช้ Full URL ที่สแกนเปิดหน้าตรวจเช็คได้เลย
+            # ดึง host จาก request เพื่อสร้าง full URL
+            host = request.get_host()  # เช่น 127.0.0.1:8000 หรือ 192.168.1.100:8000
+            scheme = 'https' if request.is_secure() else 'http'
+            scan_url = f"{scheme}://{host}/api/scan/{suborder_id}/"
+            
+            # สร้าง QR Code
+            qr = qrcode.QRCode(version=1, box_size=10, border=5)
+            qr.add_data(scan_url)
+            qr.make(fit=True)
+            
+            # แปลงเป็น base64
+            img = qr.make_image(fill_color="black", back_color="white")
+            buffer = io.BytesIO()
+            img.save(buffer, format='PNG')
+            qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            
+            # 5. ✅ FIX: ย้ายงบจาก Reserved → Spent ที่นี่ (เมื่อทราบราคาจ่ายจริง)
+            parent_order_id = suborder_data.get('parent_order_id')
+            order_doc = db.collection('orders').document(parent_order_id).get()
+            
+            if order_doc.exists:
+                order_data = order_doc.to_dict()
+                project_id = order_data.get('project_id')
+                order_total = float(order_data.get('total_estimated_price', 0))
+                
+                project_doc = db.collection('projects').document(project_id).get()
+                if project_doc.exists:
+                    project_data = project_doc.to_dict()
+                    budget_reserved = float(project_data.get('budget_reserved', 0))
+                    budget_spent = float(project_data.get('budget_spent', 0))
+                    
+                    # ลดจาก Reserved
+                    new_reserved = max(0, budget_reserved - order_total)
+                    
+                    # เพิ่มใน Spent ด้วยยอดจ่ายจริง (actual_cost)
+                    new_spent = budget_spent + actual_cost
+                    
+                    db.collection('projects').document(project_id).update({
+                        'budget_reserved': new_reserved,
+                        'budget_spent': new_spent,
+                        'updated_at': datetime.datetime.now()
+                    })
+            
+            # 6. อัปเดต Sub-order
+            db.collection('sub_orders').document(suborder_id).update({
+                'status': 'Inspected',
+                'actual_cost': actual_cost,
+                'inspector_name': inspector_name,
+                'inspection_notes': notes,
+                'qr_code': qr_base64,
+                'inspected_at': datetime.datetime.now(),
+                'updated_at': datetime.datetime.now()
+            })
+            
+            # 7. อัปเดต Order status เป็น Inspected ด้วย
+            parent_order_id = suborder_data.get('parent_order_id')
+            if parent_order_id:
+                db.collection('orders').document(parent_order_id).update({
+                    'status': 'Inspected',
+                    'actual_cost': actual_cost,
+                    'inspected_at': datetime.datetime.now(),
+                    'updated_at': datetime.datetime.now()
+                })
+            
+            return Response({
+                'message': 'ตรวจรับเรียบร้อย',
+                'suborder_id': suborder_id,
+                'suborder_no': suborder_data.get('suborder_no'),
+                'new_status': 'Inspected',
+                'actual_cost': actual_cost,
+                'cost_difference': cost_difference,
+                'qr_code': f'data:image/png;base64,{qr_base64}'
+            }, status=status.HTTP_200_OK)
+            
+        except ImportError:
+            return Response({
+                'error': 'กรุณาติดตั้ง qrcode library: pip install qrcode[pil]'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==========================================================================
+# HANDOVER API - จ่ายของให้ผู้ขอซื้อ (Phase 4)
+# ==========================================================================
+
+class HandoverAPIView(APIView):
+    """
+    ===================================================================
+    HandoverAPIView - จ่ายของให้ผู้ขอซื้อ
+    ===================================================================
+    
+    Staff จ่ายของที่ตรวจรับแล้วให้ User
+    
+    Flow: Inspected → Received
+    
+    Method: POST /api/orders/<order_id>/handover/
+    
+    Body: {
+        "receiver_name": "ชื่อผู้รับของ",
+        "notes": "หมายเหตุ (optional)"
+    }
+    ===================================================================
+    """
+    def post(self, request, order_id):
+        try:
+            # 1. ดึงข้อมูล Order
+            order_doc = db.collection('orders').document(order_id).get()
+            if not order_doc.exists:
+                return Response({'error': 'ไม่พบใบสั่งซื้อ'}, status=status.HTTP_404_NOT_FOUND)
+            
+            order_data = order_doc.to_dict()
+            
+            # 2. ตรวจสอบสถานะ - ต้องเป็น Inspected เท่านั้น
+            if order_data.get('status') != 'Inspected':
+                return Response({
+                    'error': 'ใบสั่งซื้อนี้ยังไม่ได้ตรวจรับ'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 3. รับข้อมูลจาก request
+            receiver_name = request.data.get('receiver_name', '')
+            notes = request.data.get('notes', '')
+            
+            if not receiver_name:
+                return Response({'error': 'กรุณาระบุชื่อผู้รับของ'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 4. อัปเดต Order
+            db.collection('orders').document(order_id).update({
+                'status': 'Received',
+                'receiver_name': receiver_name,
+                'handover_notes': notes,
+                'received_at': datetime.datetime.now(),
+                'updated_at': datetime.datetime.now()
+            })
+            
+            return Response({
+                'message': 'จ่ายของเรียบร้อย',
+                'order_id': order_id,
+                'new_status': 'Received',
+                'receiver_name': receiver_name
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==========================================================================
+# CLOSE ORDER API - ปิดงาน (Phase 4)
+# ==========================================================================
+
+class CloseOrderAPIView(APIView):
+    """
+    ===================================================================
+    CloseOrderAPIView - ปิดการสั่งซื้อ
+    ===================================================================
+    
+    Staff ปิดการสั่งซื้อหลังจากจ่ายของเรียบร้อยแล้ว
+    
+    Flow: Received → Closed
+    
+    Method: POST /api/orders/<order_id>/close/
+    
+    Body: {
+        "notes": "หมายเหตุปิดงาน (optional)"
+    }
+    ===================================================================
+    """
+    def post(self, request, order_id):
+        try:
+            # 1. ดึงข้อมูล Order
+            order_doc = db.collection('orders').document(order_id).get()
+            if not order_doc.exists:
+                return Response({'error': 'ไม่พบใบสั่งซื้อ'}, status=status.HTTP_404_NOT_FOUND)
+            
+            order_data = order_doc.to_dict()
+            
+            # 2. ตรวจสอบสถานะ - ต้องเป็น Received เท่านั้น
+            if order_data.get('status') != 'Received':
+                return Response({
+                    'error': 'ใบสั่งซื้อนี้ยังไม่ได้จ่ายของ'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 3. รับข้อมูลจาก request
+            notes = request.data.get('notes', '')
+            
+            # 4. อัปเดต Order
+            db.collection('orders').document(order_id).update({
+                'status': 'Closed',
+                'close_notes': notes,
+                'closed_at': datetime.datetime.now(),
+                'updated_at': datetime.datetime.now()
+            })
+            
+            return Response({
+                'message': 'ปิดงานเรียบร้อย',
+                'order_id': order_id,
+                'new_status': 'Closed'
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
@@ -1174,18 +1754,19 @@ class OrderApprovedCorrectionAPIView(APIView):
             if order_data.get('status') != 'Approved':
                 return Response({'error': 'ใบสั่งซื้อนี้ไม่อยู่ในสถานะหัวหน้าเซ็นอนุมัติแล้ว'}, status=status.HTTP_400_BAD_REQUEST)
             
-            # 4. คืนงบประมาณ
+            # 4. คืนงบประมาณ (ลบจาก Spent เพราะ Approved แล้ว = เงินอยู่ใน Spent)
             project_id = order_data.get('project_id')
             order_total = float(order_data.get('total_estimated_price', 0))
             
             project_doc = db.collection('projects').document(project_id).get()
             if project_doc.exists:
                 project_data = project_doc.to_dict()
-                budget_reserved = float(project_data.get('budget_reserved', 0))
-                new_reserved = max(0, budget_reserved - order_total)
+                budget_spent = float(project_data.get('budget_spent', 0))
+                new_spent = max(0, budget_spent - order_total)
                 
                 db.collection('projects').document(project_id).update({
-                    'budget_reserved': new_reserved
+                    'budget_spent': new_spent,
+                    'updated_at': datetime.datetime.now()
                 })
             
             # 5. อัปเดตสถานะ Order เป็น CorrectionNeeded
@@ -1548,3 +2129,296 @@ def staff_po_management_view(request):
     ===================================================================
     """
     return render(request, 'staff_po_management.html')
+
+
+def staff_po_detail_view(request, order_id):
+    """
+    ===================================================================
+    staff_po_detail_view - หน้าดูรายละเอียดใบสั่งซื้อ (View Only)
+    ===================================================================
+    
+    URL: /api/staff/po/<order_id>/detail/
+    
+    Purpose:
+    - แสดงรายละเอียดใบสั่งซื้อ (ดูอย่างเดียว ไม่มีปุ่มอนุมัติ)
+    - ใช้จากหน้ารายการใบสั่งซื้อ (PO Management)
+    - กลับหน้า PO Management
+    ===================================================================
+    """
+    return render(request, 'staff_po_detail.html', {'order_id': order_id})
+
+
+# ==========================================================================
+# SCAN QR CODE - หน้าสแกน QR Code ตรวจเช็คสินค้า
+# ==========================================================================
+
+def scan_suborder_view(request, suborder_id):
+    """
+    ===================================================================
+    scan_suborder_view - หน้าตรวจเช็คสินค้าจาก QR Code
+    ===================================================================
+    
+    URL: /api/scan/<suborder_id>/
+    
+    Purpose:
+    - แสดงข้อมูล Sub-order จากการสแกน QR Code
+    - ใช้บนมือถือ/แท็บเล็ต
+    - แสดงรายการสินค้า, ยอดเงิน, ผู้ตรวจรับ
+    ===================================================================
+    """
+    return render(request, 'scan_suborder.html', {'suborder_id': suborder_id})
+
+
+class ScanSuborderDataAPIView(APIView):
+    """
+    ===================================================================
+    ScanSuborderDataAPIView - API ดึงข้อมูล Sub-order สำหรับหน้าสแกน
+    ===================================================================
+    
+    URL: GET /api/scan/<suborder_id>/data/
+    
+    Returns:
+    - ข้อมูล Sub-order พร้อม Order และ Project info
+    ===================================================================
+    """
+    def get(self, request, suborder_id):
+        try:
+            # 1. ดึงข้อมูล Sub-order
+            suborder_doc = db.collection('sub_orders').document(suborder_id).get()
+            if not suborder_doc.exists:
+                return Response({'error': 'ไม่พบ Sub-order'}, status=status.HTTP_404_NOT_FOUND)
+            
+            suborder_data = suborder_doc.to_dict()
+            suborder_data['id'] = suborder_doc.id
+            
+            # 2. ดึงข้อมูล Parent Order
+            parent_order_id = suborder_data.get('parent_order_id')
+            order_no = '-'
+            project_name = '-'
+            
+            if parent_order_id:
+                order_doc = db.collection('orders').document(parent_order_id).get()
+                if order_doc.exists:
+                    order_data = order_doc.to_dict()
+                    order_no = order_data.get('order_no', '-')
+                    
+                    # 3. ดึงข้อมูล Project
+                    project_id = order_data.get('project_id')
+                    if project_id:
+                        project_doc = db.collection('projects').document(project_id).get()
+                        if project_doc.exists:
+                            project_data = project_doc.to_dict()
+                            project_name = project_data.get('project_name', '-')
+            
+            # 4. แปลง timestamp เป็น string
+            inspected_at = suborder_data.get('inspected_at')
+            if inspected_at:
+                suborder_data['inspected_at'] = inspected_at.isoformat() if hasattr(inspected_at, 'isoformat') else str(inspected_at)
+            
+            # 5. เพิ่มข้อมูล order และ project
+            suborder_data['order_no'] = order_no
+            suborder_data['project_name'] = project_name
+            
+            # 6. Ensure QR Code has prefix
+            qr_code = suborder_data.get('qr_code')
+            if qr_code and not qr_code.startswith('data:image'):
+                suborder_data['qr_code'] = f"data:image/png;base64,{qr_code}"
+            
+            return Response(suborder_data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==========================================================================
+# BUDGET SUMMARY API - สรุปงบประมาณรวม (Phase 4: Reports)
+# ==========================================================================
+
+class BudgetSummaryAPIView(APIView):
+    """
+    ===================================================================
+    BudgetSummaryAPIView - ดึงข้อมูลสรุปงบประมาณทุกโครงการ
+    ===================================================================
+    
+    Endpoint: GET /api/budget-summary/
+    
+    Returns:
+        JSON: {
+            total_budget: float,
+            total_spent: float,
+            total_reserved: float,
+            total_remaining: float,
+            projects: [...]
+        }
+    ===================================================================
+    """
+    
+    def get(self, request):
+        try:
+            # 1. ดึงข้อมูลโครงการทั้งหมด
+            projects_ref = db.collection('projects')
+            projects_docs = projects_ref.stream()
+            
+            total_budget = 0
+            total_spent = 0
+            total_reserved = 0
+            projects_list = []
+            
+            for doc in projects_docs:
+                project = doc.to_dict()
+                project_id = doc.id
+                
+                budget_total = float(project.get('budget_total', 0))
+                budget_spent = float(project.get('budget_spent', 0))
+                budget_reserved = float(project.get('budget_reserved', 0))
+                budget_remaining = budget_total - budget_spent - budget_reserved
+                
+                # สะสมยอดรวม
+                total_budget += budget_total
+                total_spent += budget_spent
+                total_reserved += budget_reserved
+                
+                # คำนวณเปอร์เซนต์การใช้งาน
+                usage_percent = 0
+                if budget_total > 0:
+                    usage_percent = round(((budget_spent + budget_reserved) / budget_total) * 100, 1)
+                
+                projects_list.append({
+                    'project_id': project_id,
+                    'project_name': project.get('project_name', '-'),
+                    'budget_total': budget_total,
+                    'budget_spent': budget_spent,
+                    'budget_reserved': budget_reserved,
+                    'budget_remaining': max(0, budget_remaining),
+                    'usage_percent': usage_percent,
+                    'status': project.get('status', 'Active')
+                })
+            
+            total_remaining = total_budget - total_spent - total_reserved
+            
+            return Response({
+                'total_budget': total_budget,
+                'total_spent': total_spent,
+                'total_reserved': total_reserved,
+                'total_remaining': max(0, total_remaining),
+                'projects': projects_list
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==========================================================================
+# REPORTS PAGE VIEW - หน้ารายงานสรุป
+# ==========================================================================
+
+def staff_reports_view(request):
+    """
+    ===================================================================
+    staff_reports_view - หน้ารายงานสรุปงบประมาณ
+    ===================================================================
+    
+    Endpoint: /api/staff/reports/
+    
+    Returns:
+        HttpResponse: หน้า HTML แสดงรายงานสรุปงบประมาณ
+    ===================================================================
+    """
+    return render(request, 'staff_reports.html')
+
+
+# ==========================================================================
+# EXPORT ORDER CSV API - ดาวน์โหลดใบสั่งซื้อเป็น CSV
+# ==========================================================================
+
+from django.http import HttpResponse
+import csv
+
+class ExportOrderCSVAPIView(APIView):
+    """
+    ===================================================================
+    ExportOrderCSVAPIView - ดาวน์โหลดใบสั่งซื้อเป็นไฟล์ CSV
+    ===================================================================
+    
+    Endpoint: GET /api/orders/<order_id>/export-csv/
+    
+    Returns:
+        CSV File: ไฟล์ CSV ของใบสั่งซื้อ
+    ===================================================================
+    """
+    
+    def get(self, request, order_id):
+        try:
+            # 1. ดึงข้อมูล Order
+            order_ref = db.collection('orders').document(order_id)
+            order_doc = order_ref.get()
+            
+            if not order_doc.exists:
+                return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            order = order_doc.to_dict()
+            
+            # 2. ดึงชื่อโครงการ
+            project_name = '-'
+            if order.get('project_id'):
+                project_doc = db.collection('projects').document(order['project_id']).get()
+                if project_doc.exists:
+                    project_name = project_doc.to_dict().get('project_name', '-')
+            
+            # 3. ดึงชื่อผู้ขอซื้อ
+            requester_name = '-'
+            if order.get('requester_id'):
+                user_doc = db.collection('users').document(order['requester_id']).get()
+                if user_doc.exists:
+                    requester_name = user_doc.to_dict().get('username', '-')
+            
+            # 4. สร้าง CSV Response
+            response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+            response['Content-Disposition'] = f'attachment; filename="order_{order.get("order_no", order_id)}.csv"'
+            
+            # เขียน BOM สำหรับ Excel ภาษาไทย
+            response.write('\ufeff')
+            
+            writer = csv.writer(response)
+            
+            # Header ข้อมูลทั่วไป
+            writer.writerow(['ใบขอซื้อ / Purchase Order'])
+            writer.writerow([])
+            writer.writerow(['เลขที่ใบสั่งซื้อ', order.get('order_no', '-')])
+            writer.writerow(['โครงการ', project_name])
+            writer.writerow(['เรื่อง', order.get('order_title', '-')])
+            writer.writerow(['ผู้ขอซื้อ', requester_name])
+            writer.writerow(['ร้านค้า', order.get('vendor_name', '-')])
+            writer.writerow(['วันที่ต้องการ', order.get('required_date', '-')])
+            writer.writerow(['หมายเหตุ', order.get('order_description', '-')])
+            writer.writerow([])
+            
+            # Header ตารางสินค้า
+            writer.writerow(['ลำดับ', 'รายการ', 'จำนวน', 'หน่วย', 'ราคา/หน่วย', 'จำนวนเงิน'])
+            
+            # รายการสินค้า
+            items = order.get('items', [])
+            total = 0
+            for i, item in enumerate(items, 1):
+                qty = float(item.get('quantity_requested', item.get('quantity', 0)))
+                price = float(item.get('estimated_unit_price', item.get('unit_price', 0)))
+                subtotal = qty * price
+                total += subtotal
+                
+                writer.writerow([
+                    i,
+                    item.get('item_name', item.get('name', '-')),
+                    qty,
+                    item.get('unit', '-'),
+                    f'{price:,.2f}',
+                    f'{subtotal:,.2f}'
+                ])
+            
+            # ยอดรวม
+            writer.writerow([])
+            writer.writerow(['', '', '', '', 'รวมเงินทั้งสิ้น', f'{total:,.2f} บาท'])
+            
+            return response
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

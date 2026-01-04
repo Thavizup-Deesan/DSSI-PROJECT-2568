@@ -206,7 +206,7 @@
                         <tr class="hover:bg-blue-50 transition group border-b border-gray-50 last:border-b-0">
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 font-mono">${shortId}</td>
                             <td class="px-6 py-4 text-sm text-gray-800 font-medium">${project.project_name}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">฿${project.budget_total.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">฿${(parseFloat(project.budget_total || 0) - parseFloat(project.budget_reserved || 0) - parseFloat(project.budget_spent || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
                             <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button onclick="openAssignModal('${project.id}', '${project.project_name}')" class="text-green-500 hover:text-green-700 bg-green-50 hover:bg-green-100 p-2 rounded-lg mr-2 transition" title="กำหนดผู้รับผิดชอบ">
@@ -237,7 +237,7 @@
       const statusField = document.getElementById('statusField');
 
       if (id) {
-        title.innerText = "✏️ แก้ไขข้อมูลโครงการ";
+        title.innerText = "แก้ไขข้อมูลโครงการ";
         document.getElementById('p_id').value = id;
         document.getElementById('p_name').value = name;
         document.getElementById('p_budget').value = budget;

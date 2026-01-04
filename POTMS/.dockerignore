@@ -1,0 +1,89 @@
+# =============================================================================
+# POTMS - Docker Ignore File
+# Exclude unnecessary files from Docker build context
+# =============================================================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+.eggs
+*.egg
+.pytest_cache
+.coverage
+htmlcov
+.mypy_cache
+.ruff_cache
+
+# Virtual environments
+venv
+.venv
+env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.docker
+
+# Logs
+*.log
+logs
+
+# Local development
+db.sqlite3
+*.sqlite3
+.env
+
+# Node (if any frontend)
+node_modules
+npm-debug.log
+
+# Test files
+tests
+test_*.py
+*_test.py
+
+# Documentation
+docs
+*.md
+!README.md
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Vercel (not needed in Docker)
+.vercel
+vercel.json
+
+# Firebase
+.firebaserc
+firebase.json
+
+# Credentials (copy separately, don't include in build)
+credentials
+
+# Diagram files
+Diagram
+*.puml

@@ -292,7 +292,7 @@
                                         };
                                         card.innerHTML = `
                         <p class="font-medium text-gray-800 text-sm mb-1">${project.project_name}</p>
-                        <p class="text-xs text-gray-500">งบประมาณ: ฿${parseFloat(project.budget_total).toLocaleString()} บาท</p>
+                        <p class="text-xs text-gray-500">งบคงเหลือ: ฿${(parseFloat(project.budget_total || 0) - parseFloat(project.budget_reserved || 0) - parseFloat(project.budget_spent || 0)).toLocaleString()} บาท</p>
                     `;
                                         listContainer.appendChild(card);
                                 });

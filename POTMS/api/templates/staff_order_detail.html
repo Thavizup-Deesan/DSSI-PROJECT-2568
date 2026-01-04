@@ -65,7 +65,7 @@
                                 <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
                                         <h3
                                                 class="font-semibold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-                                                <span class="text-blue-500">👤</span> ข้อมูลผู้สั่ง
+                                                <span class="text-blue-500"></span> ข้อมูลผู้สั่ง
                                         </h3>
                                         <div class="grid grid-cols-2 gap-3 sm:gap-4">
                                                 <div>
@@ -91,7 +91,7 @@
                                 <!-- ข้อมูลโครงการและงบประมาณ -->
                                 <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                                         <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                                <span class="text-blue-500">📋</span> ข้อมูลโครงการและงบประมาณ
+                                                <span class="text-blue-500"></span> ข้อมูลโครงการและงบประมาณ
                                         </h3>
                                         <div class="grid grid-cols-2 gap-4">
                                                 <div>
@@ -115,7 +115,7 @@
                                 <!-- รายละเอียดใบขอซื้อ -->
                                 <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                                         <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                                <span class="text-blue-500">📝</span> รายละเอียดใบขอซื้อ
+                                                <span class="text-blue-500"></span> รายละเอียดใบขอซื้อ
                                         </h3>
                                         <div class="space-y-4">
                                                 <div>
@@ -142,7 +142,7 @@
                                 <!-- รายการพัสดุ -->
                                 <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                                         <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                                <span class="text-blue-500">📦</span> รายการพัสดุ
+                                                <span class="text-blue-500"></span> รายการพัสดุ
                                         </h3>
                                         <div class="overflow-x-auto">
                                                 <table class="w-full text-sm">
@@ -184,7 +184,7 @@
                                 <!-- การอนุมัติ -->
                                 <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 sticky top-6">
                                         <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                                <span class="text-green-500">✅</span> การอนุมัติ
+                                                <span class="text-green-500"></span> การอนุมัติ
                                         </h3>
 
                                         <!-- Budget Summary -->
@@ -276,14 +276,14 @@
                                         <!-- Buttons for WaitingBossApproval Status -->
                                         <div id="waitingBossButtons" class="space-y-3 hidden">
                                                 <div class="text-center mb-4 p-3 bg-purple-50 rounded-lg">
-                                                        <p class="text-purple-700 font-medium">⏳ รอหัวหน้าเซ็นอนุมัติ
+                                                        <p class="text-purple-700 font-medium">รอหัวหน้าเซ็นอนุมัติ
                                                         </p>
                                                         <p class="text-sm text-gray-500">
                                                                 กรุณาพิมพ์ใบสั่งซื้อและเสนอหัวหน้าเซ็น</p>
                                                 </div>
                                                 <button onclick="printOrder()"
                                                         class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
-                                                        🖨️ พิมพ์ใบสั่งซื้อ
+                                                        พิมพ์ใบสั่งซื้อ
                                                 </button>
                                                 <button onclick="bossApprove()"
                                                         class="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
@@ -323,17 +323,17 @@
                                         <!-- Buttons for Approved Status -->
                                         <div id="approvedButtons" class="space-y-3 hidden">
                                                 <div class="text-center mb-4 p-3 bg-green-50 rounded-lg">
-                                                        <p class="text-green-700 font-medium">✅ หัวหน้าเซ็นอนุมัติแล้ว
+                                                        <p class="text-green-700 font-medium">หัวหน้าเซ็นอนุมัติแล้ว
                                                         </p>
                                                         <p class="text-sm text-gray-500">พร้อมส่งรายการให้พัสดุ</p>
                                                 </div>
                                                 <button onclick="printOrder()"
                                                         class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
-                                                        🖨️ พิมพ์ใบสั่งซื้อ
+                                                        พิมพ์ใบสั่งซื้อ
                                                 </button>
-                                                <button onclick="sendToProcurement()"
+                                                <button oncick="sendToProcurement()"
                                                         class="w-full py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
-                                                        📤 ส่งรายการให้พัสดุ
+                                                        ส่งรายการให้พัสดุ
                                                 </button>
                                                 <button onclick="showApprovedCorrectionSection()"
                                                         class="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
@@ -364,6 +364,252 @@
                                                                 ยกเลิก
                                                         </button>
                                                 </div>
+                                        </div>
+
+                                        <!-- Buttons for SentToProcurement Status -->
+                                        <div id="sentToProcurementButtons" class="space-y-3 hidden">
+                                                <div class="text-center mb-4 p-3 bg-purple-50 rounded-lg">
+                                                        <p class="text-purple-700 font-medium">ส่งให้พัสดุแล้ว
+                                                        </p>
+                                                        <p class="text-sm text-gray-500">รอรับของจากพัสดุ</p>
+                                                </div>
+                                                <button onclick="printOrder()"
+                                                        class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        พิมพ์ใบสั่งซื้อ
+                                                </button>
+                                                <button onclick="receiveFromProcurement()"
+                                                        class="w-full py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        รับของจากพัสดุ
+                                                </button>
+                                                <a href="/api/staff/orders/page/"
+                                                        class="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition text-center">
+                                                        ← กลับ
+                                                </a>
+                                        </div>
+
+                                        <!-- Buttons for ReceivedFromProcurement Status -->
+                                        <div id="receivedFromProcurementButtons" class="space-y-3 hidden">
+                                                <div class="text-center mb-4 p-3 bg-teal-50 rounded-lg">
+                                                        <p class="text-teal-700 font-medium">รับของจากพัสดุแล้ว
+                                                        </p>
+                                                        <p class="text-sm text-gray-500">พร้อมสร้าง Sub-order
+                                                                เพื่อตรวจรับ</p>
+                                                </div>
+                                                <button onclick="printOrder()"
+                                                        class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        พิมพ์ใบสั่งซื้อ
+                                                </button>
+                                                <button onclick="showSubOrderForm()"
+                                                        class="w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        สร้าง Sub-order
+                                                </button>
+                                                <a href="/api/staff/orders/page/"
+                                                        class="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition text-center">
+                                                        ← กลับ
+                                                </a>
+                                        </div>
+
+                                        <!-- Sub-order Form (hidden by default) -->
+                                        <div id="subOrderForm" class="hidden">
+                                                <div class="mb-4 p-3 bg-indigo-50 rounded-lg">
+                                                        <p class="text-indigo-700 font-medium">สร้าง Sub-order</p>
+                                                        <p class="text-sm text-gray-500">เลือกรายการที่ได้รับจากพัสดุ
+                                                        </p>
+                                                </div>
+                                                <div id="subOrderItemsList"
+                                                        class="space-y-2 mb-4 max-h-60 overflow-y-auto">
+                                                        <!-- Items will be populated here -->
+                                                </div>
+                                                <div class="mb-4">
+                                                        <label class="block text-sm text-gray-600 mb-2">หมายเหตุ
+                                                                (ถ้ามี)</label>
+                                                        <textarea id="subOrderNotes" rows="2"
+                                                                placeholder="เช่น รับของงวดที่ 1..."
+                                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"></textarea>
+                                                </div>
+                                                <div class="space-y-3">
+                                                        <button onclick="createSubOrder()"
+                                                                class="w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium transition">
+                                                                ยืนยันสร้าง Sub-order
+                                                        </button>
+                                                        <button onclick="hideSubOrderForm()"
+                                                                class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition">
+                                                                ยกเลิก
+                                                        </button>
+                                                </div>
+                                        </div>
+
+                                        <!-- Buttons for WaitingInspection Status -->
+                                        <div id="waitingInspectionButtons" class="space-y-3 hidden">
+                                                <div class="text-center mb-4 p-3 bg-cyan-50 rounded-lg">
+                                                        <p class="text-cyan-700 font-medium">รอตรวจรับ
+                                                        </p>
+                                                        <p class="text-sm text-gray-500">
+                                                                พร้อมตรวจรับและบันทึกยอดจ่ายจริง</p>
+                                                </div>
+                                                <button onclick="showInspectionForm()"
+                                                        class="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        ตรวจรับสินค้า
+                                                </button>
+                                                <a href="/api/staff/orders/page/"
+                                                        class="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition text-center">
+                                                        ← กลับ
+                                                </a>
+                                        </div>
+
+                                        <!-- Inspection Form (hidden by default) -->
+                                        <div id="inspectionForm" class="hidden">
+                                                <div class="mb-4 p-3 bg-green-50 rounded-lg">
+                                                        <p class="text-green-700 font-medium">ตรวจรับสินค้า</p>
+                                                        <p class="text-sm text-gray-500">กรอกข้อมูลการตรวจรับ</p>
+                                                </div>
+
+                                                <!-- Sub-orders List -->
+                                                <div id="subOrdersList" class="space-y-2 mb-4 max-h-40 overflow-y-auto">
+                                                        <!-- Sub-orders will be populated here -->
+                                                </div>
+
+                                                <div class="space-y-4 mb-4">
+                                                        <div>
+                                                                <label class="block text-sm text-gray-600 mb-2">ยอดจ่ายจริง
+                                                                        (บาท) *</label>
+                                                                <input type="number" id="actualCostInput" step="0.01"
+                                                                        min="0" placeholder="0.00"
+                                                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm">
+                                                        </div>
+                                                        <div>
+                                                                <label class="block text-sm text-gray-600 mb-2">ชื่อผู้ตรวจรับ
+                                                                        *</label>
+                                                                <input type="text" id="inspectorNameInput"
+                                                                        placeholder="กรอกชื่อผู้ตรวจรับ"
+                                                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm">
+                                                        </div>
+                                                        <div>
+                                                                <label class="block text-sm text-gray-600 mb-2">หมายเหตุ
+                                                                        (ถ้ามี)</label>
+                                                                <textarea id="inspectionNotesInput" rows="2"
+                                                                        placeholder="หมายเหตุเพิ่มเติม..."
+                                                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"></textarea>
+                                                        </div>
+                                                </div>
+                                                <div class="space-y-3">
+                                                        <button onclick="submitInspection()"
+                                                                class="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition">
+                                                                ยืนยันตรวจรับ + สร้าง QR Code
+                                                        </button>
+                                                        <button onclick="hideInspectionForm()"
+                                                                class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition">
+                                                                ยกเลิก
+                                                        </button>
+                                                </div>
+                                        </div>
+
+                                        <!-- QR Code Result (hidden by default) -->
+                                        <div id="qrCodeResult" class="hidden">
+                                                <div class="text-center p-4 bg-green-50 rounded-lg">
+                                                        <p class="text-green-700 font-semibold mb-3">ตรวจรับเรียบร้อย!
+                                                        </p>
+                                                        <div id="qrCodeImage" class="flex justify-center mb-3">
+                                                                <!-- QR Code image will be inserted here -->
+                                                        </div>
+                                                        <p id="inspectionMessage" class="text-sm text-gray-600 mb-3">
+                                                        </p>
+                                                        <button onclick="downloadQRCode()"
+                                                                class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition">
+                                                                ⬇ดาวน์โหลด QR Code
+                                                        </button>
+                                                </div>
+                                                <div class="mt-4 space-y-2">
+                                                        <button onclick="showHandoverForm()"
+                                                                class="w-full py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition">
+                                                                ไปจ่ายของ
+                                                        </button>
+                                                        <a href="/api/staff/orders/page/"
+                                                                class="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition text-center">
+                                                                ← กลับรายการ
+                                                        </a>
+                                                </div>
+                                        </div>
+
+                                        <!-- Buttons for Inspected Status (จ่ายของ) -->
+                                        <div id="inspectedButtons" class="space-y-3 hidden">
+                                                <div class="text-center mb-4 p-3 bg-green-50 rounded-lg">
+                                                        <p class="text-green-700 font-medium">ตรวจรับแล้ว
+                                                        </p>
+                                                        <p class="text-sm text-gray-500">พร้อมจ่ายของให้ผู้ขอซื้อ</p>
+                                                </div>
+                                                <button onclick="showHandoverForm()"
+                                                        class="w-full py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        จ่ายของ
+                                                </button>
+                                                <a href="/api/staff/orders/page/"
+                                                        class="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition text-center">
+                                                        ← กลับ
+                                                </a>
+                                        </div>
+
+                                        <!-- Handover Form (hidden by default) -->
+                                        <div id="handoverForm" class="hidden">
+                                                <div class="mb-4 p-3 bg-purple-50 rounded-lg">
+                                                        <p class="text-purple-700 font-medium">จ่ายของ</p>
+                                                        <p class="text-sm text-gray-500">กรอกชื่อผู้รับของ</p>
+                                                </div>
+                                                <div class="space-y-4 mb-4">
+                                                        <div>
+                                                                <label class="block text-sm text-gray-600 mb-2">ชื่อผู้รับของ
+                                                                        *</label>
+                                                                <input type="text" id="receiverNameInput"
+                                                                        placeholder="กรอกชื่อผู้รับของ"
+                                                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm">
+                                                        </div>
+                                                        <div>
+                                                                <label class="block text-sm text-gray-600 mb-2">หมายเหตุ
+                                                                        (ถ้ามี)</label>
+                                                                <textarea id="handoverNotesInput" rows="2"
+                                                                        placeholder="หมายเหตุ..."
+                                                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"></textarea>
+                                                        </div>
+                                                </div>
+                                                <div class="space-y-3">
+                                                        <button onclick="submitHandover()"
+                                                                class="w-full py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition">
+                                                                ยืนยันจ่ายของ
+                                                        </button>
+                                                        <button onclick="hideHandoverForm()"
+                                                                class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition">
+                                                                ยกเลิก
+                                                        </button>
+                                                </div>
+                                        </div>
+
+                                        <!-- Buttons for Received Status (ปิดงาน) -->
+                                        <div id="receivedButtons" class="space-y-3 hidden">
+                                                <div class="text-center mb-4 p-3 bg-blue-50 rounded-lg">
+                                                        <p class="text-blue-700 font-medium">จ่ายของแล้ว
+                                                        </p>
+                                                        <p class="text-sm text-gray-500">พร้อมปิดงาน</p>
+                                                </div>
+                                                <button onclick="closeOrder()"
+                                                        class="w-full py-3 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                                        ปิดงาน
+                                                </button>
+                                                <a href="/api/staff/orders/page/"
+                                                        class="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition text-center">
+                                                        ← กลับ
+                                                </a>
+                                        </div>
+
+                                        <!-- Buttons for Closed Status -->
+                                        <div id="closedButtons" class="space-y-3 hidden">
+                                                <div class="text-center mb-4 p-3 bg-gray-100 rounded-lg">
+                                                        <p class="text-gray-700 font-medium">ปิดงานแล้ว
+                                                        </p>
+                                                        <p class="text-sm text-gray-500">การสั่งซื้อนี้เสร็จสิ้นแล้ว</p>
+                                                </div>
+                                                <a href="/api/staff/orders/page/"
+                                                        class="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition text-center">
+                                                        ← กลับ
+                                                </a>
                                         </div>
                                 </div>
                         </div>
@@ -431,8 +677,8 @@
                 function renderOrderDetails(order, project, requester) {
                         // Order info
                         document.getElementById('orderNo').textContent = order.order_no || order.id;
-                        document.getElementById('orderTitle').textContent = order.title || order.order_no || '-';
-                        document.getElementById('orderDesc').textContent = order.description || '-';
+                        document.getElementById('orderTitle').textContent = order.order_title || order.title || order.order_no || '-';
+                        document.getElementById('orderDesc').textContent = order.order_description || order.description || '-';
                         document.getElementById('vendorName').textContent = order.vendor_name || '-';
 
                         // Date formatting
@@ -452,6 +698,10 @@
                                 'Rejected': { text: 'ปฏิเสธ', class: 'bg-red-100 text-red-700' },
                                 'CorrectionNeeded': { text: 'ต้องแก้ไข', class: 'bg-orange-100 text-orange-700' },
                                 'SentToProcurement': { text: 'ส่งรายการให้พัสดุแล้ว', class: 'bg-indigo-100 text-indigo-700' },
+                                'ReceivedFromProcurement': { text: 'รับของจากพัสดุแล้ว', class: 'bg-teal-100 text-teal-700' },
+                                'WaitingInspection': { text: 'รอตรวจรับ', class: 'bg-cyan-100 text-cyan-700' },
+                                'Inspected': { text: 'ตรวจรับแล้ว', class: 'bg-green-100 text-green-700' },
+                                'Received': { text: 'รับของแล้ว', class: 'bg-blue-100 text-blue-700' },
                                 'Closed': { text: 'ปิดแล้ว', class: 'bg-gray-200 text-gray-500' }
                         };
                         const statusInfo = statusMap[order.status] || { text: order.status, class: 'bg-gray-100 text-gray-700' };
@@ -521,6 +771,31 @@
                                 // Show Approved buttons (send to procurement)
                                 document.getElementById('actionButtons').classList.add('hidden');
                                 document.getElementById('approvedButtons').classList.remove('hidden');
+                        } else if (order.status === 'SentToProcurement') {
+                                // Show SentToProcurement buttons (receive from procurement)
+                                document.getElementById('actionButtons').classList.add('hidden');
+                                document.getElementById('sentToProcurementButtons').classList.remove('hidden');
+                        } else if (order.status === 'ReceivedFromProcurement') {
+                                // Show ReceivedFromProcurement buttons (create sub-order)
+                                document.getElementById('actionButtons').classList.add('hidden');
+                                document.getElementById('receivedFromProcurementButtons').classList.remove('hidden');
+                        } else if (order.status === 'WaitingInspection') {
+                                // Show WaitingInspection buttons (inspection form)
+                                document.getElementById('actionButtons').classList.add('hidden');
+                                document.getElementById('waitingInspectionButtons').classList.remove('hidden');
+                        } else if (order.status === 'Inspected') {
+                                // Show Inspected buttons (handover)
+                                document.getElementById('actionButtons').classList.add('hidden');
+                                document.getElementById('inspectedButtons').classList.remove('hidden');
+                                loadAndShowQRCode(); // Load QR Code automatically
+                        } else if (order.status === 'Received') {
+                                // Show Received buttons (close order)
+                                document.getElementById('actionButtons').classList.add('hidden');
+                                document.getElementById('receivedButtons').classList.remove('hidden');
+                        } else if (order.status === 'Closed') {
+                                // Show Closed buttons (view only)
+                                document.getElementById('actionButtons').classList.add('hidden');
+                                document.getElementById('closedButtons').classList.remove('hidden');
                         } else {
                                 // Show processed message for other statuses
                                 document.getElementById('actionButtons').classList.add('hidden');
@@ -528,7 +803,7 @@
 
                                 const processedText = document.getElementById('processedText');
                                 if (order.status === 'Rejected') {
-                                        processedText.textContent = '❌ ปฏิเสธแล้ว';
+                                        processedText.textContent = 'ปฏิเสธแล้ว';
                                         processedText.className = 'text-lg font-medium text-red-600';
                                         if (order.staff_note) {
                                                 processedText.innerHTML += `<br><span class="text-sm text-gray-500">เหตุผล: ${order.staff_note}</span>`;
@@ -540,10 +815,10 @@
                                                 processedText.innerHTML += `<br><span class="text-sm text-gray-500">สิ่งที่ต้องแก้ไข: ${order.staff_note}</span>`;
                                         }
                                 } else if (order.status === 'SentToProcurement') {
-                                        processedText.textContent = '📤 ส่งให้พัสดุแล้ว';
+                                        processedText.textContent = 'ส่งให้พัสดุแล้ว';
                                         processedText.className = 'text-lg font-medium text-purple-600';
                                 } else if (order.status === 'Closed') {
-                                        processedText.textContent = '✅ ปิดงานแล้ว';
+                                        processedText.textContent = 'ปิดงานแล้ว';
                                         processedText.className = 'text-lg font-medium text-green-600';
                                 } else {
                                         processedText.textContent = `สถานะ: ${statusInfo.text}`;
@@ -749,6 +1024,336 @@
                         }
                 }
 
+                // Receive from Procurement - รับของจากพัสดุ (Phase 4)
+                async function receiveFromProcurement() {
+                        const result = await Swal.fire({
+                                title: 'รับของจากพัสดุ?',
+                                text: 'คุณต้องการบันทึกการรับของจากพัสดุหรือไม่?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonColor: '#14b8a6',
+                                cancelButtonColor: '#6b7280',
+                                confirmButtonText: 'รับของ',
+                                cancelButtonText: 'ยกเลิก'
+                        });
+
+                        if (result.isConfirmed) {
+                                try {
+                                        const response = await fetch(`/api/orders/${orderId}/receive-procurement/`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({})
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                                Swal.fire('สำเร็จ', data.message, 'success')
+                                                        .then(() => window.location.reload());
+                                        } else {
+                                                Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                        }
+                                } catch (error) {
+                                        Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                                }
+                        }
+                }
+
+                // Show Sub-order Form - แสดงฟอร์มสร้าง Sub-order
+                function showSubOrderForm() {
+                        // ซ่อนปุ่มและแสดงฟอร์ม
+                        document.getElementById('receivedFromProcurementButtons').classList.add('hidden');
+                        document.getElementById('subOrderForm').classList.remove('hidden');
+
+                        // สร้างรายการ checkboxes จาก items ใน order
+                        const itemsList = document.getElementById('subOrderItemsList');
+                        const items = orderData.items || [];
+
+                        itemsList.innerHTML = items.map((item, index) => `
+                                <label class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                                        <input type="checkbox" id="subOrderItem_${index}" 
+                                                class="suborder-item-checkbox mt-1 w-4 h-4 text-indigo-600" 
+                                                data-index="${index}" checked>
+                                        <div class="flex-1">
+                                                <p class="text-sm font-medium text-gray-800">${item.item_name || item.name || '-'}</p>
+                                                <p class="text-xs text-gray-500">จำนวน: ${item.quantity || item.quantity_requested || 0} ${item.unit || 'ชิ้น'}</p>
+                                        </div>
+                                </label>
+                        `).join('');
+                }
+
+                // Hide Sub-order Form - ซ่อนฟอร์มสร้าง Sub-order
+                function hideSubOrderForm() {
+                        document.getElementById('receivedFromProcurementButtons').classList.remove('hidden');
+                        document.getElementById('subOrderForm').classList.add('hidden');
+                        document.getElementById('subOrderNotes').value = '';
+                }
+
+                // Create Sub-order - สร้าง Sub-order
+                async function createSubOrder() {
+                        // รวบรวมรายการที่เลือก
+                        const checkboxes = document.querySelectorAll('.suborder-item-checkbox:checked');
+
+                        if (checkboxes.length === 0) {
+                                Swal.fire('กรุณาเลือกรายการ', 'ต้องเลือกอย่างน้อย 1 รายการ', 'warning');
+                                return;
+                        }
+
+                        const items = orderData.items || [];
+                        const selectedItems = [];
+
+                        checkboxes.forEach(checkbox => {
+                                const index = parseInt(checkbox.dataset.index);
+                                if (items[index]) {
+                                        selectedItems.push(items[index]);
+                                }
+                        });
+
+                        const notes = document.getElementById('subOrderNotes').value.trim();
+
+                        // ยืนยันการสร้าง
+                        const result = await Swal.fire({
+                                title: 'สร้าง Sub-order?',
+                                text: `สร้าง Sub-order จาก ${selectedItems.length} รายการ?`,
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonColor: '#6366f1',
+                                cancelButtonColor: '#6b7280',
+                                confirmButtonText: 'สร้าง',
+                                cancelButtonText: 'ยกเลิก'
+                        });
+
+                        if (result.isConfirmed) {
+                                try {
+                                        const response = await fetch(`/api/orders/${orderId}/create-suborder/`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                        items: selectedItems,
+                                                        notes: notes
+                                                })
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                                Swal.fire({
+                                                        title: 'สำเร็จ!',
+                                                        html: `สร้าง Sub-order เรียบร้อย<br><strong>${data.suborder_no}</strong>`,
+                                                        icon: 'success'
+                                                }).then(() => window.location.reload());
+                                        } else {
+                                                Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                        }
+                                } catch (error) {
+                                        Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                                }
+                        }
+                }
+
+                // ===============================================
+                // Inspection Functions - ตรวจรับสินค้า
+                // ===============================================
+
+                let subOrdersData = [];  // เก็บข้อมูล Sub-orders
+                let selectedSubOrderId = null;  // Sub-order ที่เลือก
+
+                // Load Sub-orders for this Order
+                async function loadSubOrders() {
+                        try {
+                                // Query sub_orders collection for this order
+                                const response = await fetch(`/api/orders/${orderId}/`);
+                                if (!response.ok) return;
+
+                                const order = await response.json();
+
+                                // For now, assume there's one sub-order per order
+                                // In production, you'd query sub_orders collection
+                                if (order.status === 'WaitingInspection') {
+                                        // Create a mock sub-order ID based on order
+                                        selectedSubOrderId = order.current_suborder_id || null;
+                                }
+                        } catch (error) {
+                                console.error('Error loading sub-orders:', error);
+                        }
+                }
+
+                // แสดง Inspection Form
+                async function showInspectionForm() {
+                        document.getElementById('waitingInspectionButtons').classList.add('hidden');
+                        document.getElementById('inspectionForm').classList.remove('hidden');
+
+                        // Pre-fill estimated cost from order
+                        const estimatedCost = parseFloat(orderData.total_estimated_price || 0);
+                        document.getElementById('actualCostInput').value = estimatedCost;
+
+                        // Pre-fill inspector name from current user
+                        if (currentUser) {
+                                document.getElementById('inspectorNameInput').value = currentUser.username || '';
+                        }
+
+                        // Try to find sub-order for this order
+                        await findSubOrderForOrder();
+                }
+
+                // ค้นหา Sub-order สำหรับ Order นี้
+                async function findSubOrderForOrder() {
+                        // Note: This is a simplified version
+                        // In production, you'd query Firebase for sub_orders
+                        const subOrdersList = document.getElementById('subOrdersList');
+                        subOrdersList.innerHTML = `
+                                <div class="p-3 bg-cyan-50 rounded-lg text-sm">
+                                        <p class="font-medium text-cyan-700">รายการรอตรวจรับ</p>
+                                        <p class="text-gray-600">Order: ${orderData.order_no}</p>
+                                        <p class="text-gray-600">ยอดประมาณ: ฿${parseFloat(orderData.total_estimated_price || 0).toLocaleString()}</p>
+                                </div>
+                        `;
+                }
+
+                // ซ่อน Inspection Form
+                function hideInspectionForm() {
+                        document.getElementById('waitingInspectionButtons').classList.remove('hidden');
+                        document.getElementById('inspectionForm').classList.add('hidden');
+                        document.getElementById('actualCostInput').value = '';
+                        document.getElementById('inspectorNameInput').value = '';
+                        document.getElementById('inspectionNotesInput').value = '';
+                }
+
+                // ส่งการตรวจรับ
+                async function submitInspection() {
+                        const actualCost = parseFloat(document.getElementById('actualCostInput').value);
+                        const inspectorName = document.getElementById('inspectorNameInput').value.trim();
+                        const notes = document.getElementById('inspectionNotesInput').value.trim();
+
+                        if (!actualCost || actualCost <= 0) {
+                                Swal.fire('กรุณาระบุยอดจ่ายจริง', '', 'warning');
+                                return;
+                        }
+
+                        if (!inspectorName) {
+                                Swal.fire('กรุณาระบุชื่อผู้ตรวจรับ', '', 'warning');
+                                return;
+                        }
+
+                        // Confirm
+                        const result = await Swal.fire({
+                                title: 'ยืนยันตรวจรับ?',
+                                html: `ยอดจ่ายจริง: <strong>฿${actualCost.toLocaleString()}</strong><br>ผู้ตรวจรับ: ${inspectorName}`,
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonColor: '#22c55e',
+                                cancelButtonColor: '#6b7280',
+                                confirmButtonText: 'ยืนยัน',
+                                cancelButtonText: 'ยกเลิก'
+                        });
+
+                        if (result.isConfirmed) {
+                                try {
+                                        // First, get the sub-order ID for this order from Firebase
+                                        // For simplicity, we'll need to query sub_orders
+
+                                        // Call inspection API
+                                        const subOrderId = await getSubOrderId();
+
+                                        if (!subOrderId) {
+                                                Swal.fire('ไม่พบ Sub-order', 'กรุณาสร้าง Sub-order ก่อน', 'error');
+                                                return;
+                                        }
+
+                                        const response = await fetch(`/api/suborders/${subOrderId}/inspection/`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                        actual_cost: actualCost,
+                                                        inspector_name: inspectorName,
+                                                        notes: notes
+                                                })
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                                // Show QR Code result
+                                                showQRCodeResult(data);
+                                        } else {
+                                                Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                        }
+                                } catch (error) {
+                                        Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                                }
+                        }
+                }
+
+                // Get Sub-order ID for this order (query from Firebase)
+                async function getSubOrderId() {
+                        // For now, we store sub-order ID in order data after creation
+                        // In production, you'd query the sub_orders collection
+
+                        // Try to get from order data
+                        if (orderData.current_suborder_id) {
+                                return orderData.current_suborder_id;
+                        }
+
+                        // Try to fetch from sub_orders collection via a new API
+                        // For simplicity, we'll return a placeholder
+                        // This needs a proper API to list sub-orders for an order
+
+                        try {
+                                const response = await fetch(`/api/orders/${orderId}/suborders/`);
+                                if (response.ok) {
+                                        const suborders = await response.json();
+                                        if (suborders.length > 0) {
+                                                // Get the first WaitingInspection sub-order
+                                                const waitingSuborder = suborders.find(s => s.status === 'WaitingInspection');
+                                                return waitingSuborder ? waitingSuborder.id : null;
+                                        }
+                                }
+                        } catch (e) {
+                                console.log('Could not fetch sub-orders:', e);
+                        }
+
+                        return null;
+                }
+
+                // แสดงผล QR Code
+                function showQRCodeResult(data) {
+                        // ซ่อน form แสดงผลลัพธ์
+                        document.getElementById('inspectionForm').classList.add('hidden');
+                        document.getElementById('qrCodeResult').classList.remove('hidden');
+
+                        // แสดง QR Code
+                        const qrContainer = document.getElementById('qrCodeImage');
+                        qrContainer.innerHTML = `<img src="${data.qr_code}" alt="QR Code" class="w-48 h-48 border rounded">`;
+
+                        // แสดงข้อความ
+                        document.getElementById('inspectionMessage').innerHTML = `
+                                Sub-order: <strong>${data.suborder_no}</strong><br>
+                                ยอดจ่ายจริง: <strong>฿${data.actual_cost.toLocaleString()}</strong>
+                                ${data.cost_difference !== 0 ? `<br><span class="${data.cost_difference > 0 ? 'text-red-600' : 'text-green-600'}">ส่วนต่าง: ฿${data.cost_difference.toLocaleString()}</span>` : ''}
+                        `;
+
+                        // Store QR code for download
+                        window.currentQRCode = data.qr_code;
+
+                        // Update order status in memory
+                        orderData.status = 'Inspected';
+
+                        // Update status badge
+                        const statusEl = document.getElementById('orderStatus');
+                        statusEl.textContent = 'ตรวจรับแล้ว';
+                        statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap bg-green-100 text-green-700';
+                }
+
+                // ดาวน์โหลด QR Code
+                function downloadQRCode() {
+                        if (!window.currentQRCode) return;
+
+                        const link = document.createElement('a');
+                        link.href = window.currentQRCode;
+                        link.download = `QR_${orderData.order_no}_${new Date().toISOString().slice(0, 10)}.png`;
+                        link.click();
+                }
+
                 // Show boss reject section
                 function showBossRejectSection() {
                         document.getElementById('waitingBossButtons').classList.add('hidden');
@@ -840,6 +1445,166 @@
                                 }
                         } catch (error) {
                                 Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                        }
+                }
+
+                // ===============================================
+                // HANDOVER FUNCTIONS - จ่ายของ
+                // ===============================================
+
+                function showHandoverForm() {
+                        document.getElementById('inspectedButtons').classList.add('hidden');
+                        document.getElementById('qrCodeResult').classList.add('hidden'); // Also hide QR result
+                        document.getElementById('handoverForm').classList.remove('hidden');
+
+                        // Pre-fill receiver name if available
+                        if (orderData.created_by_name) {
+                                document.getElementById('receiverNameInput').value = orderData.created_by_name;
+                        }
+                }
+
+                function hideHandoverForm() {
+                        document.getElementById('handoverForm').classList.add('hidden');
+                        document.getElementById('receiverNameInput').value = '';
+                        document.getElementById('handoverNotesInput').value = '';
+
+                        // If we have a QR code loaded, show QR result instead of default buttons
+                        if (window.currentQRCode) {
+                                document.getElementById('qrCodeResult').classList.remove('hidden');
+                                document.getElementById('inspectedButtons').classList.add('hidden');
+                        } else {
+                                document.getElementById('inspectedButtons').classList.remove('hidden');
+                                document.getElementById('qrCodeResult').classList.add('hidden');
+                        }
+                }
+
+                // Auto-load QR code if status is Inspected
+                async function loadAndShowQRCode() {
+                        const subOrderId = orderData.current_suborder_id;
+                        if (!subOrderId) return;
+
+                        try {
+                                const response = await fetch(`/api/scan/${subOrderId}/data/`);
+                                if (!response.ok) return;
+                                const data = await response.json();
+
+                                if (data.qr_code) {
+                                        document.getElementById('qrCodeResult').classList.remove('hidden');
+                                        // Hide duplicated buttons section
+                                        document.getElementById('inspectedButtons').classList.add('hidden');
+
+                                        const qrContainer = document.getElementById('qrCodeImage');
+                                        qrContainer.innerHTML = `<img src="${data.qr_code}" alt="QR Code" class="w-48 h-48 border rounded">`;
+                                        document.getElementById('inspectionMessage').innerHTML = `
+                                Sub-order: <strong>${data.suborder_no}</strong><br>
+                                ยอดจ่ายจริง: <strong>฿${data.actual_cost.toLocaleString()}</strong>
+                            `;
+                                        window.currentQRCode = data.qr_code;
+                                        // Hide "Go to Handover" button in QR result because we show it in inspectedButtons section now?
+                                        // User wants QR code visible UNTIL handover is clicked.
+                                        // The QR result block currently has "Go to Handover" button which hides QR code block.
+                                }
+                        } catch (e) { console.error('Error loading QR:', e); }
+                }
+
+                // Modified renderOrderDetails to call loadAndShowQRCode if Inspected
+                const originalRenderOrderDetails = renderOrderDetails;
+                /* Note: We update the logic inside renderOrderDetails below to call loadAndShowQRCode() */
+
+                async function submitHandover() {
+                        const receiverName = document.getElementById('receiverNameInput').value.trim();
+                        const notes = document.getElementById('handoverNotesInput').value.trim();
+
+                        if (!receiverName) {
+                                Swal.fire('กรุณาระบุชื่อผู้รับของ', '', 'warning');
+                                return;
+                        }
+
+                        // Confirm
+                        const result = await Swal.fire({
+                                title: 'ยืนยันจ่ายของ?',
+                                html: `ผู้รับของ: <strong>${receiverName}</strong>`,
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonColor: '#a855f7',
+                                cancelButtonColor: '#6b7280',
+                                confirmButtonText: 'ยืนยัน',
+                                cancelButtonText: 'ยกเลิก'
+                        });
+
+                        if (result.isConfirmed) {
+                                try {
+                                        const response = await fetch(`/api/orders/${orderId}/handover/`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                        receiver_name: receiverName,
+                                                        notes: notes
+                                                })
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                                Swal.fire({
+                                                        title: 'จ่ายของสำเร็จ!',
+                                                        text: `ผู้รับของ: ${receiverName}`,
+                                                        icon: 'success',
+                                                        confirmButtonText: 'ตกลง'
+                                                }).then(() => {
+                                                        window.location.reload();
+                                                });
+                                        } else {
+                                                Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                        }
+                                } catch (error) {
+                                        Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                                }
+                        }
+                }
+
+                // ===============================================
+                // CLOSE ORDER FUNCTIONS - ปิดงาน
+                // ===============================================
+
+                async function closeOrder() {
+                        // Confirm
+                        const result = await Swal.fire({
+                                title: 'ยืนยันปิดงาน?',
+                                text: 'เมื่อปิดงานแล้วจะไม่สามารถแก้ไขได้อีก',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonColor: '#374151',
+                                cancelButtonColor: '#6b7280',
+                                confirmButtonText: 'ปิดงาน',
+                                cancelButtonText: 'ยกเลิก'
+                        });
+
+                        if (result.isConfirmed) {
+                                try {
+                                        const response = await fetch(`/api/orders/${orderId}/close/`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ notes: '' })
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                                Swal.fire({
+                                                        title: 'ปิดงานสำเร็จ!',
+                                                        text: 'การสั่งซื้อนี้เสร็จสิ้นแล้ว',
+                                                        icon: 'success',
+                                                        confirmButtonText: 'ตกลง'
+                                                }).then(() => {
+                                                        window.location.reload();
+                                                });
+                                        } else {
+                                                Swal.fire('เกิดข้อผิดพลาด', data.error, 'error');
+                                        }
+                                } catch (error) {
+                                        Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                                }
                         }
                 }
 

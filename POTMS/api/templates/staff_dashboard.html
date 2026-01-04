@@ -116,7 +116,7 @@
                         </div>
 
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer"
-                                onclick="alertPhase(4)">
+                                onclick="window.location.href='/api/staff/reports/'">
                                 <div
                                         class="h-12 w-12 bg-green-100 text-green-500 rounded-lg flex items-center justify-center mb-4">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
@@ -181,149 +181,88 @@
 
                 </div>
 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div
-                                class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between">
-                                <div>
-                                        <p class="text-sm text-gray-500">รอดำเนินการ</p>
-                                        <p id="stat-pending" class="text-2xl font-bold text-gray-800">-</p>
-                                </div>
-                                <div class="bg-yellow-100 p-2 rounded-lg text-yellow-600">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                                                viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                </div>
-                        </div>
-                        <div
-                                class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between">
-                                <div>
-                                        <p class="text-sm text-gray-500">อนุมัติแล้ว</p>
-                                        <p id="stat-approved" class="text-2xl font-bold text-gray-800">-</p>
-                                </div>
-                                <div class="bg-green-100 p-2 rounded-lg text-green-600">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                                                viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                </div>
-                        </div>
-                        <div
-                                class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between">
-                                <div>
-                                        <p class="text-sm text-gray-500">กำลังดำเนินการ</p>
-                                        <p id="stat-in-progress" class="text-2xl font-bold text-gray-800">-</p>
-                                </div>
-                                <div class="bg-blue-100 p-2 rounded-lg text-blue-600">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                                                viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                        </svg>
-                                </div>
-                        </div>
-                        <div
-                                class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between">
-                                <div>
-                                        <p class="text-sm text-gray-500">เสร็จสิ้น</p>
-                                        <p id="stat-completed" class="text-2xl font-bold text-gray-800">-</p>
-                                </div>
-                                <div class="bg-gray-100 p-2 rounded-lg text-gray-600">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                                                viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M3 21v-8a2 2 0 012-2h14a2 2 0 012 2v8M10 9H8v-2h2m4 0h-2v2h2m4-2h-2v2h2" />
-                                        </svg>
-                                </div>
-                        </div>
-                </div>
+                <script>
+                        // 1. ตรวจสอบ User และแสดงผลที่ Header
+                        const userStr = localStorage.getItem('user');
+                        if (!userStr) {
+                                window.location.href = '/api/login-page/';
+                        } else {
+                                const user = JSON.parse(userStr);
+                                document.getElementById('user-name').innerText = user.username || 'Staff';
+                                document.getElementById('user-role').innerText = `${user.role} (${user.department})`;
 
-        </main>
+                                // เช็คว่าเป็น Staff หรือ Admin จริงไหม
+                                if (user.role !== 'Staff' && user.role !== 'Admin') {
+                                        Swal.fire('Warning', 'Access Denied', 'error')
+                                                .then(() => window.location.href = '/api/login-page/');
+                                }
 
-        <script>
-                // 1. ตรวจสอบ User และแสดงผลที่ Header
-                const userStr = localStorage.getItem('user');
-                if (!userStr) {
-                        window.location.href = '/api/login-page/';
-                } else {
-                        const user = JSON.parse(userStr);
-                        document.getElementById('user-name').innerText = user.username || 'Staff';
-                        document.getElementById('user-role').innerText = `${user.role} (${user.department})`;
-
-                        // เช็คว่าเป็น Staff หรือ Admin จริงไหม
-                        if (user.role !== 'Staff' && user.role !== 'Admin') {
-                                Swal.fire('Warning', 'Access Denied', 'error')
-                                        .then(() => window.location.href = '/api/login-page/');
-                        }
-
-                        // ===================================================================
-                        // แสดง Card จัดการผู้ใช้งาน เฉพาะ Admin เท่านั้น
-                        // ===================================================================
-                        if (user.role === 'Admin') {
-                                const adminCard = document.getElementById('admin-only-card');
-                                if (adminCard) {
-                                        adminCard.classList.remove('hidden');
+                                // ===================================================================
+                                // แสดง Card จัดการผู้ใช้งาน เฉพาะ Admin เท่านั้น
+                                // ===================================================================
+                                if (user.role === 'Admin') {
+                                        const adminCard = document.getElementById('admin-only-card');
+                                        if (adminCard) {
+                                                adminCard.classList.remove('hidden');
+                                        }
                                 }
                         }
-                }
 
-                // 2. ฟังก์ชัน Logout
-                function logout() {
-                        localStorage.removeItem('user');
-                        window.location.href = '/api/login-page/';
-                }
+                        // 2. ฟังก์ชัน Logout
+                        function logout() {
+                                localStorage.removeItem('user');
+                                window.location.href = '/api/login-page/';
+                        }
 
-                // 3. ฟังก์ชันแจ้งเตือนเมนูที่ยังไม่เสร็จ
-                function alertPhase(phase) {
-                        Swal.fire({
-                                title: 'ฟีเจอร์นี้อยู่ในเฟส ' + phase,
-                                text: 'ระบบส่วนนี้จะถูกพัฒนาในขั้นตอนต่อไปครับ',
-                                icon: 'info',
-                                confirmButtonColor: '#3b82f6'
-                        });
-                }
-
-                // 4. โหลดสถิติจาก API (นับจากโครงการจริง)
-                async function loadStats() {
-                        try {
-                                const response = await fetch('/api/projects/');
-                                const projects = await response.json();
-
-                                // นับจำนวนโครงการตามสถานะ
-                                let counts = { Pending: 0, Active: 0, Completed: 0, Cancelled: 0 };
-                                projects.forEach(p => {
-                                        const st = p.status || 'Active';
-                                        if (counts[st] !== undefined) counts[st]++;
+                        // 3. ฟังก์ชันแจ้งเตือนเมนูที่ยังไม่เสร็จ
+                        function alertPhase(phase) {
+                                Swal.fire({
+                                        title: 'ฟีเจอร์นี้อยู่ในเฟส ' + phase,
+                                        text: 'ระบบส่วนนี้จะถูกพัฒนาในขั้นตอนต่อไปครับ',
+                                        icon: 'info',
+                                        confirmButtonColor: '#3b82f6'
                                 });
-
-                                document.getElementById('stat-pending').innerText = counts.Pending || 0;
-                                document.getElementById('stat-approved').innerText = counts.Active || 0;
-                                document.getElementById('stat-in-progress').innerText = counts.Active || 0;
-                                document.getElementById('stat-completed').innerText = counts.Completed || 0;
-                        } catch (error) {
-                                console.error('Error loading stats:', error);
                         }
-                }
 
-                // เรียกโหลดสถิติเมื่อหน้าเว็บโหลดเสร็จ
-                loadStats();
-                loadPendingOrdersCount();
+                        // 4. โหลดสถิติจาก API (นับจากโครงการจริง)
+                        async function loadStats() {
+                                try {
+                                        const response = await fetch('/api/projects/');
+                                        const projects = await response.json();
 
-                // โหลดจำนวนใบสั่งซื้อรอ Pending
-                async function loadPendingOrdersCount() {
-                        try {
-                                const res = await fetch('/api/staff/orders/?status=Pending');
-                                const orders = await res.json();
-                                const count = orders.length || 0;
-                                document.getElementById('pendingOrdersBadge').textContent = count;
-                        } catch (e) {
-                                console.error('Error loading pending orders count:', e);
-                                document.getElementById('pendingOrdersBadge').textContent = '0';
+                                        // นับจำนวนโครงการตามสถานะ
+                                        let counts = { Pending: 0, Active: 0, Completed: 0, Cancelled: 0 };
+                                        projects.forEach(p => {
+                                                const st = p.status || 'Active';
+                                                if (counts[st] !== undefined) counts[st]++;
+                                        });
+
+                                        document.getElementById('stat-pending').innerText = counts.Pending || 0;
+                                        document.getElementById('stat-approved').innerText = counts.Active || 0;
+                                        document.getElementById('stat-in-progress').innerText = counts.Active || 0;
+                                        document.getElementById('stat-completed').innerText = counts.Completed || 0;
+                                } catch (error) {
+                                        console.error('Error loading stats:', error);
+                                }
                         }
-                }
-        </script>
+
+                        // เรียกโหลดสถิติเมื่อหน้าเว็บโหลดเสร็จ
+                        loadStats();
+                        loadPendingOrdersCount();
+
+                        // โหลดจำนวนใบสั่งซื้อรอ Pending
+                        async function loadPendingOrdersCount() {
+                                try {
+                                        const res = await fetch('/api/staff/orders/?status=Pending');
+                                        const orders = await res.json();
+                                        const count = orders.length || 0;
+                                        document.getElementById('pendingOrdersBadge').textContent = count;
+                                } catch (e) {
+                                        console.error('Error loading pending orders count:', e);
+                                        document.getElementById('pendingOrdersBadge').textContent = '0';
+                                }
+                        }
+                </script>
 </body>
 
 </html>

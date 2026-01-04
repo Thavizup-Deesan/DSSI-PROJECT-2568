@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>รายงานสรุปงบประมาณ - POTMS</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap"
+                rel="stylesheet">
+        <style>
+                body {
+                        font-family: 'Prompt', sans-serif;
+                }
+
+                .gradient-card {
+                        background: linear-gradient(135deg, var(--from) 0%, var(--to) 100%);
+                }
+
+                .card-blue {
+                        --from: #3b82f6;
+                        --to: #1d4ed8;
+                }
+
+                .card-green {
+                        --from: #10b981;
+                        --to: #059669;
+                }
+
+                .card-yellow {
+                        --from: #f59e0b;
+                        --to: #d97706;
+                }
+
+                .card-purple {
+                        --from: #8b5cf6;
+                        --to: #6d28d9;
+                }
+        </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                                <a href="/api/staff-dashboard/" class="text-gray-500 hover:text-gray-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                        </svg>
+                                </a>
+                                <div class="bg-green-500 p-2 rounded-lg text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                        </svg>
+                                </div>
+                                <div>
+                                        <h1 class="text-lg font-bold text-gray-800">รายงานสรุปงบประมาณ</h1>
+                                        <p class="text-xs text-gray-500">Budget Summary Report</p>
+                                </div>
+                        </div>
+
+                        <div class="flex items-center gap-4">
+                                <button onclick="loadBudgetData()"
+                                        class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        รีเฟรช
+                                </button>
+                        </div>
+                </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+                <!-- Loading State -->
+                <div id="loadingState" class="text-center py-12">
+                        <div
+                                class="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4">
+                        </div>
+                        <p class="text-gray-500">กำลังโหลดข้อมูล...</p>
+                </div>
+
+                <!-- Content (hidden until loaded) -->
+                <div id="contentArea" class="hidden">
+
+                        <!-- Summary Cards -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+                                <!-- Total Budget -->
+                                <div class="gradient-card card-blue rounded-xl p-6 text-white shadow-lg">
+                                        <div class="flex items-center justify-between mb-4">
+                                                <div class="bg-white/20 p-3 rounded-lg">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2"
+                                                                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                        </svg>
+                                                </div>
+                                                <span class="text-xs bg-white/20 px-2 py-1 rounded">รวมทั้งหมด</span>
+                                        </div>
+                                        <p class="text-sm text-white/80 mb-1">งบประมาณรวม</p>
+                                        <p id="totalBudget" class="text-2xl font-bold">฿0</p>
+                                </div>
+
+                                <!-- Spent -->
+                                <div class="gradient-card card-green rounded-xl p-6 text-white shadow-lg">
+                                        <div class="flex items-center justify-between mb-4">
+                                                <div class="bg-white/20 p-3 rounded-lg">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2"
+                                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                </div>
+                                                <span class="text-xs bg-white/20 px-2 py-1 rounded">จ่ายจริง</span>
+                                        </div>
+                                        <p class="text-sm text-white/80 mb-1">ใช้จ่ายแล้ว</p>
+                                        <p id="totalSpent" class="text-2xl font-bold">฿0</p>
+                                </div>
+
+                                <!-- Reserved -->
+                                <div class="gradient-card card-yellow rounded-xl p-6 text-white shadow-lg">
+                                        <div class="flex items-center justify-between mb-4">
+                                                <div class="bg-white/20 p-3 rounded-lg">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2"
+                                                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                </div>
+                                                <span class="text-xs bg-white/20 px-2 py-1 rounded">รออนุมัติ</span>
+                                        </div>
+                                        <p class="text-sm text-white/80 mb-1">จองไว้</p>
+                                        <p id="totalReserved" class="text-2xl font-bold">฿0</p>
+                                </div>
+
+                                <!-- Remaining -->
+                                <div class="gradient-card card-purple rounded-xl p-6 text-white shadow-lg">
+                                        <div class="flex items-center justify-between mb-4">
+                                                <div class="bg-white/20 p-3 rounded-lg">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2"
+                                                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                </div>
+                                                <span class="text-xs bg-white/20 px-2 py-1 rounded">พร้อมใช้</span>
+                                        </div>
+                                        <p class="text-sm text-white/80 mb-1">คงเหลือ</p>
+                                        <p id="totalRemaining" class="text-2xl font-bold">฿0</p>
+                                </div>
+                        </div>
+
+                        <!-- Budget Charts Section -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                                <!-- Donut Chart - สัดส่วนงบประมาณ -->
+                                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                        <h3 class="text-lg font-bold text-gray-800 mb-4">สัดส่วนการใช้งบประมาณ</h3>
+                                        <div class="relative" style="height: 300px;">
+                                                <canvas id="budgetDonutChart"></canvas>
+                                        </div>
+                                        <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+                                                <div class="flex items-center gap-2">
+                                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                                        <span>ใช้จ่ายแล้ว</span>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                        <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                                        <span>จองไว้</span>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                        <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
+                                                        <span>คงเหลือ</span>
+                                                </div>
+                                        </div>
+                                </div>
+
+                                <!-- Bar Chart - งบแต่ละโครงการ -->
+                                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                        <h3 class="text-lg font-bold text-gray-800 mb-4">งบประมาณแต่ละโครงการ
+                                        </h3>
+                                        <div class="relative" style="height: 300px;">
+                                                <canvas id="budgetBarChart"></canvas>
+                                        </div>
+                                </div>
+                        </div>
+
+                        <!-- Projects Table -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                                        <h2 class="text-lg font-bold text-gray-800">รายละเอียดงบประมาณแต่ละโครงการ
+                                        </h2>
+                                        <span id="projectCount" class="text-sm text-gray-500">0 โครงการ</span>
+                                </div>
+
+                                <div class="overflow-x-auto">
+                                        <table class="w-full">
+                                                <thead class="bg-gray-50">
+                                                        <tr>
+                                                                <th
+                                                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                        โครงการ</th>
+                                                                <th
+                                                                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                        งบทั้งหมด</th>
+                                                                <th
+                                                                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                        ใช้ไป</th>
+                                                                <th
+                                                                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                        จองไว้</th>
+                                                                <th
+                                                                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                        คงเหลือ</th>
+                                                                <th
+                                                                        class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                                                                        สถานะ</th>
+                                                        </tr>
+                                                </thead>
+                                                <tbody id="projectsTable" class="divide-y divide-gray-200">
+                                                        <!-- Projects will be inserted here -->
+                                                </tbody>
+                                        </table>
+                                </div>
+                        </div>
+
+                </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-center py-4 mt-8">
+                <p class="text-sm font-medium">ระบบติดตามการสั่งซื้อ (POTMS)</p>
+                <p class="text-xs text-cyan-100">Procurement Order Tracking Management System</p>
+        </footer>
+
+        <script>
+                // Chart instances
+                let donutChart = null;
+                let barChart = null;
+
+                // Format number with commas
+                function formatNumber(num) {
+                        return new Intl.NumberFormat('th-TH').format(num);
+                }
+
+                // Get progress bar color based on percentage
+                function getProgressColor(percent) {
+                        if (percent >= 90) return 'bg-red-500';
+                        if (percent >= 70) return 'bg-yellow-500';
+                        return 'bg-green-500';
+                }
+
+                // Initialize Donut Chart
+                function initDonutChart(spent, reserved, remaining) {
+                        const ctx = document.getElementById('budgetDonutChart').getContext('2d');
+
+                        // Destroy existing chart
+                        if (donutChart) {
+                                donutChart.destroy();
+                        }
+
+                        donutChart = new Chart(ctx, {
+                                type: 'doughnut',
+                                data: {
+                                        labels: ['ใช้จ่ายแล้ว', 'จองไว้', 'คงเหลือ'],
+                                        datasets: [{
+                                                data: [spent, reserved, remaining],
+                                                backgroundColor: [
+                                                        'rgb(16, 185, 129)',  // Green
+                                                        'rgb(245, 158, 11)',  // Yellow
+                                                        'rgb(139, 92, 246)'   // Purple
+                                                ],
+                                                borderWidth: 0
+                                        }]
+                                },
+                                options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        plugins: {
+                                                legend: {
+                                                        display: false
+                                                },
+                                                tooltip: {
+                                                        callbacks: {
+                                                                label: function (context) {
+                                                                        const label = context.label || '';
+                                                                        const value = formatNumber(context.parsed);
+                                                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                                                        const percent = ((context.parsed / total) * 100).toFixed(1);
+                                                                        return `${label}: ฿${value} (${percent}%)`;
+                                                                }
+                                                        }
+                                                }
+                                        }
+                                }
+                        });
+                }
+
+                // Initialize Bar Chart
+                function initBarChart(projects) {
+                        const ctx = document.getElementById('budgetBarChart').getContext('2d');
+
+                        // Destroy existing chart
+                        if (barChart) {
+                                barChart.destroy();
+                        }
+
+                        // Get top 5 projects by budget
+                        const topProjects = projects
+                                .sort((a, b) => b.budget_total - a.budget_total)
+                                .slice(0, 5);
+
+                        const projectNames = topProjects.map(p => p.project_name.length > 20
+                                ? p.project_name.substring(0, 20) + '...'
+                                : p.project_name);
+                        const budgetSpent = topProjects.map(p => p.budget_spent);
+                        const budgetReserved = topProjects.map(p => p.budget_reserved);
+                        const budgetRemaining = topProjects.map(p => p.budget_remaining);
+
+                        barChart = new Chart(ctx, {
+                                type: 'bar',
+                                data: {
+                                        labels: projectNames,
+                                        datasets: [
+                                                {
+                                                        label: 'ใช้จ่ายแล้ว',
+                                                        data: budgetSpent,
+                                                        backgroundColor: 'rgb(16, 185, 129)'
+                                                },
+                                                {
+                                                        label: 'จองไว้',
+                                                        data: budgetReserved,
+                                                        backgroundColor: 'rgb(245, 158, 11)'
+                                                },
+                                                {
+                                                        label: 'คงเหลือ',
+                                                        data: budgetRemaining,
+                                                        backgroundColor: 'rgb(139, 92, 246)'
+                                                }
+                                        ]
+                                },
+                                options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        scales: {
+                                                x: {
+                                                        stacked: true
+                                                },
+                                                y: {
+                                                        stacked: true,
+                                                        ticks: {
+                                                                callback: function (value) {
+                                                                        return '฿' + formatNumber(value);
+                                                                }
+                                                        }
+                                                }
+                                        },
+                                        plugins: {
+                                                tooltip: {
+                                                        callbacks: {
+                                                                label: function (context) {
+                                                                        return `${context.dataset.label}: ฿${formatNumber(context.parsed.y)}`;
+                                                                }
+                                                        }
+                                                }
+                                        }
+                                }
+                        });
+                }
+
+                // Load budget data from API
+                async function loadBudgetData() {
+                        document.getElementById('loadingState').classList.remove('hidden');
+                        document.getElementById('contentArea').classList.add('hidden');
+
+                        try {
+                                const response = await fetch('/api/budget-summary/');
+                                if (!response.ok) throw new Error('Failed to load data');
+
+                                const data = await response.json();
+
+                                // Update summary cards
+                                document.getElementById('totalBudget').textContent = `฿${formatNumber(data.total_budget)}`;
+                                document.getElementById('totalSpent').textContent = `฿${formatNumber(data.total_spent)}`;
+                                document.getElementById('totalReserved').textContent = `฿${formatNumber(data.total_reserved)}`;
+                                document.getElementById('totalRemaining').textContent = `฿${formatNumber(data.total_remaining)}`;
+
+                                // Update project count
+                                document.getElementById('projectCount').textContent = `${data.projects.length} โครงการ`;
+
+                                // Initialize Charts
+                                initDonutChart(data.total_spent, data.total_reserved, data.total_remaining);
+                                if (data.projects.length > 0) {
+                                        initBarChart(data.projects);
+                                }
+
+                                // Build projects table
+                                const tbody = document.getElementById('projectsTable');
+                                tbody.innerHTML = '';
+
+                                if (data.projects.length === 0) {
+                                        tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                <p class="text-4xl mb-2">📭</p>
+                                <p>ไม่พบข้อมูลโครงการ</p>
+                            </td>
+                        </tr>
+                    `;
+                                } else {
+                                        data.projects.forEach(project => {
+                                                const progressColor = getProgressColor(project.usage_percent);
+                                                const statusBadge = project.status === 'Active'
+                                                        ? '<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Active</span>'
+                                                        : '<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">' + project.status + '</span>';
+
+                                                tbody.innerHTML += `
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4">
+                                    <div class="font-medium text-gray-900">${project.project_name}</div>
+                                </td>
+                                <td class="px-6 py-4 text-right text-gray-900 font-medium">฿${formatNumber(project.budget_total)}</td>
+                                <td class="px-6 py-4 text-right text-green-600">฿${formatNumber(project.budget_spent)}</td>
+                                <td class="px-6 py-4 text-right text-yellow-600">฿${formatNumber(project.budget_reserved)}</td>
+                                <td class="px-6 py-4 text-right text-purple-600 font-medium">฿${formatNumber(project.budget_remaining)}</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 bg-gray-200 rounded-full h-2.5">
+                                            <div class="${progressColor} h-2.5 rounded-full transition-all" style="width: ${Math.min(project.usage_percent, 100)}%"></div>
+                                        </div>
+                                        <span class="text-xs text-gray-500 w-12 text-right">${project.usage_percent}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                                        });
+                                }
+
+                                // Show content
+                                document.getElementById('loadingState').classList.add('hidden');
+                                document.getElementById('contentArea').classList.remove('hidden');
+
+                        } catch (error) {
+                                console.error('Error loading budget data:', error);
+                                document.getElementById('loadingState').classList.add('hidden');
+                                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลงบประมาณได้', 'error');
+                        }
+                }
+
+                // Load data on page load
+                document.addEventListener('DOMContentLoaded', loadBudgetData);
+        </script>
+
+</body>
+
+</html>

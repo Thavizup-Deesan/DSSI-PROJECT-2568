@@ -251,6 +251,7 @@
 
 <body>
         <div class="print-actions no-print">
+                <button class="print-btn" onclick="exportCSV()" style="background: #2196F3;">📥 CSV</button>
                 <button class="print-btn" onclick="window.print()">🖨️ พิมพ์</button>
                 <button class="close-btn" onclick="window.close()">✕ ปิด</button>
         </div>
@@ -351,6 +352,20 @@
                 document.getElementById('print-date').textContent = new Date().toLocaleDateString('th-TH', {
                         year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 });
+
+                // Export CSV function
+                function exportCSV() {
+                        // Get order_id from URL (format: /api/orders/{order_id}/print/)
+                        const pathParts = window.location.pathname.split('/');
+                        const orderIdIndex = pathParts.indexOf('orders') + 1;
+                        const orderId = pathParts[orderIdIndex];
+
+                        if (orderId) {
+                                window.location.href = '/api/orders/' + orderId + '/export-csv/';
+                        } else {
+                                alert('ไม่พบ Order ID');
+                        }
+                }
         </script>
 </body>
 

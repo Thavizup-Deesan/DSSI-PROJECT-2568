@@ -116,19 +116,24 @@
                 <p class="mt-2 text-gray-500 text-sm">กำลังโหลดข้อมูล...</p>
             </div>
 
-            <table id="projectTable" class="min-w-full divide-y divide-gray-200 hidden">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">รหัสโครงการ</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">ชื่อโครงการ</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">งบประมาณ</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">สถานะ</th>
-                        <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">การจัดการ</th>
-                    </tr>
-                </thead>
-                <tbody id="projectTableBody" class="bg-white divide-y divide-gray-100">
-                </tbody>
-            </table>
+            <div class="overflow-x-auto">
+                <table id="projectTable" class="min-w-full divide-y divide-gray-200 hidden">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">รหัสโครงการ
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">ชื่อโครงการ
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">งบประมาณ</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">สถานะ</th>
+                            <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">การจัดการ
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectTableBody" class="bg-white divide-y divide-gray-100">
+                    </tbody>
+                </table>
+            </div>
 
             <div id="noData" class="hidden text-center py-10 text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300 mb-3" fill="none"
@@ -218,9 +223,9 @@
                     <tr class="hover:bg-blue-50 transition">
                         <td class="px-6 py-4 text-sm text-blue-600 font-medium">${shortId}</td>
                         <td class="px-6 py-4 text-sm text-gray-800 font-medium">${project.project_name}</td>
-                        <td class="px-6 py-4 text-sm text-gray-600">฿${parseFloat(project.budget_total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">฿${(parseFloat(project.budget_total || 0) - parseFloat(project.budget_reserved || 0) - parseFloat(project.budget_spent || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
                         <td class="px-6 py-4">
-                            <span class="px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${statusClass}">${project.status || 'Active'}</span>
+                            <span class="px-3 py-1 text-xs font-semibold rounded-full ${statusClass}">${project.status || 'Active'}</span>
                         </td>
                         <td class="px-6 py-4 text-center">
                             <button onclick="selectProject('${project.id}', '${project.project_name}')" 

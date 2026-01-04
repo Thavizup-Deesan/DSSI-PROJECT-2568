@@ -1,0 +1,36 @@
+# =============================================================================
+# POTMS - Docker Compose for Development
+# Simple setup for local development
+# =============================================================================
+
+services:
+  # =========================================================================
+  # Django Backend Application (Development Mode)
+  # =========================================================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: potms-dev
+    restart: unless-stopped
+    environment:
+      - DJANGO_SECRET_KEY=dev-secret-key-not-for-production
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/firebase-key.json
+      - PORT=8000
+    volumes:
+      - .:/app
+      - ./credentials:/app/credentials:ro
+    ports:
+      - "8000:8000"
+    command: python manage.py runserver 0.0.0.0:8000
+
+  # =========================================================================
+  # Redis for Caching (Optional for dev)
+  # =========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: potms-redis-dev
+    ports:
+      - "6379:6379"

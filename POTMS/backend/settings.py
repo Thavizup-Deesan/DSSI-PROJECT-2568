@@ -23,10 +23,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-*dy*hut_&rzo1jip2x29bgh6c+@r4#q8$7wn($44)br&&4v2qh'
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
+
+# ✅ FIX V15: Use environment variable instead of hardcoding
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-*dy*hut_&rzo1jip2x29bgh6c+@r4#q8$7wn($44)br&&4v2qh'  # Fallback for dev only
+)
+
+# Warn if using default key in production
+if not os.environ.get('DJANGO_SECRET_KEY') and not DEBUG:
+    import warnings
+    warnings.warn(
+        'Using default SECRET_KEY! Set DJANGO_SECRET_KEY environment variable in production!',
+        RuntimeWarning
+    )
+
 
 ALLOWED_HOSTS = ['.vercel.app', '127.0.0.1', 'localhost']
 
@@ -36,6 +49,7 @@ ALLOWED_HOSTS = ['.vercel.app', '127.0.0.1', 'localhost']
 INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
+    'rest_framework_simplejwt',
     'api',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -82,16 +96,27 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 #        'ENGINE': 'django.db.backends.mysql',
 
 
-DATABASES = {
-     'default': {
-         'ENGINE': 'django.db.backends.mysql',
-         'NAME': 'potms',
-         'USER': 'root',
-         'PASSWORD': 'BookReserve2025',
-         'HOST': 'localhost',
-         'PORT': '3306',
-     }
- }
+# สำหรับ Vercel/Docker: ใช้ SQLite (dummy) เพราะข้อมูลจริงอยู่ใน Firebase Firestore
+import os
+if os.environ.get('VERCEL') or os.environ.get('DOCKER'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': '/tmp/db.sqlite3',
+        }
+    }
+else:
+    # สำหรับ Local Development: ใช้ MySQL
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'potms',
+            'USER': 'root',
+            'PASSWORD': 'BookReserve2025',
+            'HOST': 'localhost',
+            'PORT': '3306',
+        }
+    }
 
 # DATABASES = {
 #     'default': {
@@ -164,4 +189,98 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
+
+# =================================================================
+# JWT Authentication Settings
+# =================================================================
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'UPDATE_LAST_LOGIN': True,
+    
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+}
+
+# Django REST Framework Settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    # Don't require authentication by default - we'll add it per-view
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+    ),
+}
+
+# =================================================================
+# Rate Limiting Settings
+# =================================================================
+RATELIMIT_ENABLE = True
+RATELIMIT_USE_CACHE = 'default'
+
+# Cache configuration for rate limiting
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'rate_limit_cache',
+    }
+}
+
+# =================================================================
+# Additional Security Settings (V12, V13, V14)
+# =================================================================
+
+# V14: Request Size Limits - Prevent memory exhaustion
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5 MB
+
+# V7: Session Security
+SESSION_COOKIE_AGE = 7200  # 2 hours
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = not DEBUG  # Use secure cookies in production
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+# V12: CSRF Protection
+CSRF_COOKIE_HTTPONLY = False  # Must be False for JavaScript to read
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_USE_SESSIONS = False
+
+# Security Headers
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
+# In production (Vercel), enable HTTPS
+# Only if running on Vercel, not localhost
+import os
+if os.environ.get('VERCEL'):
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+else:
+    # Local development - no SSL redirect
+    SECURE_SSL_REDIRECT = False
+
