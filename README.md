@@ -5,3 +5,5 @@ https://www.figma.com/design/MwMGYaHzdhh0T5nqtXiR4L/Untitled?node-id=24-544&t=U4
 
 Link Drive 
 https://drive.google.com/drive/folders/1YXr_xa2F102Yfu3A0DOHMSBixSPiH_e0?usp=sharing
+
+Link เอกสาร : https://docs.google.com/document/d/1uJ94MVcdQXf0ZZ3P4fvL0MlhHWflx_OU/edit?usp=sharing&ouid=111458634810759901210&rtpof=true&sd=true
