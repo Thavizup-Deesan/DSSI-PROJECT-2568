@@ -221,12 +221,11 @@ SIMPLE_JWT = {
 }
 
 # Django REST Framework Settings
+# NOTE: We don't use default JWTAuthentication because it tries to lookup Django User model
+# We verify JWT tokens manually in IsStaff permission class using Firebase users
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-    ),
-    # Don't require authentication by default - we'll add it per-view
+    'DEFAULT_AUTHENTICATION_CLASSES': (),  # No default auth - we handle JWT in permission classes
+    # Don't require authentication by default - we'll add it per-view  
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
     ),
@@ -239,10 +238,11 @@ RATELIMIT_ENABLE = True
 RATELIMIT_USE_CACHE = 'default'
 
 # Cache configuration for rate limiting
+# Use LocMemCache for serverless (Vercel) - no database table needed
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'rate_limit_cache',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'rate-limit-cache',
     }
 }
 

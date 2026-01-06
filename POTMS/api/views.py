@@ -29,11 +29,32 @@ from api.utils.authz import verify_staff_project_access, verify_order_ownership
 class IsStaff(BasePermission):
     """
     Custom permission to only allow Staff users to access.
+    Verifies JWT token from Authorization header.
     """
     def has_permission(self, request, view):
-        # For session-based auth (current implementation)
+        # Method 1: JWT Token-based auth (recommended for Vercel)
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            try:
+                from rest_framework_simplejwt.tokens import AccessToken
+                token = auth_header.split(' ')[1]
+                decoded = AccessToken(token)
+                role = decoded.get('role', '')
+                if role.lower() == 'staff':
+                    # Store in request for later use
+                    request.jwt_user_id = decoded.get('user_id')
+                    request.jwt_role = role
+                    return True
+            except Exception as e:
+                print(f"JWT validation error: {str(e)}")
+                pass
+        
+        # Method 2: Session-based auth (local development fallback)
         user_role = request.session.get('user_role', '')
-        return user_role == 'Staff'
+        if user_role.lower() == 'staff':
+            return True
+        
+        return False
 
 
 class ProjectAPIView(APIView):
@@ -213,11 +234,18 @@ class UserRegisterAPIView(APIView):
 @method_decorator(ratelimit(key='ip', rate='5/m', method='POST'), name='post')
 class UserLoginAPIView(APIView):
     """
-    User Login API
+    User Login API with JWT Token Generation
     Rate Limit: 5 attempts per minute per IP
+    
+    Returns:
+        - access: JWT access token (1 hour)
+        - refresh: JWT refresh token (7 days)
+        - user: User info (id, username, role, department)
     """
     def post(self, request):
         try:
+            from rest_framework_simplejwt.tokens import RefreshToken
+            
             data = request.data
             username = data.get('username')
             password = data.get('password')
@@ -233,19 +261,29 @@ class UserLoginAPIView(APIView):
 
             # 2. ตรวจสอบรหัสผ่าน (ใช้ check_password เทียบกับค่า Hash)
             if user_found and check_password(password, user_found['password']):
+                # 3. Generate JWT tokens with custom claims
+                refresh = RefreshToken()
+                refresh['user_id'] = user_found['id']
+                refresh['username'] = user_found['username']
+                refresh['role'] = user_found['role']
+                refresh['department'] = user_found.get('department', '')
+                
                 return Response({
                     'message': 'เข้าสู่ระบบสำเร็จ',
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
                     'user': {
                         'id': user_found['id'],
                         'username': user_found['username'],
                         'role': user_found['role'],
-                        'department': user_found['department']
+                        'department': user_found.get('department', '')
                     }
                 }, status=status.HTTP_200_OK)
             else:
                 return Response({'error': 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'}, status=status.HTTP_401_UNAUTHORIZED)
 
         except Exception as e:
+            print(f"Login error: {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 def login_page(request):
@@ -929,15 +967,19 @@ class OrderApproveAPIView(APIView):
             # ✅ SECURITY: Validate status transition
             validate_status_transition(current_status, 'WaitingBossApproval')
             
-            # ✅ SECURITY: Verify staff has access to this project
-            staff_id = request.session.get('user_id', approver_id)
-            if not verify_staff_project_access(staff_id, project_id):
-                return Response({
-                    'error': 'คุณไม่มีสิทธิ์อนุมัติใบสั่งซื้อจากโครงการนี้'
-                }, status=status.HTTP_403_FORBIDDEN)
-            
-            # 3. ดึง approver_id จาก request
+            # 3. ดึง approver_id จาก request body หรือ JWT
             approver_id = request.data.get('approver_id', '')
+            if not approver_id:
+                # Try to get from JWT (stored by IsStaff permission)
+                approver_id = getattr(request, 'jwt_user_id', '')
+            
+            # NOTE: Project access check disabled - all Staff can approve any project
+            # Uncomment below to restrict approval to assigned Staff only
+            # staff_id = approver_id
+            # if staff_id and not verify_staff_project_access(staff_id, project_id):
+            #     return Response({
+            #         'error': 'คุณไม่มีสิทธิ์อนุมัติใบสั่งซื้อจากโครงการนี้'
+            #     }, status=status.HTTP_403_FORBIDDEN)
             
             # 4. อัปเดตสถานะ Order เป็น WaitingBossApproval
             db.collection('orders').document(order_id).update({
@@ -949,7 +991,7 @@ class OrderApproveAPIView(APIView):
             # ✅ AUDIT: Log approval action
             log_audit(
                 action=AUDIT_ACTIONS['ORDER_APPROVED'],
-                user_id=request.session.get('user_id', approver_id),
+                user_id=approver_id,
                 resource_type='order',
                 resource_id=order_id,
                 details={'new_status': 'WaitingBossApproval'},
@@ -1465,10 +1507,16 @@ class InspectionAPIView(APIView):
             parent_order_id = suborder_data.get('parent_order_id')
             order_doc = db.collection('orders').document(parent_order_id).get()
             
+            # คำนวณส่วนต่างราคา
+            cost_difference = 0
+            
             if order_doc.exists:
                 order_data = order_doc.to_dict()
                 project_id = order_data.get('project_id')
                 order_total = float(order_data.get('total_estimated_price', 0))
+                
+                # ส่วนต่าง = ราคาจ่ายจริง - ราคาประมาณ
+                cost_difference = actual_cost - order_total
                 
                 project_doc = db.collection('projects').document(project_id).get()
                 if project_doc.exists:

@@ -331,7 +331,7 @@
                                                         class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
                                                         พิมพ์ใบสั่งซื้อ
                                                 </button>
-                                                <button oncick="sendToProcurement()"
+                                                <button onclick="sendToProcurement()"
                                                         class="w-full py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
                                                         ส่งรายการให้พัสดุ
                                                 </button>
@@ -623,6 +623,15 @@
                 let projectData = null;
                 let currentUser = null;
 
+                // Helper function to get auth headers with JWT token
+                function getAuthHeaders() {
+                        const token = localStorage.getItem('access_token');
+                        return {
+                                'Content-Type': 'application/json',
+                                'Authorization': token ? `Bearer ${token}` : ''
+                        };
+                }
+
                 // Initialize
                 document.addEventListener('DOMContentLoaded', function () {
                         checkAuth();
@@ -632,8 +641,10 @@
                 // Check authentication
                 function checkAuth() {
                         const user = JSON.parse(localStorage.getItem('user') || 'null');
-                        if (!user || (user.role || '').toLowerCase() !== 'staff') {
-                                Swal.fire('ไม่มีสิทธิ์', 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้', 'error')
+                        const token = localStorage.getItem('access_token');
+
+                        if (!user || !token || (user.role || '').toLowerCase() !== 'staff') {
+                                Swal.fire('ไม่มีสิทธิ์', 'กรุณาเข้าสู่ระบบใหม่', 'error')
                                         .then(() => window.location.href = '/api/login-page/');
                                 return;
                         }
@@ -859,7 +870,7 @@
                                 try {
                                         const response = await fetch(`/api/orders/${orderId}/approve/`, {
                                                 method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
+                                                headers: getAuthHeaders(),
                                                 body: JSON.stringify({ approver_id: currentUser.id })
                                         });
 
@@ -889,7 +900,7 @@
                         try {
                                 const response = await fetch(`/api/orders/${orderId}/reject/`, {
                                         method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
+                                        headers: getAuthHeaders(),
                                         body: JSON.stringify({
                                                 approver_id: currentUser.id,
                                                 staff_note: staffNote
@@ -934,7 +945,7 @@
                         try {
                                 const response = await fetch(`/api/orders/${orderId}/correction/`, {
                                         method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
+                                        headers: getAuthHeaders(),
                                         body: JSON.stringify({
                                                 approver_id: currentUser.id,
                                                 staff_note: correctionNote
@@ -971,7 +982,7 @@
                                 try {
                                         const response = await fetch(`/api/orders/${orderId}/boss-approve/`, {
                                                 method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
+                                                headers: getAuthHeaders(),
                                                 body: JSON.stringify({})
                                         });
 
@@ -1006,7 +1017,7 @@
                                 try {
                                         const response = await fetch(`/api/orders/${orderId}/send-to-procurement/`, {
                                                 method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
+                                                headers: getAuthHeaders(),
                                                 body: JSON.stringify({})
                                         });
 
@@ -1041,7 +1052,7 @@
                                 try {
                                         const response = await fetch(`/api/orders/${orderId}/receive-procurement/`, {
                                                 method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
+                                                headers: getAuthHeaders(),
                                                 body: JSON.stringify({})
                                         });
 
@@ -1127,7 +1138,7 @@
                                 try {
                                         const response = await fetch(`/api/orders/${orderId}/create-suborder/`, {
                                                 method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
+                                                headers: getAuthHeaders(),
                                                 body: JSON.stringify({
                                                         items: selectedItems,
                                                         notes: notes
@@ -1262,7 +1273,7 @@
 
                                         const response = await fetch(`/api/suborders/${subOrderId}/inspection/`, {
                                                 method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
+                                                headers: getAuthHeaders(),
                                                 body: JSON.stringify({
                                                         actual_cost: actualCost,
                                                         inspector_name: inspectorName,
@@ -1379,7 +1390,7 @@
                         try {
                                 const response = await fetch(`/api/orders/${orderId}/boss-reject/`, {
                                         method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
+                                        headers: getAuthHeaders(),
                                         body: JSON.stringify({
                                                 boss_note: bossRejectNote
                                         })
@@ -1429,7 +1440,7 @@
                         try {
                                 const response = await fetch(`/api/orders/${orderId}/approved-correction/`, {
                                         method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
+                                        headers: getAuthHeaders(),
                                         body: JSON.stringify({
                                                 staff_note: correctionNote
                                         })
@@ -1536,7 +1547,7 @@
                                 try {
                                         const response = await fetch(`/api/orders/${orderId}/handover/`, {
                                                 method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
+                                                headers: getAuthHeaders(),
                                                 body: JSON.stringify({
                                                         receiver_name: receiverName,
                                                         notes: notes
@@ -1584,7 +1595,7 @@
                                 try {
                                         const response = await fetch(`/api/orders/${orderId}/close/`, {
                                                 method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
+                                                headers: getAuthHeaders(),
                                                 body: JSON.stringify({ notes: '' })
                                         });
 

@@ -60,7 +60,9 @@
                                 const data = await response.json();
 
                                 if (response.ok) {
-                                        // 2. ถ้าล็อกอินผ่าน: บันทึกข้อมูลลง LocalStorage (เหมือนคุกกี้)
+                                        // 2. ถ้าล็อกอินผ่าน: บันทึก JWT tokens และข้อมูลผู้ใช้ลง LocalStorage
+                                        localStorage.setItem('access_token', data.access);
+                                        localStorage.setItem('refresh_token', data.refresh);
                                         localStorage.setItem('user', JSON.stringify(data.user));
 
                                         // 3. แจ้งเตือนและย้ายไปหน้า Dashboard ตาม Role
