@@ -1,0 +1,18 @@
+{
+        "version": "0.2.0",
+        "configurations": [
+                {
+                        "name": "Django: runserver",
+                        "type": "debugpy",
+                        "request": "launch",
+                        "program": "${workspaceFolder}/POTMS/manage.py",
+                        "args": [
+                                "runserver"
+                        ],
+                        "django": true,
+                        "justMyCode": true,
+                        "cwd": "${workspaceFolder}/POTMS",
+                        "python": "${workspaceFolder}/.venv/Scripts/python.exe"
+                }
+        ]
+}

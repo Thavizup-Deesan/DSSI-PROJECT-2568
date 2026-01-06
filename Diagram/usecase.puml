@@ -6,39 +6,61 @@ actor "User (ผู้ขอซื้อ)" as User
 actor "Staff (เจ้าหน้าที่)" as Staff
 
 package "POTMS System" {
-    ' Authentication Group
-    usecase "UC-01 Login" as UC01
-    usecase "UC-02 Register" as UC02
-    usecase "UC-03 Logout" as UC03
+    ' --- Authentication ---
+    usecase "UC-01 เข้าสู่ระบบ (Login)" as UC01
+    
+    ' --- User Actions ---
+    usecase "UC-02 เลือกโครงการ (Select Project)" as UC02
+    usecase "UC-03 สร้างใบขอซื้อ (Create Order)" as UC03
+    usecase "UC-04 ติดตามสถานะ/แก้ไข (Track & Edit)" as UC04
+    usecase "UC-05 สแกน QR Code (Scan QR)" as UC05
 
-    ' Master Data (Staff)
-    usecase "UC-04 Manage Projects\n(Create/Edit/Delete)" as UC04
-    usecase "UC-05 Import Project Data\n(Excel/CSV)" as UC05
+    ' --- Staff Actions ---
+    usecase "UC-06 จัดการข้อมูลโครงการ (Manage Projects)" as UC06
+    usecase "UC-07 ตรวจสอบใบขอซื้อ (Verify Order)" as UC07
+    usecase "UC-08 พิมพ์ใบสั่งซื้อ (Print Order)" as UC08
+    usecase "UC-09 บันทึกผลการอนุมัติ (Record Approval)" as UC09
+    usecase "UC-11 ดำเนินการจัดซื้อ (Send to Procurement)" as UC11
+    usecase "UC-12 ตรวจรับพัสดุ (Inspect Items)" as UC12
+    usecase "UC-13 ปิดงาน/ส่งมอบ (Handover & Close)" as UC13
+    usecase "UC-14 ออกรายงานสรุป (Generate Report)" as UC14
 
-    ' Ordering System (User)
-    usecase "UC-06 Select Project" as UC06
-    usecase "UC-07 Create Order\n(Create/Edit Draft)" as UC07
-    usecase "UC-08 View My Orders" as UC08
-
-    ' Approval & Inspection (Staff)
-    usecase "UC-09 Review & Approve Order" as UC09
-    usecase "UC-10 Inspect & Receive Items" as UC10
+    ' --- System Internal Processes (Included/Extended) ---
+    usecase "ตรวจสอบงบประมาณ\n(Check Budget)" as UC_CheckBudget
+    usecase "สร้าง QR Code\n(Generate QR)" as UC_GenQR
+    usecase "UC-10 ส่งคืนแก้ไข\n(Request Correction)" as UC10
+    usecase "ปฏิเสธรายการ\n(Reject Order)" as UC_Reject
 }
 
-' User Relationships
+' --- Relationships ---
+
+' Auth
 User -- UC01
+Staff -- UC01
+
+' User Flow
 User -- UC02
 User -- UC03
-User -- UC06
-User -- UC07
-User -- UC08
+User -- UC04
+User -- UC05
 
-' Staff Relationships
-Staff -- UC01
-Staff -- UC03
-Staff -- UC04
+' ** Include Relationships **
+UC03 ..> UC_CheckBudget : <<include>> \n(เช็คยอดเงินเสมอ)
+UC12 ..> UC_GenQR : <<include>> \n(สร้าง QR อัตโนมัติ)
+
+' Staff Flow
 Staff -- UC05
-Staff -- UC09
-Staff -- UC10
+Staff -- UC06
+Staff -- UC07 : (ตรวจสอบ)
+Staff -- UC08
+Staff -- UC09 : (ตัดงบจริง)
+Staff -- UC11
+Staff -- UC12
+Staff -- UC13
+Staff -- UC14
+
+' ** Extend Relationships **
+UC10 .> UC07 : <<extend>> \n(ถ้าข้อมูลผิด)
+UC_Reject .> UC09 : <<extend>> \n(ถ้าหัวหน้าไม่อนุมัติ)
 
 @enduml
