@@ -7,6 +7,7 @@
         <title>สร้างใบขอซื้อใหม่ - POTMS</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
         <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap"
                 rel="stylesheet">
         <style>
@@ -150,51 +151,36 @@
                                 <!-- Items will be added here -->
                         </div>
 
-                        <!-- Add Item Button -->
-                        <button onclick="addItem()"
-                                class="mt-4 px-4 py-2 border-2 border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition flex items-center gap-2 font-medium">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 4v16m8-8H4" />
-                                </svg>
-                                เพิ่มรายการ
-                        </button>
+                        <!-- Add Item Button + Import Button -->
+                        <div class="mt-4 flex flex-wrap gap-2">
+                                <button onclick="addItem()"
+                                        class="px-4 py-2 border-2 border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition flex items-center gap-2 font-medium">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        เพิ่มรายการ
+                                </button>
+                                <button onclick="document.getElementById('import-file').click()"
+                                        class="px-4 py-2 border-2 border-green-500 text-green-500 rounded-lg hover:bg-green-50 transition flex items-center gap-2 font-medium">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5  5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        นำเข้าจากไฟล์
+                                </button>
+                                <input type="file" id="import-file" class="hidden" accept=".csv,.xlsx,.xls"
+                                        onchange="importItems(event)">
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                                รองรับไฟล์ CSV หรือ Excel (.xlsx) โดยคอลัมน์ต้องเป็น: รายการ, จำนวน, หน่วย, ราคา/หน่วย
+                        </p>
 
                         <!-- Total -->
                         <div class="mt-6 pt-4 border-t border-gray-200 flex justify-end items-center gap-4">
                                 <span class="text-gray-600 font-medium">ยอดรวมประมาณการ:</span>
                                 <span id="total-amount" class="text-2xl font-bold text-blue-600">฿0.00</span>
                         </div>
-                </div>
-
-                <!-- Section 4: เอกสารแนบ -->
-                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                        <div class="flex items-center gap-2 mb-4">
-                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                </svg>
-                                <h2 class="text-lg font-bold text-blue-600">เอกสารแนบ</h2>
-                        </div>
-
-                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition cursor-pointer"
-                                onclick="document.getElementById('file-input').click()">
-                                <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                </svg>
-                                <p class="text-gray-500 mb-2">ลากและวางไฟล์ที่นี่</p>
-                                <p class="text-gray-400 text-sm mb-3">หรือ</p>
-                                <button type="button"
-                                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
-                                        เลือกไฟล์
-                                </button>
-                                <input type="file" id="file-input" multiple class="hidden"
-                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png">
-                        </div>
-                        <div id="file-list" class="mt-4 space-y-2"></div>
                 </div>
 
                 <!-- Action Buttons -->
@@ -404,6 +390,177 @@
                         calculateTotal();
                 }
 
+                // นำเข้ารายการจากไฟล์ CSV
+                async function importItems(event) {
+                        const file = event.target.files[0];
+                        if (!file) return;
+
+                        const fileName = file.name.toLowerCase();
+
+                        try {
+                                if (fileName.endsWith('.csv')) {
+                                        await importFromCSV(file);
+                                } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                                        await importFromExcel(file);
+                                } else {
+                                        Swal.fire('Warning', 'รองรับเฉพาะไฟล์ CSV และ Excel (.xlsx)', 'warning');
+                                }
+                        } catch (e) {
+                                console.error('Import error:', e);
+                                Swal.fire('Error', 'ไม่สามารถอ่านไฟล์ได้: ' + e.message, 'error');
+                        }
+
+                        // Reset input
+                        event.target.value = '';
+                }
+
+                // อ่านไฟล์ Excel
+                async function importFromExcel(file) {
+                        const data = await file.arrayBuffer();
+                        const workbook = XLSX.read(data, { type: 'array' });
+
+                        // อ่าน sheet แรก
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+
+                        // แปลงเป็น JSON
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                        if (jsonData.length === 0) {
+                                Swal.fire('Warning', 'ไฟล์ว่างเปล่า', 'warning');
+                                return;
+                        }
+
+                        // ข้ามบรรทัดแรก (header) ถ้าไม่ใช่ตัวเลข
+                        let startIndex = 0;
+                        if (jsonData[0] && isNaN(parseFloat(jsonData[0][1]))) {
+                                startIndex = 1;
+                        }
+
+                        let importedCount = 0;
+                        const container = document.getElementById('items-container');
+
+                        for (let i = startIndex; i < jsonData.length; i++) {
+                                const cols = jsonData[i];
+
+                                if (cols && cols.length >= 4) {
+                                        const itemName = String(cols[0] || '').trim();
+                                        const qty = parseFloat(cols[1]) || 1;
+                                        const unit = String(cols[2] || 'อัน').trim();
+                                        const price = parseFloat(cols[3]) || 0;
+
+                                        if (itemName) {
+                                                addItem();
+                                                const rows = container.children;
+                                                const lastRow = rows[rows.length - 1];
+
+                                                if (lastRow) {
+                                                        const inputs = lastRow.querySelectorAll('input');
+                                                        if (inputs.length >= 4) {
+                                                                inputs[0].value = itemName;
+                                                                inputs[1].value = qty;
+                                                                inputs[2].value = unit;
+                                                                inputs[3].value = price;
+                                                        }
+                                                }
+                                                importedCount++;
+                                        }
+                                }
+                        }
+
+                        calculateTotal();
+
+                        Swal.fire({
+                                icon: 'success',
+                                title: 'นำเข้าสำเร็จ',
+                                text: `นำเข้า ${importedCount} รายการจากไฟล์ Excel`,
+                                timer: 2000,
+                                showConfirmButton: false
+                        });
+                }
+
+                // อ่านไฟล์ CSV
+                async function importFromCSV(file) {
+                        const text = await file.text();
+                        const lines = text.split('\n').filter(line => line.trim());
+
+                        if (lines.length === 0) {
+                                Swal.fire('Warning', 'ไฟล์ว่างเปล่า', 'warning');
+                                return;
+                        }
+
+                        // ข้ามบรรทัดแรก (header) ถ้าไม่ใช่ตัวเลข
+                        let startIndex = 0;
+                        const firstLine = lines[0].split(',');
+                        if (isNaN(parseFloat(firstLine[1]))) {
+                                startIndex = 1; // Skip header
+                        }
+
+                        let importedCount = 0;
+                        const container = document.getElementById('items-container');
+
+                        for (let i = startIndex; i < lines.length; i++) {
+                                const cols = parseCSVLine(lines[i]);
+
+                                if (cols.length >= 4) {
+                                        // คอลัมน์: รายการ, จำนวน, หน่วย, ราคา
+                                        const itemName = cols[0]?.trim() || '';
+                                        const qty = parseFloat(cols[1]) || 1;
+                                        const unit = cols[2]?.trim() || 'อัน';
+                                        const price = parseFloat(cols[3]) || 0;
+
+                                        if (itemName) {
+                                                addItem();
+                                                const rows = container.children;
+                                                const lastRow = rows[rows.length - 1];
+
+                                                if (lastRow) {
+                                                        const inputs = lastRow.querySelectorAll('input');
+                                                        if (inputs.length >= 4) {
+                                                                inputs[0].value = itemName;
+                                                                inputs[1].value = qty;
+                                                                inputs[2].value = unit;
+                                                                inputs[3].value = price;
+                                                        }
+                                                }
+                                                importedCount++;
+                                        }
+                                }
+                        }
+
+                        calculateTotal();
+
+                        Swal.fire({
+                                icon: 'success',
+                                title: 'นำเข้าสำเร็จ',
+                                text: `นำเข้า ${importedCount} รายการ`,
+                                timer: 2000,
+                                showConfirmButton: false
+                        });
+                }
+
+                // Parse CSV line (รองรับ comma ใน quote)
+                function parseCSVLine(line) {
+                        const result = [];
+                        let current = '';
+                        let inQuotes = false;
+
+                        for (let i = 0; i < line.length; i++) {
+                                const char = line[i];
+                                if (char === '"') {
+                                        inQuotes = !inQuotes;
+                                } else if (char === ',' && !inQuotes) {
+                                        result.push(current);
+                                        current = '';
+                                } else {
+                                        current += char;
+                                }
+                        }
+                        result.push(current);
+                        return result;
+                }
+
+
                 // คำนวณยอดรวม
                 function calculateTotal() {
                         let total = 0;
@@ -587,20 +744,6 @@
                                 alert('เกิดข้อผิดพลาด: ' + outerError.message);
                         }
                 }
-
-                // File upload handling
-                document.getElementById('file-input').addEventListener('change', function (e) {
-                        const fileList = document.getElementById('file-list');
-                        Array.from(e.target.files).forEach(file => {
-                                const div = document.createElement('div');
-                                div.className = 'flex items-center justify-between bg-gray-50 px-4 py-2 rounded-lg';
-                                div.innerHTML = `
-                    <span class="text-sm text-gray-600">📎 ${file.name}</span>
-                    <button class="text-red-500 text-sm hover:underline">ลบ</button>
-                `;
-                                fileList.appendChild(div);
-                        });
-                });
         </script>
 </body>
 

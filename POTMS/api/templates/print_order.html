@@ -251,8 +251,8 @@
 
 <body>
         <div class="print-actions no-print">
-                <button class="print-btn" onclick="exportCSV()" style="background: #2196F3;">📥 CSV</button>
-                <button class="print-btn" onclick="window.print()">🖨️ พิมพ์</button>
+                <button class="print-btn" onclick="exportCSV()" style="background: #2196F3;">CSV</button>
+                <button class="print-btn" onclick="window.print()">พิมพ์</button>
                 <button class="close-btn" onclick="window.close()">✕ ปิด</button>
         </div>
 
@@ -312,8 +312,7 @@
                 <!-- Summary Section -->
                 <div class="summary-section">
                         <div class="note-box">
-                                <strong>หมายเหตุ:</strong> {% if order.order_description %}{{ order.order_description
-                                }}{% else %}-{% endif %}
+                                <strong>หมายเหตุ:</strong> {{ order.order_description|default:"-" }}
                         </div>
                         <div class="total-box">
                                 <div class="total-row"><span>รวมเงิน</span><span>{{ grand_total }} บาท</span></div>

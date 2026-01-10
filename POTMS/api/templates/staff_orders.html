@@ -146,9 +146,17 @@
                                         <select id="statusFilter" onchange="loadOrders()"
                                                 class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                                                 <option value="" selected>ทั้งหมด</option>
+                                                <option value="Draft">ฉบับร่าง</option>
                                                 <option value="Pending">รออนุมัติ</option>
-                                                <option value="Approved">อนุมัติแล้ว</option>
+                                                <option value="WaitingBossApproval">รอหัวหน้าเซ็น</option>
+                                                <option value="Approved">หัวหน้าอนุมัติแล้ว</option>
+                                                <option value="CorrectionNeeded">ต้องแก้ไข</option>
                                                 <option value="Rejected">ปฏิเสธ</option>
+                                                <option value="SentToProcurement">ส่งพัสดุแล้ว</option>
+                                                <option value="ReceivedFromProcurement">รับของจากพัสดุแล้ว</option>
+                                                <option value="WaitingInspection">รอตรวจรับ</option>
+                                                <option value="Inspected">ตรวจรับแล้ว</option>
+                                                <option value="Closed">ปิดแล้ว</option>
                                         </select>
                                 </div>
                         </div>
