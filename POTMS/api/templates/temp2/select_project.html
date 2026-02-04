@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-10">
+    <div class="text-center mb-10">
+        <div class="flex justify-center mb-4">
+            <a href="/api/dashboard/" class="text-gray-500 hover:text-purple-600 text-sm">
+                <i class="fa-solid fa-arrow-left mr-1"></i> กลับหน้าหลัก
+            </a>
+        </div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2 flex items-center justify-center">
+            <span class="w-4 h-4 bg-purple-500 rounded-full mr-3"></span>
+            เลือกโครงการครุภัณฑ์
+        </h1>
+        <p class="text-gray-500">กรุณาเลือกโครงการเพื่อดำเนินการสร้างใบขอซื้อครุภัณฑ์</p>
+        
+
+    </div>
+
+    <!-- Project List Container -->
+    <div id="projectList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Loading State -->
+        <div class="col-span-full text-center py-20">
+            <span class="loading loading-spinner loading-lg text-purple-500"></span>
+            <p class="mt-4 text-gray-400">กำลังโหลดรายชื่อโครงการครุภัณฑ์...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            // Fetch Projects - filter by equipment type
+            const response = await fetchAPI('/api/projects/?type=ครุภัณฑ์');
+            let projects = await response.json();
+            
+            // Client-side filter in case API doesn't filter
+            projects = projects.filter(p => p.project_type === 'ครุภัณฑ์');
+
+            const container = document.getElementById('projectList');
+            container.innerHTML = '';
+
+            if (projects.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-10 bg-white rounded-xl shadow-sm border border-dashed border-gray-300">
+                        <i class="fa-solid fa-folder-open text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-500">ไม่พบโครงการครุภัณฑ์ในระบบ</p>
+                        <a href="/api/equipment/projects/create/" class="btn btn-primary btn-sm mt-4 text-white">
+                            <i class="fa-solid fa-plus mr-1"></i> เพิ่มโครงการใหม่
+                        </a>
+                    </div>
+                `;
+                return;
+            }
+
+            projects.forEach(project => {
+                const total = project.budget_total || 0;
+                const reserved = project.budget_reserved || 0;
+                const spent = project.budget_spent || 0;
+                const remaining = total - reserved - spent;
+                const percent = total > 0 ? ((reserved + spent) / total) * 100 : 0;
+                
+                const displayName = project.project_name || project.project_code || `โครงการ ${project.id.substring(0, 8)}...`;
+                const projectCode = project.project_code || project.id;
+
+                container.innerHTML += `
+                    <div class="card bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer group" onclick="selectProject('${project.id}', '${displayName.replace(/'/g, "\\'")}')">
+                        <div class="card-body">
+                            <div class="flex justify-between items-start">
+                                <div class="w-12 h-12 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                                    <i class="fa-solid fa-desktop text-xl"></i>
+                                </div>
+                                <span class="badge ${project.status === 'Active' ? 'badge-success text-white' : 'badge-ghost'} badge-sm">${project.status || 'Active'}</span>
+                            </div>
+                            
+                            <h2 class="card-title text-base mt-4 text-gray-800">${displayName}</h2>
+                            <p class="text-xs text-gray-400 font-mono mb-4">รหัส: ${projectCode}</p>
+                            
+                            <!-- Budget Progress -->
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-gray-500">งบประมาณคงเหลือ</span>
+                                    <span class="font-bold text-gray-700">${remaining.toLocaleString('th-TH', {minimumFractionDigits: 2})} บาท</span>
+                                </div>
+                                <progress class="progress progress-secondary w-full h-2" value="${percent}" max="100"></progress>
+                                <div class="flex justify-between text-[10px] text-gray-400">
+                                    <span>ใช้ไปแล้ว: ${(reserved + spent).toLocaleString('th-TH')}</span>
+                                    <span>ทั้งหมด: ${total.toLocaleString('th-TH')}</span>
+                                </div>
+                            </div>
+
+                            <div class="card-actions justify-end mt-4">
+                                <button class="btn btn-sm btn-outline btn-secondary w-full group-hover:btn-active">
+                                    เลือกโครงการนี้ <i class="fa-solid fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+        } catch (error) {
+            console.error(error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาด',
+                text: 'ไม่สามารถดึงข้อมูลโครงการได้'
+            });
+        }
+    });
+
+    function selectProject(id, name) {
+        localStorage.setItem('selected_project_id', id);
+        localStorage.setItem('selected_project_name', name);
+        window.location.href = `/api/equipment/orders/create/?project_id=${id}`;
+    }
+
+
+</script>
+{% endblock %}

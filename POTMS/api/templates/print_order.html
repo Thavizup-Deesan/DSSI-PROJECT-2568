@@ -1,371 +1,199 @@
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>ใบขอซื้อ - {{ order.order_no }}</title>
-        <style>
-                @page {
-                        size: A4;
-                        margin: 10mm;
-                }
-
-                * {
-                        margin: 0;
-                        padding: 0;
-                        box-sizing: border-box;
-                }
-
-                body {
-                        font-family: 'Sarabun', 'TH Sarabun New', 'Tahoma', sans-serif;
-                        font-size: 10pt;
-                        line-height: 1.3;
-                        background: white;
-                        color: #000;
-                }
-
-                .page {
-                        width: 190mm;
-                        min-height: 277mm;
-                        padding: 8mm;
-                        margin: 0 auto;
-                        background: white;
-                        display: flex;
-                        flex-direction: column;
-                }
-
-                /* Header */
-                .header {
-                        text-align: center;
-                        margin-bottom: 10px;
-                        padding-bottom: 8px;
-                        border-bottom: 2px solid #000;
-                }
-
-                .header h1 {
-                        font-size: 18pt;
-                        font-weight: bold;
-                        margin-bottom: 3px;
-                }
-
-                .org-name {
-                        font-size: 11pt;
-                        color: #333;
-                }
-
-                /* Info Section */
-                .info-section {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 12px;
-                }
-
-                .info-left {
-                        width: 55%;
-                        border: 1px solid #333;
-                        padding: 8px;
-                }
-
-                .info-right {
-                        width: 43%;
-                        border: 1px solid #333;
-                        padding: 8px;
-                }
-
-                .info-row {
-                        margin-bottom: 4px;
-                        font-size: 10pt;
-                }
-
-                .info-label {
-                        font-weight: bold;
-                        display: inline-block;
-                        min-width: 80px;
-                }
-
-                /* Items Table */
-                table.items {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 10px;
-                        font-size: 9pt;
-                }
-
-                table.items th,
-                table.items td {
-                        border: 1px solid #333;
-                        padding: 5px 6px;
-                }
-
-                table.items th {
-                        background: #e8e8e8;
-                        font-weight: bold;
-                        text-align: center;
-                }
-
-                table.items .col-no {
-                        width: 6%;
-                        text-align: center;
-                }
-
-                table.items .col-name {
-                        width: 35%;
-                }
-
-                table.items .col-qty {
-                        width: 10%;
-                        text-align: center;
-                }
-
-                table.items .col-unit {
-                        width: 10%;
-                        text-align: center;
-                }
-
-                table.items .col-price {
-                        width: 17%;
-                        text-align: right;
-                }
-
-                table.items .col-total {
-                        width: 17%;
-                        text-align: right;
-                }
-
-                /* Summary Section */
-                .summary-section {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 15px;
-                }
-
-                .note-box {
-                        width: 50%;
-                        border: 1px solid #333;
-                        min-height: 50px;
-                        padding: 5px;
-                        font-size: 9pt;
-                }
-
-                .total-box {
-                        width: 48%;
-                }
-
-                .total-row {
-                        display: flex;
-                        justify-content: space-between;
-                        border: 1px solid #333;
-                        padding: 5px 8px;
-                        font-size: 10pt;
-                        font-weight: bold;
-                        background: #f0f0f0;
-                }
-
-                /* Signatures - Fixed at bottom */
-                .signatures {
-                        margin-top: auto;
-                        padding-top: 30px;
-                        display: flex;
-                        justify-content: space-around;
-                }
-
-                .signature-box {
-                        text-align: center;
-                        width: 30%;
-                }
-
-                .signature-line {
-                        border-bottom: 1px solid #000;
-                        height: 45px;
-                        margin-bottom: 8px;
-                }
-
-                .signature-title {
-                        font-size: 10pt;
-                        font-weight: bold;
-                }
-
-                .signature-name {
-                        font-size: 9pt;
-                }
-
-                .signature-date {
-                        font-size: 9pt;
-                        margin-top: 5px;
-                }
-
-                /* Footer */
-                .footer {
-                        margin-top: 15px;
-                        text-align: center;
-                        font-size: 8pt;
-                        color: #666;
-                        border-top: 1px solid #ddd;
-                        padding-top: 5px;
-                }
-
-                /* Print styles */
-                @media print {
-                        body {
-                                -webkit-print-color-adjust: exact;
-                                print-color-adjust: exact;
-                        }
-
-                        .page {
-                                width: 100%;
-                                height: auto;
-                                padding: 0;
-                        }
-
-                        .no-print {
-                                display: none !important;
-                        }
-                }
-
-                .print-actions {
-                        position: fixed;
-                        top: 10px;
-                        right: 10px;
-                        z-index: 100;
-                }
-
-                .print-btn,
-                .close-btn {
-                        background: #4CAF50;
-                        color: white;
-                        border: none;
-                        padding: 8px 15px;
-                        font-size: 10pt;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        margin-left: 5px;
-                }
-
-                .close-btn {
-                        background: #666;
-                }
-        </style>
-        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>ใบขอซื้อครุภัณฑ์ - {{ order.order_no }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        @page { size: A4; margin: 1.5cm; }
+        body { 
+            font-family: 'Sarabun', 'TH Sarabun New', sans-serif; 
+            font-size: 14px; 
+            line-height: 1.6; 
+            color: #000; 
+            background: #fff; 
+        }
+        .container { width: 100%; max-width: 210mm; margin: 0 auto; }
+        
+        /* Header */
+        .header { text-align: center; margin-bottom: 15px; }
+        .header-logo { width: 60px; height: auto; margin-bottom: 5px; }
+        .header h1 { font-size: 22px; font-weight: bold; margin: 5px 0; }
+        
+        /* Meta Section */
+        .meta-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .meta-left { flex: 1; }
+        .meta-right { text-align: right; }
+        .dotted-fill { border-bottom: 1px dotted #000; display: inline-block; min-width: 150px; }
+        
+        /* Form Fields */
+        .form-line { margin-bottom: 8px; }
+        .checkbox { display: inline-block; width: 14px; height: 14px; border: 1px solid #000; margin-right: 5px; vertical-align: middle; }
+        .checkbox.checked::after { content: '✓'; font-size: 12px; }
+        
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #000; padding: 6px 8px; vertical-align: top; }
+        th { background-color: #f5f5f5; text-align: center; font-weight: 600; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .col-no { width: 40px; }
+        .col-desc { width: auto; }
+        .col-qty { width: 50px; }
+        .col-price { width: 80px; }
+        .col-total { width: 80px; }
+        .col-reason { width: 150px; }
+        
+        /* Grand Total */
+        .grand-total-row td { font-weight: bold; }
+        
+        /* Signatures Section */
+        .signatures { margin-top: 30px; display: flex; justify-content: space-between; flex-wrap: wrap; page-break-inside: avoid; }
+        .sig-box { width: 30%; text-align: left; margin-bottom: 20px; }
+        .sig-line { border-bottom: 1px dotted #000; width: 90%; margin: 25px 0 5px 0; }
+        .sig-label { font-size: 13px; }
+        
+        /* Notes */
+        .notes { margin-top: 20px; font-size: 12px; border-top: 1px solid #ccc; padding-top: 10px; }
+        .notes strong { text-decoration: underline; }
+        
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
 </head>
+<body onload="window.print()">
 
-<body>
-        <div class="print-actions no-print">
-                <button class="print-btn" onclick="exportCSV()" style="background: #2196F3;">CSV</button>
-                <button class="print-btn" onclick="window.print()">พิมพ์</button>
-                <button class="close-btn" onclick="window.close()">✕ ปิด</button>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>ใบขอซื้อครุภัณฑ์</h1>
         </div>
 
-        <div class="page">
-                <!-- Header -->
-                <div class="header">
-                        <h1>ใบขอซื้อ / Purchase Request</h1>
-                        <div class="org-name">หน่วยงาน : {{ user_department }}</div>
-                </div>
-
-                <!-- Document Info -->
-                <div class="info-section">
-                        <div class="info-left">
-                                <div class="info-row"><span class="info-label">เลขที่:</span> {{ order.order_no }}</div>
-                                <div class="info-row"><span class="info-label">โครงการ:</span> {{ project_name }}</div>
-                                <div class="info-row"><span class="info-label">เรื่อง:</span> {{ order.order_title }}
-                                </div>
-                                <div class="info-row"><span class="info-label">ผู้ขอซื้อ:</span> {{ requester_name }}
-                                </div>
-                        </div>
-                        <div class="info-right">
-                                <div class="info-row"><span class="info-label">วันที่ขอซื้อ:</span> {{ created_date }}
-                                </div>
-                                <div class="info-row"><span class="info-label">ต้องการใช้:</span> {{ required_date }}
-                                </div>
-                                <div class="info-row"><span class="info-label">ร้านค้า:</span> {{ vendor_display }}
-                                </div>
-                        </div>
-                </div>
-
-                <!-- Items Table -->
-                <table class="items">
-                        <thead>
-                                <tr>
-                                        <th class="col-no">ลำดับ</th>
-                                        <th class="col-name">รายการ</th>
-                                        <th class="col-qty">จำนวน</th>
-                                        <th class="col-unit">หน่วย</th>
-                                        <th class="col-price">ราคา/หน่วย</th>
-                                        <th class="col-total">จำนวนเงิน</th>
-                                </tr>
-                        </thead>
-                        <tbody>
-                                {% for item in order.items %}
-                                <tr>
-                                        <td class="col-no">{{ forloop.counter }}</td>
-                                        <td class="col-name">{{ item.item_name }}</td>
-                                        <td class="col-qty">{{ item.quantity_requested }}</td>
-                                        <td class="col-unit">{{ item.unit }}</td>
-                                        <td class="col-price">{{ item.formatted_price }}</td>
-                                        <td class="col-total">{{ item.formatted_total }}</td>
-                                </tr>
-                                {% endfor %}
-                        </tbody>
-                </table>
-
-                <!-- Summary Section -->
-                <div class="summary-section">
-                        <div class="note-box">
-                                <strong>หมายเหตุ:</strong> {{ order.order_description|default:"-" }}
-                        </div>
-                        <div class="total-box">
-                                <div class="total-row"><span>รวมเงิน</span><span>{{ grand_total }} บาท</span></div>
-                        </div>
-                </div>
-
-                <!-- Signatures - At bottom of page -->
-                <div class="signatures">
-                        <div class="signature-box">
-                                <div class="signature-line"></div>
-                                <div class="signature-title">ผู้ขอซื้อ</div>
-                                <div class="signature-name">({{ requester_name }})</div>
-                                <div class="signature-date">วันที่ ____/____/________</div>
-                        </div>
-                        <div class="signature-box">
-                                <div class="signature-line"></div>
-                                <div class="signature-title">ผู้ตรวจสอบ</div>
-                                <div class="signature-name">(..................................................)</div>
-                                <div class="signature-date">วันที่ ____/____/________</div>
-                        </div>
-                        <div class="signature-box">
-                                <div class="signature-line"></div>
-                                <div class="signature-title">ผู้อนุมัติ</div>
-                                <div class="signature-name">(..................................................)</div>
-                                <div class="signature-date">วันที่ ____/____/________</div>
-                        </div>
-                </div>
-
-                <!-- Footer -->
-                <div class="footer">
-                        พิมพ์จากระบบ POTMS | วันที่พิมพ์: <span id="print-date"></span>
-                </div>
+        <!-- Meta Info Row -->
+        <div class="meta-row">
+            <div class="meta-left">
+                <strong>ส่วนราชการ</strong> คณะวิทยาศาสตร์ มหาวิทยาลัยอุบลราชธานี
+            </div>
+            <div class="meta-right">
+                วันที่ <span class="dotted-fill">{{ created_date|default:"" }}</span> 
+                เดือน <span class="dotted-fill"></span>
+                พ.ศ. <span class="dotted-fill"></span>
+            </div>
         </div>
 
-        <script>
-                document.getElementById('print-date').textContent = new Date().toLocaleDateString('th-TH', {
-                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                });
+        <!-- Subject -->
+        <div class="form-line">
+            <strong>เรื่อง</strong> <span class="checkbox checked"></span> ขอซื้อครุภัณฑ์
+        </div>
+        <div class="form-line">
+            <strong>เรียน</strong> คณบดีคณะวิทยาศาสตร์ ผ่านหัวหน้าเจ้าหน้าที่
+        </div>
 
-                // Export CSV function
-                function exportCSV() {
-                        // Get order_id from URL (format: /api/orders/{order_id}/print/)
-                        const pathParts = window.location.pathname.split('/');
-                        const orderIdIndex = pathParts.indexOf('orders') + 1;
-                        const orderId = pathParts[orderIdIndex];
+        <!-- Details -->
+        <div class="form-line" style="margin-top: 15px;">
+            ด้วย <span class="dotted-fill" style="min-width: 200px;">{{ requester_name }}</span>
+            ตำแหน่ง <span class="dotted-fill" style="min-width: 150px;">{{ requester_position|default:"" }}</span>
+            สังกัด <span class="dotted-fill" style="min-width: 100px;"></span>
+            โทร. <span class="dotted-fill" style="min-width: 80px;">{{ requester_phone|default:"" }}</span> คณะวิทยาศาสตร์
+        </div>
+        <div class="form-line">
+            มีความประสงค์ให้งานพัสดุดำเนินการ <span class="checkbox checked"></span> ซื้อครุภัณฑ์ 
+            เพื่อใช้ <span class="checkbox"></span> ประกอบการเรียนการสอนในรายวิชา <span class="dotted-fill"></span>
+        </div>
+        <div class="form-line">
+            <span class="checkbox checked"></span> โครงการ/กิจกรรม <span class="dotted-fill" style="min-width: 300px;">{{ project_name }}</span>
+        </div>
+        <div class="form-line">
+            โดยขออนุมัติใช้เงินในรหัสโครงการ <span class="dotted-fill" style="min-width: 100px;">{{ project_code }}</span>
+            ต้องการใช้ครุภัณฑ์ในวันที่ <span class="dotted-fill" style="min-width: 100px;">{{ required_date|default:"" }}</span>
+            รายละเอียดตามรายการดังตารางต่อไปนี้
+        </div>
 
-                        if (orderId) {
-                                window.location.href = '/api/orders/' + orderId + '/export-csv/';
-                        } else {
-                                alert('ไม่พบ Order ID');
-                        }
-                }
-        </script>
+        <!-- Items Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-no">ลำดับ<br>ที่</th>
+                    <th class="col-desc">รายการ/ขนาด/ลักษณะ</th>
+                    <th class="col-qty">จำนวน</th>
+                    <th class="col-price">ราคาประมาณ<br>ต่อหน่วย (บาท)</th>
+                    <th class="col-total">รวมราคา<br>(บาท)</th>
+                    <th class="col-reason">ระบุเหตุผลการขอใช้ครุภัณฑ์</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %}
+                <tr>
+                    <td class="text-center">{{ forloop.counter }}</td>
+                    <td>{{ item.item_name }}</td>
+                    <td class="text-center">{{ item.quantity_requested|floatformat:0 }}</td>
+                    <td class="text-right">{{ item.formatted_price }}</td>
+                    <td class="text-right">{{ item.formatted_total }}</td>
+                    <td>{{ item.reason|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+                <!-- Empty rows for manual writing if needed -->
+                {% for i in "12345" %}
+                {% if forloop.counter > order.items|length %}
+                <tr>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="grand-total-row">
+                    <td colspan="4" class="text-right">รวมเป็นเงิน</td>
+                    <td class="text-right">{{ grand_total }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- Signatures Section -->
+        <div class="signatures">
+            <!-- 1. Requester -->
+            <div class="sig-box">
+                <p><strong>1) ผู้ขอซื้อครุภัณฑ์</strong></p>
+                <div class="sig-line"></div>
+                <p class="sig-label">(ลงชื่อ)......................................................</p>
+                <p class="sig-label">( {{ requester_name|default:"" }} )</p>
+                <p class="sig-label">วันที่........../............/............</p>
+            </div>
+            
+            <!-- 2. Department Head Approval -->
+            <div class="sig-box">
+                <p><strong>2) ความเห็นของหัวหน้าภาควิชา/หัวหน้างาน</strong></p>
+                <p><span class="checkbox"></span> เห็นชอบ</p>
+                <p><span class="checkbox"></span> ไม่เห็นชอบ เนื่องจาก................................</p>
+                <div class="sig-line"></div>
+                <p class="sig-label">(ลงชื่อ)......................................................</p>
+                <p class="sig-label">(........................................................)</p>
+                <p class="sig-label">วันที่........../............/............</p>
+            </div>
+            
+            <!-- 3. Inspection Committee -->
+            <div class="sig-box">
+                <p><strong>3) โดยมีคณะกรรมการตรวจรับพัสดุดังนี้</strong></p>
+                <p class="sig-label">1..................................................(ประธาน)</p>
+                <p class="sig-label">2..................................................(กรรมการ)</p>
+                <p class="sig-label">3..................................................(กรรมการ)</p>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="notes">
+            <p><strong>หมายเหตุ :</strong></p>
+            <p>1. กรณีจัดซื้อครุภัณฑ์วงเงินไม่เกิน 100,000 บาท กรรมการตรวจรับไม่น้อยกว่า 1 คน</p>
+            <p>2. กรณีจัดซื้อครุภัณฑ์วงเงินเกิน 100,000 บาท กรรมการตรวจรับไม่น้อยกว่า 3 คน</p>
+        </div>
+    </div>
+
 </body>
-
 </html>

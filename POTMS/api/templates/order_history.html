@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">ประวัติการสั่งซื้อ</h1>
+            <p class="text-gray-500">รายการที่ดำเนินการเสร็จสิ้นแล้ว</p>
+        </div>
+        <a href="/api/dashboard/" class="btn btn-ghost btn-sm">
+            <i class="fa-solid fa-arrow-left mr-1"></i> กลับ
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-xl shadow-sm p-4 flex gap-4 items-end">
+        <div class="form-control">
+            <label class="label"><span class="label-text text-sm">ค้นหา</span></label>
+            <input type="text" id="search" placeholder="เลขที่ / โครงการ" 
+                   class="input input-bordered input-sm w-64" onkeyup="filterOrders()" />
+        </div>
+        <button onclick="exportCSV()" class="btn btn-outline btn-sm">
+            <i class="fa-solid fa-download mr-1"></i> Export
+        </button>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <table class="table w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th>เลขที่</th>
+                    <th>โครงการ</th>
+                    <th class="text-right">ยอดรวม</th>
+                    <th class="text-center">วันที่รับครบ</th>
+                    <th class="text-center">ดำเนินการ</th>
+                </tr>
+            </thead>
+            <tbody id="tbody">
+                <tr><td colspan="5" class="text-center py-8 text-gray-400">
+                    <span class="loading loading-spinner"></span> กำลังโหลด...
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allOrders = [];
+
+    document.addEventListener('DOMContentLoaded', loadOrders);
+
+    async function loadOrders() {
+        try {
+            const res = await fetchAPI('/api/api/orders/history/');
+            allOrders = await res.json();
+            renderOrders(allOrders);
+        } catch (e) {
+            document.getElementById('tbody').innerHTML = 
+                `<tr><td colspan="5" class="text-center py-8 text-red-500">โหลดไม่สำเร็จ</td></tr>`;
+        }
+    }
+
+    function renderOrders(orders) {
+        const tbody = document.getElementById('tbody');
+        if (!orders.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400">ไม่พบรายการ</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = orders.map(o => `
+            <tr class="hover:bg-gray-50">
+                <td class="font-mono font-medium">${o.order_no || '-'}</td>
+                <td>
+                    <div class="font-bold text-sm">${o.project_code || ''}</div>
+                    <div class="text-xs text-gray-500">${o.project_name || ''}</div>
+                </td>
+                <td class="text-right font-mono">${(o.total_estimated_price || 0).toLocaleString()}</td>
+                <td class="text-center text-sm">${o.last_receiving_at ? new Date(o.last_receiving_at).toLocaleDateString('th-TH') : '-'}</td>
+                <td class="text-center">
+                    <a href="/api/orders/${o.id}/view/" class="btn btn-ghost btn-xs">ดู</a>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function filterOrders() {
+        const q = document.getElementById('search').value.toLowerCase();
+        const filtered = allOrders.filter(o => 
+            (o.order_no || '').toLowerCase().includes(q) ||
+            (o.project_name || '').toLowerCase().includes(q)
+        );
+        renderOrders(filtered);
+    }
+
+    function exportCSV() {
+        let csv = '\uFEFF' + 'เลขที่,โครงการ,ยอดรวม,วันที่รับครบ\n';
+        allOrders.forEach(o => {
+            csv += `"${o.order_no || ''}","${o.project_name || ''}",${o.total_estimated_price || 0},"${o.last_receiving_at || ''}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'order_history.csv';
+        a.click();
+    }
+</script>
+{% endblock %}

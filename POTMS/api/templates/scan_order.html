@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตรวจสอบรายการ - POTMS</title>
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f9fafb; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Sarabun', sans-serif; font-weight: 600; }
+        .font-eng { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-10 px-4">
+
+    <div class="w-full max-w-lg space-y-6">
+        <!-- Header -->
+        <div class="text-center">
+            <div class="inline-block p-4 rounded-full bg-white shadow-sm mb-4" id="header-icon-container">
+                <i class="fa-solid fa-clipboard-check text-3xl text-gray-400" id="header-icon"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800" id="page-title">ตรวจสอบรายการ</h1>
+            <p class="text-gray-500 text-sm mt-1">สำหรับคณะกรรมการตรวจรับ</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="text-center py-12">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+            <p class="mt-4 text-gray-400">กำลังโหลดข้อมูล...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="hidden text-center py-12 bg-white rounded-xl shadow-sm p-6">
+            <div class="text-red-500 mb-3">
+                <i class="fa-solid fa-circle-exclamation text-4xl"></i>
+            </div>
+            <h3 class="font-bold text-gray-800 text-lg">ไม่พบข้อมูล</h3>
+            <p class="text-gray-500 mt-2" id="error-msg">ไม่สามารถโหลดข้อมูลคำสั่งซื้อได้</p>
+        </div>
+
+        <!-- Content -->
+        <div id="content" class="hidden space-y-4">
+            <!-- Order Info Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-5 border-b border-gray-50">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">เลขที่เอกสาร</p>
+                            <h2 class="font-mono font-bold text-xl text-indigo-600 tracking-tight" id="order-no">-</h2>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-50">
+                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">ผู้ขอซื้อ</p>
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 mr-3">
+                                <i class="fa-solid fa-user text-xs"></i>
+                            </div>
+                            <p class="font-medium text-gray-700" id="requester-name">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items List -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <h3 class="font-bold text-gray-800">รายการพัสดุ</h3>
+                    <span class="text-xs font-medium px-2 py-1 bg-white rounded border border-gray-200 text-gray-500" id="item-count">0 รายการ</span>
+                </div>
+                <div class="divide-y divide-gray-50" id="items-list">
+                    <!-- Items will be injected here -->
+                </div>
+            </div>
+            
+            <!-- Instructions Warning -->
+             <div class="alert bg-blue-50 border-none text-blue-800 text-xs flex items-start gap-3 mt-6">
+                <i class="fa-solid fa-circle-info mt-0.5 text-blue-500"></i>
+                <span>กรุณาตรวจสอบพัสดุให้ครบถ้วนถูกต้องตามรายการ</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const orderId = "{{ order_id }}";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+        });
+
+        async function loadData() {
+            try {
+                const res = await fetch(`/api/scan/${orderId}/data/`);
+                if (!res.ok) throw new Error('ไม่พบข้อมูลคำสั่งซื้อนี้');
+                
+                const data = await res.json();
+                renderData(data);
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        function renderData(data) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('content').classList.remove('hidden');
+
+            // 1. Basic Info
+            document.getElementById('order-no').textContent = data.order_no || '-';
+            document.getElementById('requester-name').textContent = data.requester || 'ไม่ระบุ';
+
+            // 2. Dynamic Title & Styling based on Project Type
+            const isEquipment = data.project_type === 'ครุภัณฑ์';
+            const pageTitle = document.getElementById('page-title');
+            const headerIcon = document.getElementById('header-icon');
+            const headerIconContainer = document.getElementById('header-icon-container');
+
+            if (isEquipment) {
+                pageTitle.textContent = 'ตรวจสอบรายการครุภัณฑ์';
+                pageTitle.className = 'text-2xl font-bold text-purple-700';
+                headerIcon.className = 'fa-solid fa-desktop text-3xl text-purple-600';
+                headerIconContainer.className = 'inline-block p-4 rounded-full bg-purple-50 shadow-sm mb-4 ring-4 ring-purple-50';
+            } else {
+                pageTitle.textContent = 'ตรวจสอบรายการพัสดุ';
+                pageTitle.className = 'text-2xl font-bold text-blue-700';
+                headerIcon.className = 'fa-solid fa-box-open text-3xl text-blue-600';
+                headerIconContainer.className = 'inline-block p-4 rounded-full bg-blue-50 shadow-sm mb-4 ring-4 ring-blue-50';
+            }
+
+            // 3. Items List
+            const items = data.items || [];
+            document.getElementById('item-count').textContent = `${items.length} รายการ`;
+            
+            const listContainer = document.getElementById('items-list');
+            if (items.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="p-10 text-center">
+                        <div class="text-gray-300 mb-2"><i class="fa-solid fa-box-open text-2xl"></i></div>
+                        <p class="text-gray-400 text-sm">ไม่พบรายการพัสดุ</p>
+                    </div>
+                `;
+            } else {
+                listContainer.innerHTML = items.map((item, idx) => `
+                    <div class="p-4 hover:bg-gray-50/80 transition-colors group">
+                        <div class="flex gap-4">
+                            <div class="flex-none pt-1">
+                                <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-[10px] font-bold text-gray-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                                    ${idx + 1}
+                                </span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-gray-800 break-words text-sm leading-snug mb-1">${item.item_name}</p>
+                                <p class="text-xs text-gray-500 font-mono">${item.brand ? item.brand : ''} ${item.model ? item.model : ''}</p>
+                            </div>
+                            <div class="flex-none text-right pl-2">
+                                <p class="font-bold text-gray-800 text-lg leading-none">${parseFloat(item.quantity || 0).toLocaleString()}</p>
+                                <p class="text-[10px] text-gray-400 mt-1">${item.unit || 'หน่วย'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('error-msg').textContent = msg;
+        }
+    </script>
+</body>
+</html>

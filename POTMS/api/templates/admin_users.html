@@ -1,0 +1,402 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-8">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">
+                <i class="fa-solid fa-users-cog mr-3 text-indigo-600"></i>จัดการบัญชีผู้ใช้
+            </h1>
+            <p class="text-gray-500 mt-1">เพิ่ม แก้ไข หรือลบบัญชีผู้ใช้ในระบบ</p>
+        </div>
+        <button onclick="showAddUserModal()" class="btn btn-primary">
+            <i class="fa-solid fa-user-plus mr-2"></i> เพิ่มผู้ใช้ใหม่
+        </button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                    <i class="fa-solid fa-users text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">ผู้ใช้ทั้งหมด</p>
+                    <p class="text-2xl font-bold text-gray-800" id="statTotal">0</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
+                    <i class="fa-solid fa-user text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">ผู้ขอซื้อ</p>
+                    <p class="text-2xl font-bold text-gray-800" id="statUser">0</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+                    <i class="fa-solid fa-box text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">พัสดุ</p>
+                    <p class="text-2xl font-bold text-gray-800" id="statStaff">0</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+                    <i class="fa-solid fa-user-tie text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">หัวหน้าภาค</p>
+                    <p class="text-2xl font-bold text-gray-800" id="statBoss">0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-4 border-b border-gray-100 bg-gray-50/50">
+            <div class="flex items-center gap-4">
+                <input type="text" id="searchInput" placeholder="ค้นหาชื่อหรืออีเมล..." 
+                       class="input input-bordered input-sm w-64" onkeyup="filterUsers()">
+                <select id="roleFilter" class="select select-bordered select-sm" onchange="filterUsers()">
+                    <option value="">ทุก Role</option>
+                    <option value="user">ผู้ขอซื้อ</option>
+                    <option value="staff">พัสดุ</option>
+                    <option value="boss">หัวหน้าภาค</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead class="bg-gray-50 text-gray-600">
+                    <tr>
+                        <th class="w-12">#</th>
+                        <th>ชื่อ-นามสกุล</th>
+                        <th>อีเมล</th>
+                        <th>แผนก</th>
+                        <th>เบอร์โทร</th>
+                        <th class="text-center">Role</th>
+                        <th class="text-center">สถานะ</th>
+                        <th class="text-center">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr>
+                        <td colspan="8" class="text-center py-10 text-gray-400">
+                            <span class="loading loading-spinner text-primary"></span> กำลังโหลดข้อมูล...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit User Modal -->
+<dialog id="userModal" class="modal">
+    <div class="modal-box w-11/12 max-w-2xl">
+        <h3 class="font-bold text-lg mb-4" id="modalTitle">เพิ่มผู้ใช้ใหม่</h3>
+        <form id="userForm" autocomplete="off">
+            <input type="hidden" id="editUserId" value="">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Username *</span></label>
+                    <input type="text" id="userUid" class="input input-bordered" required placeholder="ชื่อผู้ใช้" autocomplete="off">
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">อีเมล *</span></label>
+                    <input type="email" id="userEmail" class="input input-bordered" required placeholder="email@example.com" autocomplete="off">
+                </div>
+                <div class="form-control md:col-span-2">
+                    <label class="label"><span class="label-text">ชื่อ-นามสกุล *</span></label>
+                    <input type="text" id="userFullName" class="input input-bordered" required placeholder="ชื่อ นามสกุล" autocomplete="off">
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">แผนก</span></label>
+                    <input type="text" id="userDepartment" class="input input-bordered" placeholder="ชื่อแผนก" autocomplete="off">
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">เบอร์โทร</span></label>
+                    <input type="text" id="userPhone" class="input input-bordered" placeholder="0xx-xxx-xxxx" autocomplete="off">
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Role *</span></label>
+                    <select id="userRole" class="select select-bordered" required>
+                        <option value="user">ผู้ขอซื้อ</option>
+                        <option value="staff">พัสดุ</option>
+                        <option value="boss">หัวหน้าภาค</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">สถานะ</span></label>
+                    <label class="cursor-pointer label justify-start gap-4">
+                        <input type="checkbox" id="userIsActive" class="toggle toggle-success" checked>
+                        <span class="label-text">เปิดใช้งาน</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-action">
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('userModal').close()">ยกเลิก</button>
+                <button type="submit" class="btn btn-primary">บันทึก</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allUsers = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Check if admin
+        if (user.role !== 'admin') {
+            Swal.fire({
+                icon: 'error',
+                title: 'ไม่มีสิทธิ์เข้าถึง',
+                text: 'หน้านี้สำหรับผู้ดูแลระบบเท่านั้น'
+            }).then(() => {
+                window.location.href = '/api/dashboard/';
+            });
+            return;
+        }
+        loadUsers();
+    });
+
+    async function loadUsers() {
+        try {
+            const res = await fetchAPI('/api/admin/users/');
+            if (!res.ok) throw new Error('Cannot load users');
+            allUsers = await res.json();
+            renderUsers(allUsers);
+            updateStats();
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้', 'error');
+        }
+    }
+
+    function updateStats() {
+        document.getElementById('statTotal').textContent = allUsers.length;
+        document.getElementById('statUser').textContent = allUsers.filter(u => u.role === 'user').length;
+        document.getElementById('statStaff').textContent = allUsers.filter(u => u.role === 'staff').length;
+        document.getElementById('statBoss').textContent = allUsers.filter(u => u.role === 'boss').length;
+    }
+
+    function filterUsers() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const role = document.getElementById('roleFilter').value;
+        
+        let filtered = allUsers;
+        if (search) {
+            filtered = filtered.filter(u => 
+                u.full_name.toLowerCase().includes(search) || 
+                u.email.toLowerCase().includes(search)
+            );
+        }
+        if (role) {
+            filtered = filtered.filter(u => u.role === role);
+        }
+        renderUsers(filtered);
+    }
+
+    function getRoleBadge(role) {
+        const badges = {
+            'user': '<span class="badge badge-success text-white">ผู้ขอซื้อ</span>',
+            'staff': '<span class="badge badge-primary text-white">พัสดุ</span>',
+            'boss': '<span class="badge badge-warning text-white">หัวหน้าภาค</span>',
+            'admin': '<span class="badge badge-error text-white">Admin</span>'
+        };
+        return badges[role] || role;
+    }
+
+    function renderUsers(users) {
+        const tbody = document.getElementById('usersTableBody');
+        
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10 text-gray-400">ไม่พบข้อมูลผู้ใช้</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = users.map((u, idx) => `
+            <tr class="hover:bg-gray-50">
+                <td class="text-gray-400">${idx + 1}</td>
+                <td class="font-medium">${u.full_name}</td>
+                <td class="text-gray-600">${u.email}</td>
+                <td class="text-gray-500">${u.department || '-'}</td>
+                <td class="text-gray-500">${u.phone || '-'}</td>
+                <td class="text-center">${getRoleBadge(u.role)}</td>
+                <td class="text-center">
+                    ${u.is_active 
+                        ? '<span class="badge badge-outline badge-success">Active</span>' 
+                        : '<span class="badge badge-outline badge-ghost">Inactive</span>'}
+                </td>
+                <td class="text-center">
+                    <div class="join">
+                        <button onclick="editUser('${u.uid}')" class="btn btn-sm btn-ghost join-item text-amber-500" title="แก้ไข">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button onclick="resetPassword('${u.uid}', '${u.full_name}')" class="btn btn-sm btn-ghost join-item text-blue-500" title="รีเซ็ตรหัสผ่าน">
+                            <i class="fa-solid fa-key"></i>
+                        </button>
+                        <button onclick="deleteUser('${u.uid}')" class="btn btn-sm btn-ghost join-item text-red-500" title="ลบ">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function showAddUserModal() {
+        document.getElementById('modalTitle').textContent = 'เพิ่มผู้ใช้ใหม่';
+        document.getElementById('editUserId').value = '';
+        document.getElementById('userForm').reset();
+        document.getElementById('userUid').disabled = false;
+        document.getElementById('userIsActive').checked = true;
+        document.getElementById('userModal').showModal();
+    }
+
+    function editUser(uid) {
+        const u = allUsers.find(x => x.uid === uid);
+        if (!u) return;
+
+        document.getElementById('modalTitle').textContent = 'แก้ไขข้อมูลผู้ใช้';
+        document.getElementById('editUserId').value = u.uid;
+        document.getElementById('userUid').value = u.uid;
+        document.getElementById('userUid').disabled = true;
+        document.getElementById('userEmail').value = u.email;
+        document.getElementById('userFullName').value = u.full_name;
+        document.getElementById('userDepartment').value = u.department || '';
+        document.getElementById('userPhone').value = u.phone || '';
+        document.getElementById('userRole').value = u.role;
+        document.getElementById('userIsActive').checked = u.is_active;
+        document.getElementById('userModal').showModal();
+    }
+
+    document.getElementById('userForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const editId = document.getElementById('editUserId').value;
+        const isEdit = !!editId;
+        
+        const userData = {
+            uid: document.getElementById('userUid').value,
+            email: document.getElementById('userEmail').value,
+            full_name: document.getElementById('userFullName').value,
+            department: document.getElementById('userDepartment').value,
+            phone: document.getElementById('userPhone').value,
+            role: document.getElementById('userRole').value,
+            is_active: document.getElementById('userIsActive').checked
+        };
+
+        try {
+            const url = isEdit ? `/api/admin/users/${editId}/` : '/api/admin/users/';
+            const method = isEdit ? 'PUT' : 'POST';
+            
+            const res = await fetchAPI(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData)
+            });
+
+            if (res.ok) {
+                document.getElementById('userModal').close();
+                Swal.fire({
+                    icon: 'success',
+                    title: isEdit ? 'อัพเดทสำเร็จ' : 'เพิ่มผู้ใช้สำเร็จ',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => loadUsers());
+            } else {
+                const data = await res.json();
+                throw new Error(data.error || 'เกิดข้อผิดพลาด');
+            }
+        } catch (error) {
+            Swal.fire('Error', error.message, 'error');
+        }
+    });
+
+    async function deleteUser(uid) {
+        const result = await Swal.fire({
+            title: 'ลบผู้ใช้?',
+            text: 'ต้องการลบผู้ใช้นี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'ลบ',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const res = await fetchAPI(`/api/admin/users/${uid}/`, { method: 'DELETE' });
+                if (res.ok) {
+                    Swal.fire('ลบสำเร็จ', '', 'success').then(() => loadUsers());
+                } else {
+                    const data = await res.json();
+                    Swal.fire('Error', data.error || 'ไม่สามารถลบได้', 'error');
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+    }
+
+    async function resetPassword(uid, fullName) {
+        const { value: newPassword } = await Swal.fire({
+            title: `รีเซ็ตรหัสผ่าน`,
+            html: `<p class="text-gray-600 mb-4">ผู้ใช้: <strong>${fullName}</strong></p>`,
+            input: 'password',
+            inputLabel: 'รหัสผ่านใหม่',
+            inputPlaceholder: 'กรอกรหัสผ่านใหม่',
+            showCancelButton: true,
+            confirmButtonText: 'รีเซ็ต',
+            cancelButtonText: 'ยกเลิก',
+            inputValidator: (value) => {
+                if (!value) return 'กรุณากรอกรหัสผ่านใหม่';
+                if (value.length < 4) return 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร';
+            }
+        });
+
+        if (newPassword) {
+            try {
+                const res = await fetchAPI(`/api/admin/users/${uid}/reset-password/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_password: newPassword })
+                });
+
+                if (res.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'รีเซ็ตรหัสผ่านสำเร็จ',
+                        text: `รหัสผ่านใหม่ของ ${fullName} ถูกตั้งแล้ว`,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    const data = await res.json();
+                    throw new Error(data.error || 'ไม่สามารถรีเซ็ตรหัสผ่านได้');
+                }
+            } catch (error) {
+                Swal.fire('Error', error.message, 'error');
+            }
+        }
+    }
+</script>
+{% endblock %}

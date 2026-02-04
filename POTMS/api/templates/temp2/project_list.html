@@ -67,9 +67,10 @@
 
 {% block extra_js %}
 <script>
-    // Get project type from URL parameter
+    // Get project type from URL parameter OR detect from path
     const urlParams = new URLSearchParams(window.location.search);
-    const projectType = urlParams.get('type') || 'พัสดุ';
+    const pathIsEquipment = window.location.pathname.includes('/equipment/');
+    const projectType = urlParams.get('type') || (pathIsEquipment ? 'ครุภัณฑ์' : 'พัสดุ');
     const isEquipment = projectType === 'ครุภัณฑ์';
 
     document.addEventListener('DOMContentLoaded', async () => {

@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="text-center">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">QR Code สำหรับตรวจรับพัสดุ</h1>
+        <p class="text-gray-500">ให้คณะกรรมการตรวจรับสแกน QR Code นี้เพื่อดูรายการ</p>
+    </div>
+
+    <!-- QR Code Card -->
+    <div class="flex justify-center">
+        <div class="card bg-white shadow-xl w-full max-w-md">
+            <div class="card-body items-center text-center">
+                <!-- QR Code Container -->
+                <div id="qr-container" class="bg-white p-4 rounded-lg border-2 border-dashed border-gray-200 min-h-[280px] flex items-center justify-center">
+                    <div class="text-center">
+                        <span class="loading loading-spinner loading-lg text-primary"></span>
+                        <p class="text-gray-400 mt-2">กำลังสร้าง QR Code...</p>
+                    </div>
+                </div>
+
+                <!-- Order Info -->
+                <div class="w-full mt-6 space-y-3 text-left">
+                    <div class="flex justify-between text-sm border-b pb-2">
+                        <span class="text-gray-500">เลขที่เอกสาร:</span>
+                        <span class="font-mono font-bold" id="order-no">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm border-b pb-2">
+                        <span class="text-gray-500">โครงการ:</span>
+                        <span class="font-medium" id="project-name">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm border-b pb-2">
+                        <span class="text-gray-500">สถานะ:</span>
+                        <span class="badge" id="order-status">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">จำนวนรายการ:</span>
+                        <span class="font-medium" id="item-count">-</span>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="card-actions mt-6 w-full flex-col gap-2">
+                    <button onclick="window.print()" class="btn btn-primary w-full text-white">
+                        <i class="fa-solid fa-print mr-2"></i> พิมพ์ QR Code
+                    </button>
+                    <a href="/api/orders/{{ order_id }}/view/" class="btn btn-outline w-full">
+                        <i class="fa-solid fa-arrow-left mr-2"></i> กลับ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="alert bg-blue-50 border border-blue-200 max-w-md mx-auto">
+        <div class="flex gap-3">
+            <i class="fa-solid fa-info-circle text-blue-500 text-xl"></i>
+            <div>
+                <h3 class="font-bold text-blue-700">วิธีใช้งาน</h3>
+                <p class="text-sm text-blue-600">คณะกรรมการตรวจรับสแกน QR Code เพื่อดูรายการพัสดุ จากนั้นตรวจสอบของจริงและลงนามในเอกสาร</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const orderId = "{{ order_id }}";
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadOrderAndGenerateQR();
+    });
+
+    async function loadOrderAndGenerateQR() {
+        console.log('Loading order:', orderId);
+        try {
+            const res = await fetchAPI(`/api/orders/${orderId}/`);
+            console.log('API response status:', res.status);
+            
+            if (!res.ok) {
+                throw new Error('Failed to load order');
+            }
+            
+            const order = await res.json();
+            console.log('Order data:', order);
+            
+            // Update info
+            document.getElementById('order-no').textContent = order.order_no || orderId;
+            document.getElementById('project-name').textContent = order.project_name || '-';
+            document.getElementById('item-count').textContent = `${(order.items || []).length} รายการ`;
+            
+            const statusBadge = document.getElementById('order-status');
+            statusBadge.textContent = order.status;
+            statusBadge.className = `badge ${getStatusBadge(order.status)}`;
+            
+            // Generate QR Code using API (avoids blocked CDN scripts)
+            const qrUrl = `${window.location.origin}/api/scan/${orderId}/`;
+            const qrContainer = document.getElementById('qr-container');
+            qrContainer.innerHTML = '';
+            
+            const img = document.createElement('img');
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(qrUrl)}`;
+            img.alt = 'QR Code';
+            img.style.width = '256px';
+            img.style.height = '256px';
+            qrContainer.appendChild(img);
+            
+        } catch (err) {
+            console.error('QR Page Error:', err);
+            document.getElementById('qr-container').innerHTML = `
+                <div class="text-red-500 text-center">
+                    <i class="fa-solid fa-exclamation-triangle text-4xl"></i>
+                    <p class="mt-2">ไม่สามารถโหลดข้อมูลได้</p>
+                </div>
+            `;
+        }
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'Draft': 'badge-ghost',
+            'รอ': 'badge-warning',
+            'รอรับของ': 'badge-info',
+            'รับบางส่วน': 'badge-secondary',
+            'รับครบ': 'badge-success'
+        };
+        return badges[status] || 'badge-outline';
+    }
+</script>
+{% endblock %}

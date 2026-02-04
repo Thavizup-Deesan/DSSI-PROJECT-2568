@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto py-10">
+<div class="max-w-4xl mx-auto py-10">
     <div class="mb-4">
         <a href="/api/dashboard/" class="text-gray-500 hover:text-indigo-600 text-sm">
             <i class="fa-solid fa-arrow-left mr-1"></i> กลับหน้าหลัก
@@ -11,24 +11,21 @@
     <div class="text-center mb-10">
         <div class="flex items-center justify-center mb-2">
             <span class="w-4 h-4 bg-blue-500 rounded-full mr-3" id="typeIndicator"></span>
-            <h1 class="text-3xl font-bold text-gray-800" id="pageTitle">จัดการโครงการพัสดุ</h1>
+            <h1 class="text-3xl font-bold text-gray-800" id="pageTitle">เลือกโครงการพัสดุ</h1>
         </div>
-        <p class="text-gray-500" id="pageSubtitle">ดูและจัดการโครงการทั้งหมดในระบบ</p>
+        <p class="text-gray-500" id="pageSubtitle">กรุณาเลือกโครงการเพื่อดำเนินการสร้างใบขอซื้อพัสดุในขั้นตอนถัดไป</p>
         
         <!-- Action Buttons -->
         <div class="mt-4 flex justify-center gap-3">
             <button onclick="showAddProjectModal()" class="btn btn-primary">
                 <i class="fa-solid fa-plus mr-2"></i> เพิ่มโครงการใหม่
             </button>
-            <label class="btn btn-outline btn-secondary cursor-pointer">
-                <i class="fa-solid fa-file-import mr-2"></i> นำเข้าจาก Excel/CSV
-                <input type="file" id="importProjectFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleProjectImport(event)" />
-            </label>
+
         </div>
     </div>
 
     <!-- Project List Container -->
-    <div id="projectList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div id="projectList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Loading State -->
         <div class="col-span-full text-center py-20">
             <span class="loading loading-spinner loading-lg text-primary"></span>
@@ -83,24 +80,19 @@
         if (isEquipment) {
             indicator.classList.remove('bg-blue-500');
             indicator.classList.add('bg-purple-500');
-            title.textContent = 'จัดการโครงการครุภัณฑ์';
+            title.textContent = 'เลือกโครงการครุภัณฑ์';
+            subtitle.textContent = 'กรุณาเลือกโครงการเพื่อดำเนินการสร้างใบขอซื้อครุภัณฑ์ในขั้นตอนถัดไป';
             modalTitle.textContent = 'เพิ่มโครงการครุภัณฑ์ใหม่';
             projectTypeField.value = 'ครุภัณฑ์';
         }
         
-        loadProjects();
-    });
-    
-    async function loadProjects() {
         try {
-            // Fetch all Projects then filter by type
-            const response = await fetchAPI(`/api/projects/`);
+            // Fetch Projects filtered by type
+            const response = await fetchAPI(`/api/projects/?type=${encodeURIComponent(projectType)}`);
             let projects = await response.json();
             
-            // Filter strictly by project_type
+            // Filter client-side to ensure correct type
             projects = projects.filter(p => p.project_type === projectType);
-            
-            console.log('Project Type:', projectType, 'Projects Found:', projects.length);
 
             const container = document.getElementById('projectList');
             container.innerHTML = '';
@@ -130,10 +122,10 @@
                 const projectCode = project.project_code || project.id;
 
                 container.innerHTML += `
-                    <div class="card bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div class="card bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer group" onclick="selectProject('${project.id}', '${displayName.replace(/'/g, "\\'")}')">
                         <div class="card-body">
                             <div class="flex justify-between items-start">
-                                <div class="w-12 h-12 rounded-lg bg-${colorClass}-50 flex items-center justify-center text-${colorClass}-600">
+                                <div class="w-12 h-12 rounded-lg bg-${colorClass}-50 flex items-center justify-center text-${colorClass}-600 group-hover:bg-${colorClass}-600 group-hover:text-white transition-colors">
                                     <i class="fa-solid ${isEquipment ? 'fa-desktop' : 'fa-box'} text-xl"></i>
                                 </div>
                                 <span class="badge ${project.status === 'Active' ? 'badge-success text-white' : 'badge-ghost'} badge-sm">${project.status || 'Active'}</span>
@@ -155,11 +147,8 @@
                             </div>
 
                             <div class="card-actions justify-end mt-4">
-                                <button onclick="editProject('${project.id}')" class="btn btn-sm btn-ghost text-amber-500">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button onclick="deleteProject('${project.id}')" class="btn btn-sm btn-ghost text-red-500">
-                                    <i class="fa-solid fa-trash"></i>
+                                <button class="btn btn-sm btn-outline btn-${isEquipment ? 'secondary' : 'primary'} w-full group-hover:btn-active">
+                                    เลือกโครงการนี้ <i class="fa-solid fa-arrow-right ml-1"></i>
                                 </button>
                             </div>
                         </div>
@@ -174,6 +163,17 @@
                 title: 'เกิดข้อผิดพลาด',
                 text: 'ไม่สามารถดึงข้อมูลโครงการได้'
             });
+        }
+    });
+
+    function selectProject(id, name) {
+        localStorage.setItem('selected_project_id', id);
+        localStorage.setItem('selected_project_name', name);
+        // Redirect to correct create order page based on type
+        if (isEquipment) {
+            window.location.href = `/api/equipment/orders/create/?project_id=${id}`;
+        } else {
+            window.location.href = `/api/orders/create/?project_id=${id}`;
         }
     }
     
@@ -218,80 +218,6 @@
         }
     });
 
-    async function deleteProject(id) {
-        const result = await Swal.fire({
-            title: 'ลบโครงการ?',
-            text: "ต้องการลบโครงการนี้หรือไม่? ข้อมูลที่เกี่ยวข้องจะถูกลบด้วย",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'ลบ',
-            cancelButtonText: 'ยกเลิก'
-        });
 
-        if (result.isConfirmed) {
-            try {
-                const res = await fetchAPI(`/api/projects/${id}/`, { method: 'DELETE' });
-                if (res.ok) {
-                    Swal.fire('ลบสำเร็จ', '', 'success').then(() => window.location.reload());
-                } else {
-                    const data = await res.json();
-                    Swal.fire('ลบไม่สำเร็จ', data.error || 'เกิดข้อผิดพลาด', 'error');
-                }
-            } catch (error) {
-                console.error(error);
-            }
-        }
-    }
-
-    async function handleProjectImport(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        try {
-            Swal.fire({ 
-                title: 'กำลังนำเข้าข้อมูล...', 
-                text: 'กรุณารอสักครู่',
-                didOpen: () => Swal.showLoading() 
-            });
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('project_type', projectType);
-
-            const response = await fetch('/api/projects/import/', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'นำเข้าสำเร็จ',
-                    text: data.message || 'ข้อมูลโครงการถูกนำเข้าเรียบร้อยแล้ว',
-                    timer: 2000
-                });
-                window.location.reload();
-            } else {
-                throw new Error(data.error || 'เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
-            }
-
-        } catch (error) {
-            console.error('Import error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'นำเข้าไม่สำเร็จ',
-                text: error.message
-            });
-        }
-
-        event.target.value = '';
-    }
 </script>
 {% endblock %}

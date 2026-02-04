@@ -27,9 +27,15 @@
     <!-- Detail Card -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-6 border-b border-gray-100 bg-gray-50/50">
-            <div class="text-right">
-                <p class="text-sm text-gray-500">วันที่สร้าง</p>
-                <p class="font-medium text-gray-800" id="requiredDate">...</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-sm text-gray-500">หัวข้อเรื่อง</p>
+                    <p class="font-bold text-gray-800 text-lg" id="orderTitle">...</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-500">วันที่ต้องการใช้</p>
+                    <p class="font-medium text-gray-800" id="requiredDate">...</p>
+                </div>
             </div>
         </div>
 
@@ -102,7 +108,8 @@
 
     function renderOrder(order) {
         document.getElementById('orderNo').textContent = order.order_no || order.id;
-        document.getElementById('requiredDate').textContent = new Date(order.created_at).toLocaleDateString('th-TH');
+        document.getElementById('orderTitle').textContent = order.order_title;
+        document.getElementById('requiredDate').textContent = new Date(order.required_date).toLocaleDateString('th-TH');
 
         // Items
         const tbody = document.getElementById('itemsBody');

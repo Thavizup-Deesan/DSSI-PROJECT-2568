@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POTMS - ระบบติดตามพัสดุ</title>
+    <!-- Tailwind CSS (DaisyUI included via CDN for simplicity, or standard Tailwind) -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Sarabun & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        /* Aggressive override for inputs to ensure visibility */
+        .force-visible {
+            color: #000000 !important;
+            background-color: #ffffff !important;
+            -webkit-text-fill-color: #000000 !important; /* For Safari/Chrome */
+            opacity: 1 !important;
+        }
+        /* Ensure disabled inputs are also readable if any */
+        .force-visible:disabled {
+            color: #333333 !important;
+            background-color: #f3f4f6 !important;
+        }
+
+        /* SweetAlert2 Button Visibility Fix */
+        .swal2-styled.swal2-cancel {
+            color: #ffffff !important;
+            background-color: #6b7280 !important;
+            border: none !important;
+        }
+        .swal2-styled.swal2-confirm {
+            color: #ffffff !important;
+            background-color: #4f46e5 !important;
+            border: none !important;
+        }
+
+        /* General Base Styles */
+        body { font-family: 'Sarabun', sans-serif; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Sarabun', sans-serif; font-weight: 600; }
+        .font-eng { font-family: 'Inter', sans-serif; }
+        .sidebar-active { background-color: #f3f4f6; color: #4f46e5; border-right: 3px solid #4f46e5; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50 text-gray-800 h-screen flex overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm hidden md:flex">
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-gray-100">
+            <i class="fa-solid fa-box-open text-indigo-600 text-2xl mr-3"></i>
+            <span class="text-xl font-bold text-gray-800 tracking-tight">POTMS</span>
+        </div>
+
+        <!-- User Info -->
+        <div class="p-6 border-b border-gray-100 bg-indigo-50/50">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold" id="userAvatar">
+                    U
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-900 truncate" id="userName">กำลังโหลด...</p>
+                    <p class="text-xs text-gray-500" id="userRole">ผู้ใช้งานทั่วไป</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            <!-- Menu for Requester -->
+            <div id="requesterMenu">
+                <!-- พัสดุ และ ครุภัณฑ์ (ซ่อนสำหรับ Admin) -->
+                <div id="userMenuSections">
+                    <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">เมนูหลัก</p>
+                    
+                    <a href="/api/dashboard/" class="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-50 group transition-colors {% if request.path == '/api/dashboard/' %}sidebar-active{% endif %}">
+                        <i class="fa-solid fa-chart-pie w-6 text-center text-gray-400 group-hover:text-indigo-500 transition-colors"></i>
+                        <span class="ml-2">ภาพรวม (Dashboard)</span>
+                    </a>
+
+                    <!-- พัสดุ Section -->
+                    <p class="px-3 pt-4 text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">
+                        <span class="w-2 h-2 bg-blue-500 rounded-full inline-block mr-1"></span> พัสดุ
+                    </p>
+                    
+                    <a href="/api/projects/select/?type=พัสดุ" class="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-blue-50 group transition-colors {% if 'type=พัสดุ' in request.get_full_path and '/projects/select' in request.path %}sidebar-active{% endif %}">
+                        <i class="fa-solid fa-cart-plus w-6 text-center text-gray-400 group-hover:text-blue-500 transition-colors"></i>
+                        <span class="ml-2">สร้างใบขอซื้อพัสดุ</span>
+                    </a>
+
+                    <a href="/api/orders/my/?type=พัสดุ" class="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-blue-50 group transition-colors {% if 'type=พัสดุ' in request.get_full_path and '/orders/my' in request.path %}sidebar-active{% endif %}">
+                        <i class="fa-solid fa-list w-6 text-center text-gray-400 group-hover:text-blue-500 transition-colors"></i>
+                        <span class="ml-2">รายการใบขอซื้อพัสดุ</span>
+                    </a>
+
+                    <!-- ครุภัณฑ์ Section -->
+                    <p class="px-3 pt-4 text-xs font-semibold text-purple-500 uppercase tracking-wider mb-1">
+                        <span class="w-2 h-2 bg-purple-500 rounded-full inline-block mr-1"></span> ครุภัณฑ์
+                    </p>
+
+                    <a href="/api/projects/select/?type=ครุภัณฑ์" class="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-purple-50 group transition-colors {% if 'type=ครุภัณฑ์' in request.get_full_path and '/projects/select' in request.path %}sidebar-active{% endif %}">
+                        <i class="fa-solid fa-cart-plus w-6 text-center text-gray-400 group-hover:text-purple-500 transition-colors"></i>
+                        <span class="ml-2">สร้างใบขอซื้อครุภัณฑ์</span>
+                    </a>
+
+                    <a href="/api/equipment/orders/my/" class="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-purple-50 group transition-colors {% if '/api/equipment/orders/' in request.path %}sidebar-active{% endif %}">
+                        <i class="fa-solid fa-list w-6 text-center text-gray-400 group-hover:text-purple-500 transition-colors"></i>
+                        <span class="ml-2">รายการใบขอซื้อครุภัณฑ์</span>
+                    </a>
+                </div>
+
+                <!-- Admin Section -->
+                <div id="adminMenu" class="hidden">
+                    <p class="px-3 pt-4 text-xs font-semibold text-red-500 uppercase tracking-wider mb-1">
+                        <span class="w-2 h-2 bg-red-500 rounded-full inline-block mr-1"></span> ผู้ดูแลระบบ
+                    </p>
+                     <a href="/api/admin/users/page/" class="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-red-50 group transition-colors {% if '/api/admin/' in request.path %}sidebar-active{% endif %}">
+                        <i class="fa-solid fa-users-cog w-6 text-center text-gray-400 group-hover:text-red-500 transition-colors"></i>
+                        <span class="ml-2">จัดการบัญชีผู้ใช้</span>
+                    </a>
+                </div>
+            </div>
+
+
+        </nav>
+
+        <!-- Footer -->
+        <div class="p-4 border-t border-gray-200">
+            <button onclick="logout()" class="flex items-center w-full px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+                <i class="fa-solid fa-sign-out-alt w-6 text-center"></i>
+                <span class="ml-2">ออกจากระบบ</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Header Mobile -->
+        <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 md:hidden z-10">
+            <div class="flex items-center">
+                <i class="fa-solid fa-box-open text-indigo-600 text-xl mr-2"></i>
+                <span class="text-lg font-bold text-gray-800">POTMS</span>
+            </div>
+            <button class="text-gray-500 p-2 rounded-lg hover:bg-gray-100">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+        </header>
+
+        <!-- Content Body -->
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6 relative">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Global Scripts -->
+    <script>
+        // Check Auth Configuration
+        const token = localStorage.getItem('access_token');
+        const user = JSON.parse(localStorage.getItem('user_info') || '{}');
+
+        // Initial Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check login status for protected pages
+            const publicPages = ['/api/login/', '/api/register/', '/api/'];
+            const currentPath = window.location.pathname;
+            
+            if (!token && !publicPages.includes(currentPath)) {
+                window.location.href = '/api/login/';
+                return;
+            }
+
+            // Render User Info if logged in
+            if (token) {
+                const userNameEl = document.getElementById('userName');
+                const userRoleEl = document.getElementById('userRole');
+                const userAvatarEl = document.getElementById('userAvatar');
+                const adminMenuEl = document.getElementById('adminMenu');
+
+                if (userNameEl) userNameEl.textContent = user.fullname || user.username || 'ผู้ใช้งาน';
+                
+                // Update Role Display
+                if (userRoleEl) {
+                    let roleText = 'ผู้ใช้งาน';
+                    if (user.role === 'admin') roleText = 'Admin';
+                    else if (user.role === 'staff') roleText = 'พัสดุ';
+                    else if (user.role === 'boss') roleText = 'หัวหน้าภาค';
+                    else if (user.role === 'user') roleText = 'ผู้ขอซื้อ';
+                    userRoleEl.textContent = roleText;
+                }
+
+                if (userAvatarEl) userAvatarEl.textContent = (user.username || 'U').charAt(0).toUpperCase();
+
+                // Show Admin Menu and hide user sections
+                if (user.role === 'admin' && adminMenuEl) {
+                    adminMenuEl.classList.remove('hidden');
+                    // Hide พัสดุ/ครุภัณฑ์ for admin
+                    const userSections = document.getElementById('userMenuSections');
+                    if (userSections) userSections.classList.add('hidden');
+                }
+            }
+        });
+
+        // Logout Function
+        function logout() {
+            Swal.fire({
+                title: 'ยืนยันการออกจากระบบ',
+                text: "คุณต้องการออกจากระบบใช่หรือไม่?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#4f46e5',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'ใช่, ออกจากระบบ',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    localStorage.removeItem('user_info');
+                    window.location.href = '/api/login/';
+                }
+            });
+        }
+
+        // API Helper
+        async function fetchAPI(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...options.headers
+            };
+
+            const response = await fetch(endpoint, { ...options, headers });
+            
+            if (response.status === 401) {
+                // Token Expired Logic could go here
+                localStorage.clear();
+                window.location.href = '/api/login/';
+            }
+
+            return response;
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

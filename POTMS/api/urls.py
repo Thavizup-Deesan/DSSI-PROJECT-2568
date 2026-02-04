@@ -1,121 +1,166 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
-    ProjectAPIView, ProjectDetailAPIView, ProjectImportAPIView, 
-    UserRegisterAPIView, UserLoginAPIView, StatsAPIView,
-    UserListAPIView, UserDetailAPIView,  # User Management APIs
-    ProjectAssignmentAPIView, ProjectAssignmentDetailAPIView,  # Project Assignment APIs
-    project_dashboard, login_page, OrderAPIView, OrderSubmitAPIView, OrderDetailAPIView, 
-    OrderApproveAPIView, OrderRejectAPIView, OrderCorrectionAPIView,  # Order Approval APIs
-    OrderBossApproveAPIView, OrderBossRejectAPIView, OrderSendToProcurementAPIView, OrderApprovedCorrectionAPIView,  # Boss Approval & Procurement APIs
-    OrderReceiveFromProcurementAPIView,  # Phase 4: Receive from Procurement
-    SubOrderCreateAPIView,  # Phase 4: Create Sub-order
-    InspectionAPIView,  # Phase 4: Inspection + QR Code
-    HandoverAPIView, CloseOrderAPIView,  # Phase 4: Handover + Close
-    BudgetSummaryAPIView, staff_reports_view,  # Phase 4: Reports
-    ExportOrderCSVAPIView,  # Phase 4: Export CSV
-    UserProjectsAPIView, StaffOrdersAPIView,
-    create_order_view, my_orders_view, order_detail_view, edit_order_view, staff_dashboard, homepage, 
-    staff_orders_view, staff_order_detail_view, staff_po_management_view, staff_po_detail_view,  # Staff page views
-    register_page, user_management_page, user_select_project_view, user_dashboard,  # Page Views
-    print_order_view,  # Print Order Page
-    scan_suborder_view, ScanSuborderDataAPIView  # Scan QR Code
-)
+    # Auth APIs
+    UserRegisterAPIView, UserLoginAPIView, UserDetailAPIView, UserListAPIView, AdminUserAPIView, admin_users_view, ResetPasswordAPIView,
+    
+    # Project APIs
+    ProjectAPIView, ProjectDetailAPIView,
 
+    # Master Item APIs
+    MasterItemAPIView,
+
+    # Order APIs
+    OrderAPIView, OrderDetailAPIView, OrderSubmitAPIView, OrderStatusUpdateAPIView,
+    
+    # Delivery APIs
+    DeliveryRecordAPIView,
+
+    # Export & Scan APIs
+    ExportOrderCSVAPIView, ScanOrderDataAPIView,
+
+    # Page Views (Frontend)
+    homepage, login_page, register_page, requester_dashboard,
+    project_list_view, select_project_view, create_order_view,
+    my_orders_view, order_detail_view, edit_order_view, staff_dashboard, staff_order_detail_view,
+    order_qr_view, receive_items_view, order_history_view,
+    
+    # Equipment Page Views
+    equipment_select_project_view, equipment_project_list_view, equipment_my_orders_view,
+    equipment_create_order_view, equipment_order_detail_view, equipment_edit_order_view,
+    
+    # Print Views
+    print_order_view, print_equipment_request_view,
+
+    # Scan Views
+    scan_order_view,
+    
+    # Staff Action APIs
+    OrderApproveAPIView, OrderRejectAPIView, OrderCorrectionAPIView,
+    
+    # QR & Receiving APIs (New Workflow)
+    GenerateQRCodeAPIView, ItemReceivingAPIView, OrderHistoryAPIView, UpdateOrderStatusAPIView,
+    
+    # Image Upload APIs
+    OrderImageUploadAPIView,
+    
+    # Vendor APIs
+    VendorAPIView
+)
 
 
 urlpatterns = [
     # ===================================================================
-    # JWT Authentication - Token Management
+    # Authentication APIs
     # ===================================================================
-    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('auth/register/', UserRegisterAPIView.as_view(), name='api-register'),
+    path('auth/login/', UserLoginAPIView.as_view(), name='api-login'),
+    path('users/<str:user_id>/', UserDetailAPIView.as_view(), name='api-user-detail'),
+
+    # ===================================================================
+    # Project APIs
+    # ===================================================================
+    path('projects/select/', select_project_view, name='page-project-select'),
+    path('projects/list/', project_list_view, name='page-project-list'),
+    path('projects/', ProjectAPIView.as_view(), name='api-projects'),
+    path('projects/<str:project_id>/', ProjectDetailAPIView.as_view(), name='api-project-detail'),
+
+    # ===================================================================
+    # Product/Item APIs
+    # ===================================================================
+    path('products/', MasterItemAPIView.as_view(), name='api-products'),
+
+    # ===================================================================
+    # Order Management APIs
+    # ===================================================================
+    # Page Routes (Must be before <str:order_id>)
+    path('orders/create/', create_order_view, name='page-order-create'),
+    path('orders/my/', my_orders_view, name='page-my-orders'),
+
+    # API Routes
+    path('orders/', OrderAPIView.as_view(), name='api-orders'),
+    path('orders/<str:order_id>/', OrderDetailAPIView.as_view(), name='api-order-detail'),
+    path('orders/<str:order_id>/submit/', OrderSubmitAPIView.as_view(), name='api-order-submit'),
+    path('orders/<str:order_id>/status/', OrderStatusUpdateAPIView.as_view(), name='api-order-status'),
+    path('orders/<str:order_id>/export-csv/', ExportOrderCSVAPIView.as_view(), name='api-order-export'),
+    
+    # Staff Action APIs
+    path('orders/<str:order_id>/approve/', OrderApproveAPIView.as_view(), name='api-order-approve'),
+    path('orders/<str:order_id>/reject/', OrderRejectAPIView.as_view(), name='api-order-reject'),
+    path('orders/<str:order_id>/correction/', OrderCorrectionAPIView.as_view(), name='api-order-correction'),
+
+    # ===================================================================
+    # Delivery & Tracking APIs
+    # ===================================================================
+    path('orders/<str:order_id>/deliveries/', DeliveryRecordAPIView.as_view(), name='api-order-deliveries'),
+
+    # ===================================================================
+    # Scan Data APIs
+    # ===================================================================
+    path('scan/<str:order_id>/data/', ScanOrderDataAPIView.as_view(), name='api-scan-data'),
+
+    # ===================================================================
+    # Frontend Pages (URL Routing)
+    # ===================================================================
+    path('', homepage, name='page-home'),
+    path('login/', login_page, name='page-login'),
+    path('register/', register_page, name='page-register'),
+    path('dashboard/', requester_dashboard, name='page-dashboard'),
+    path('staff/dashboard/', staff_dashboard, name='page-staff-dashboard'),
+    path('staff/orders/<str:order_id>/', staff_order_detail_view, name='page-staff-order-detail'),
+    
+    # path('projects/list/', project_list_view, name='page-project-list'), # Moved up
+    # path('projects/select/', select_project_view, name='page-project-select'), # Moved up
+    
+    # path('orders/create/', create_order_view, name='page-order-create'), # Moved up
+    # path('orders/my/', my_orders_view, name='page-my-orders'), # Moved up
+    path('orders/<str:order_id>/view/', order_detail_view, name='page-order-view'),
+    path('orders/<str:order_id>/edit/', edit_order_view, name='page-order-edit'),
+    
+    # Print Pages
+    path('orders/<str:order_id>/print/', print_order_view, name='page-order-print'),
+    path('orders/<str:order_id>/print-equipment/', print_equipment_request_view, name='page-order-print-equipment'),
+    
+    # Scan Pages (Mobile)
+    path('scan/<str:order_id>/', scan_order_view, name='page-scan-order'),
     
     # ===================================================================
-    # Project APIs - จัดการข้อมูลโครงการ
+    # New Workflow Routes
     # ===================================================================
-    path('projects/', ProjectAPIView.as_view(), name='project-list-create'),
-    # สำหรับ Import (ต้องอยู่ก่อน <str:project_id> ไม่งั้นจะถูกจับผิด)
-    path('projects/import/', ProjectImportAPIView.as_view(), name='project-import'),
-    # ลิงก์สำหรับจัดการโครงการแต่ละตัว (ลบ/แก้ไข)
-    path('projects/<str:project_id>/', ProjectDetailAPIView.as_view(), name='project-detail'),
+    # QR Code & Receiving Pages (Requester records after offline committee inspection)
+    path('orders/<str:order_id>/qr/', order_qr_view, name='page-order-qr'),
+    path('orders/<str:order_id>/receive/', receive_items_view, name='page-receive-items'),
+    path('orders/history/', order_history_view, name='page-order-history'),
+    
+    # QR Code & Receiving APIs
+    path('api/orders/<str:order_id>/generate-qr/', GenerateQRCodeAPIView.as_view(), name='api-generate-qr'),
+    path('api/orders/<str:order_id>/receive/', ItemReceivingAPIView.as_view(), name='api-receive-items'),
+    path('api/orders/<str:order_id>/update-status/', UpdateOrderStatusAPIView.as_view(), name='api-update-order-status'),
+    path('api/orders/history/', OrderHistoryAPIView.as_view(), name='api-order-history'),
+    
+    # Image Upload APIs
+    path('orders/<str:order_id>/images/', OrderImageUploadAPIView.as_view(), name='api-order-images'),
+    
+    # Vendor APIs
+    path('vendors/', VendorAPIView.as_view(), name='api-vendors'),
+    
+    # User List API
+    path('users/', UserListAPIView.as_view(), name='api-users'),
     
     # ===================================================================
-    # Project Assignment APIs - มอบหมายโครงการ (Staff)
+    # Equipment (ครุภัณฑ์) System Routes - Uses temp2 templates
     # ===================================================================
-    path('project-assignments/', ProjectAssignmentAPIView.as_view(), name='project-assignment-list'),
-    path('project-assignments/<str:assignment_id>/', ProjectAssignmentDetailAPIView.as_view(), name='project-assignment-detail'),
+    path('equipment/projects/select/', equipment_select_project_view, name='page-equipment-project-select'),
+    path('equipment/projects/list/', equipment_project_list_view, name='page-equipment-project-list'),
+    path('equipment/orders/my/', equipment_my_orders_view, name='page-equipment-my-orders'),
+    path('equipment/orders/create/', equipment_create_order_view, name='page-equipment-order-create'),
+    path('equipment/orders/<str:order_id>/view/', equipment_order_detail_view, name='page-equipment-order-detail'),
+    path('equipment/orders/<str:order_id>/edit/', equipment_edit_order_view, name='page-equipment-order-edit'),
     
     # ===================================================================
-    # User Management APIs - จัดการผู้ใช้งาน (Admin)
+    # Admin User Management
     # ===================================================================
-    path('users/', UserListAPIView.as_view(), name='user-list'),  # GET: ดึงรายชื่อผู้ใช้ทั้งหมด
-    path('users/<str:user_id>/', UserDetailAPIView.as_view(), name='user-detail'),
-    path('users/<str:user_id>/projects/', UserProjectsAPIView.as_view(), name='user-projects'),  # โครงการที่ user รับผิดชอบ  # GET/PUT/DELETE
-    
-    # ===================================================================
-    # Page Views - หน้าเว็บ HTML
-    # ===================================================================
-    path('project_list/', project_dashboard, name='project-dashboard'),
-    path('user-dashboard/', user_dashboard, name='user-dashboard'),  # User Dashboard ใหม่
-    path('login-page/', login_page, name='login-page'),
-    path('register-page/', register_page, name='register-page'),  # หน้าสมัครสมาชิก
-    path('staff-dashboard/', staff_dashboard, name='staff-dashboard'),
-    path('user-management/', user_management_page, name='user-management'),  # Admin Panel
-    path('select_project/', user_select_project_view, name='user_select_project'),
-    
-    # ===================================================================
-    # User Authentication APIs - ระบบ Login/Register
-    # ===================================================================
-    path('register/', UserRegisterAPIView.as_view(), name='user-register'),
-    path('login/', UserLoginAPIView.as_view(), name='user-login'),
-    
-    # ===================================================================
-    # Stats API - ดึงสถิติ
-    # ===================================================================
-    path('stats/', StatsAPIView.as_view(), name='stats'),
-    path('orders/', OrderAPIView.as_view(), name='order-list'),
-    path('orders/<str:order_id>/', OrderDetailAPIView.as_view(), name='order-detail'),  # GET/PUT/DELETE order
-    path('orders/<str:order_id>/submit/', OrderSubmitAPIView.as_view(), name='order-submit'),  # ส่งใบสั่งซื้อ + ตัดงบ
-    path('orders/<str:order_id>/detail/', order_detail_view, name='order-detail-view'),  # หน้ารายละเอียด
-    path('orders/<str:order_id>/edit/', edit_order_view, name='edit-order'),  # หน้าแก้ไขใบสั่งซื้อ
-    
-    # ===================================================================
-    # Staff Order Management - จัดการใบสั่งซื้อ (Staff)
-    # ===================================================================
-    path('staff/orders/', StaffOrdersAPIView.as_view(), name='staff-orders-api'),  # API: ดึงรายการทั้งหมด
-    path('staff/orders/page/', staff_orders_view, name='staff-orders-page'),  # หน้าจัดการรออนุมัติ
-    path('staff/po-management/', staff_po_management_view, name='staff-po-management'),  # หน้าจัดการ PO ทั้งหมด
-    path('staff/orders/<str:order_id>/detail/', staff_order_detail_view, name='staff-order-detail'),  # หน้าตรวจสอบรายละเอียด
-    path('staff/po/<str:order_id>/detail/', staff_po_detail_view, name='staff-po-detail'),  # หน้าดูรายละเอียด PO
-    
-    # Order Approval APIs
-    path('orders/<str:order_id>/approve/', OrderApproveAPIView.as_view(), name='order-approve'),  # Staff อนุมัติ → รอหัวหน้า
-    path('orders/<str:order_id>/reject/', OrderRejectAPIView.as_view(), name='order-reject'),  # ปฏิเสธ
-    path('orders/<str:order_id>/correction/', OrderCorrectionAPIView.as_view(), name='order-correction'),  # ส่งกลับแก้ไข
-    path('orders/<str:order_id>/boss-approve/', OrderBossApproveAPIView.as_view(), name='order-boss-approve'),  # หัวหน้าอนุมัติ
-    path('orders/<str:order_id>/boss-reject/', OrderBossRejectAPIView.as_view(), name='order-boss-reject'),  # หัวหน้าไม่อนุมัติ (WaitingBossApproval)
-    path('orders/<str:order_id>/approved-correction/', OrderApprovedCorrectionAPIView.as_view(), name='order-approved-correction'),  # ส่งกลับแก้ไข (Approved)
-    path('orders/<str:order_id>/send-to-procurement/', OrderSendToProcurementAPIView.as_view(), name='order-send-procurement'),  # ส่งพัสดุ
-    path('orders/<str:order_id>/receive-procurement/', OrderReceiveFromProcurementAPIView.as_view(), name='order-receive-procurement'),  # รับของจากพัสดุ
-    path('orders/<str:order_id>/create-suborder/', SubOrderCreateAPIView.as_view(), name='order-create-suborder'),  # สร้าง Sub-order
-    path('suborders/<str:suborder_id>/inspection/', InspectionAPIView.as_view(), name='suborder-inspection'),  # ตรวจรับ + QR Code
-    path('orders/<str:order_id>/handover/', HandoverAPIView.as_view(), name='order-handover'),  # จ่ายของ
-    path('orders/<str:order_id>/close/', CloseOrderAPIView.as_view(), name='order-close'),  # ปิดงาน
-    path('orders/<str:order_id>/print/', print_order_view, name='order-print'),  # พิมพ์ใบสั่งซื้อ
-    
-    path('create-order/', create_order_view, name='create-order'),
-    path('my-orders/', my_orders_view, name='my-orders'),  # หน้ารายการสั่งซื้อของ User
-    path('stats/', StatsAPIView.as_view(), name='dashboard-stats'),
-    
-    # Scan QR Code
-    path('scan/<str:suborder_id>/', scan_suborder_view, name='scan-suborder'),  # หน้าสแกน QR
-    path('scan/<str:suborder_id>/data/', ScanSuborderDataAPIView.as_view(), name='scan-suborder-data'),  # API ดึงข้อมูล
-    
-    # ===================================================================
-    # Reports & Budget Summary APIs - รายงานสรุป
-    # ===================================================================
-    path('budget-summary/', BudgetSummaryAPIView.as_view(), name='budget-summary'),  # API สรุปงบประมาณ
-    path('staff/reports/', staff_reports_view, name='staff-reports'),  # หน้ารายงานสรุป
-    path('orders/<str:order_id>/export-csv/', ExportOrderCSVAPIView.as_view(), name='order-export-csv'),  # Export CSV
+    path('admin/users/page/', admin_users_view, name='page-admin-users'),
+    path('admin/users/', AdminUserAPIView.as_view(), name='api-admin-users'),
+    path('admin/users/<str:uid>/', AdminUserAPIView.as_view(), name='api-admin-user-detail'),
+    path('admin/users/<str:uid>/reset-password/', ResetPasswordAPIView.as_view(), name='api-admin-reset-password'),
 ]

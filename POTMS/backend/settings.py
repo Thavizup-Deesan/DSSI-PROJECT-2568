@@ -24,7 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+
+# ... (Previous SECRET_KEY logic remains) ...
 
 # ✅ FIX V15: Use environment variable instead of hardcoding
 SECRET_KEY = os.environ.get(
@@ -97,8 +100,21 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 
 # สำหรับ Vercel/Docker: ใช้ SQLite (dummy) เพราะข้อมูลจริงอยู่ใน Firebase Firestore
-import os
-if os.environ.get('VERCEL') or os.environ.get('DOCKER'):
+# Database Configuration for Vercel / Production
+import dj_database_url
+
+# 1. First priority: Use Vercel Postgres (POSTGRES_URL or DATABASE_URL)
+if 'POSTGRES_URL' in os.environ or 'DATABASE_URL' in os.environ:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('POSTGRES_URL') or os.environ.get('DATABASE_URL'),
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=True
+        )
+    }
+# 2. Fallback for Vercel/Docker (without Postgres): Use SQLite (Not Recommended for Prod)
+elif os.environ.get('VERCEL') or os.environ.get('DOCKER'):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -106,32 +122,17 @@ if os.environ.get('VERCEL') or os.environ.get('DOCKER'):
         }
     }
 else:
-    # สำหรับ Local Development: ใช้ MySQL
+    # 3. Local Development: Use MySQL/Postgres locally as configured
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'potms',
-            'USER': 'root',
-            'PASSWORD': 'BookReserve2025',
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'potms_db',
+            'USER': 'postgres',
+            'PASSWORD': 'potms1234',
             'HOST': 'localhost',
-            'PORT': '3306',
+            'PORT': '5432',
         }
     }
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
-# การตั้งค่าสำหรับ Vercel (ถ้ามี DATABASE_URL ให้ใช้ MySQL/Postgres)
-# if 'POSTGRES_URL' in os.environ:
-#     DATABASES['default'] = dj_database_url.config(
-#         default=os.environ.get('POSTGRES_URL'),
-#         conn_max_age=0,
-#         conn_health_checks=True,
-#     )
 
 ALLOWED_HOSTS = ['127.0.0.1',
     'localhost',
@@ -179,7 +180,11 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-ALLOWED_HOSTS = ['*']
+# Media files (User uploads - Images)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
