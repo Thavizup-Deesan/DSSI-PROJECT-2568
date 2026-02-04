@@ -66,4 +66,18 @@ node_modules/
 .env
 
 # dataconnect generated files
-.dataconnect
+
+# One-time Scripts / Utilities
+POTMS/fix_*.py
+POTMS/reset_*.py
+POTMS/migrate_*.py
+POTMS/create_*.py
+POTMS/seed_*.py
+POTMS/populate_*.py
+POTMS/test_*.py
+POTMS/requirements.txt
+
+# Docker
+POTMS/Dockerfile*
+POTMS/docker-compose*.yml
+POTMS/.dockerignore
