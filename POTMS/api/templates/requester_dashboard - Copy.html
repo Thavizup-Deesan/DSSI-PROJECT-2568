@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    
+    <!-- Welcome Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">ยินดีต้อนรับ, <span id="dashName" class="text-indigo-600">...</span></h1>
+        </div>
+    </div>
+
+    <!-- Category Selection Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- พัสดุ Section -->
+        <div class="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl shadow-lg text-white p-6 relative overflow-hidden hover:shadow-xl transition-shadow">
+            <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full"></div>
+            <div class="relative z-10">
+                <div class="flex items-center mb-4">
+                    <div class="bg-white/20 rounded-full w-12 h-12 flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-box text-2xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold">พัสดุ</h2>
+                </div>
+                <p class="text-blue-100 mb-6">ระบบจัดการใบขอซื้อพัสดุ</p>
+                
+                <div class="space-y-3">
+                    <a href="/api/projects/select/?type=พัสดุ" class="block w-full bg-white/20 hover:bg-white/30 rounded-lg px-4 py-3 text-center font-semibold transition-colors">
+                        <i class="fa-solid fa-plus mr-2"></i> สร้างใบขอซื้อพัสดุ
+                    </a>
+                    <a href="/api/orders/my/?type=พัสดุ" class="block w-full bg-white/10 hover:bg-white/20 rounded-lg px-4 py-3 text-center transition-colors">
+                        <i class="fa-solid fa-history mr-2"></i> ประวัติใบขอซื้อพัสดุ
+                    </a>
+                    <a href="/api/projects/list/?type=พัสดุ" class="block w-full bg-white/10 hover:bg-white/20 rounded-lg px-4 py-3 text-center transition-colors">
+                        <i class="fa-solid fa-folder-plus mr-2"></i> จัดการโครงการพัสดุ
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ครุภัณฑ์ Section -->
+        <div class="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl shadow-lg text-white p-6 relative overflow-hidden hover:shadow-xl transition-shadow">
+            <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full"></div>
+            <div class="relative z-10">
+                <div class="flex items-center mb-4">
+                    <div class="bg-white/20 rounded-full w-12 h-12 flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-desktop text-2xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold">ครุภัณฑ์</h2>
+                </div>
+                <p class="text-purple-100 mb-6">ระบบจัดการใบขอซื้อครุภัณฑ์</p>
+                
+                <div class="space-y-3">
+                    <a href="/api/projects/select/?type=ครุภัณฑ์" class="block w-full bg-white/20 hover:bg-white/30 rounded-lg px-4 py-3 text-center font-semibold transition-colors">
+                        <i class="fa-solid fa-plus mr-2"></i> สร้างใบขอซื้อครุภัณฑ์
+                    </a>
+                    <a href="/api/equipment/orders/my/" class="block w-full bg-white/10 hover:bg-white/20 rounded-lg px-4 py-3 text-center transition-colors">
+                        <i class="fa-solid fa-history mr-2"></i> ประวัติใบขอซื้อครุภัณฑ์
+                    </a>
+                    <a href="/api/equipment/projects/list/" class="block w-full bg-white/10 hover:bg-white/20 rounded-lg px-4 py-3 text-center transition-colors">
+                        <i class="fa-solid fa-folder-plus mr-2"></i> จัดการโครงการครุภัณฑ์
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- พัสดุ Stats -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h3 class="font-bold text-gray-800 mb-4 flex items-center">
+                <span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                สถิติ พัสดุ
+            </h3>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-500">ทั้งหมด</p>
+                    <p class="text-2xl font-bold text-blue-600" id="statSupplyTotal">0</p>
+                </div>
+                <div class="bg-amber-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-500">รออนุมัติ</p>
+                    <p class="text-2xl font-bold text-amber-600" id="statSupplyPending">0</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ครุภัณฑ์ Stats -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h3 class="font-bold text-gray-800 mb-4 flex items-center">
+                <span class="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                สถิติ ครุภัณฑ์
+            </h3>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-purple-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-500">ทั้งหมด</p>
+                    <p class="text-2xl font-bold text-purple-600" id="statEquipTotal">0</p>
+                </div>
+                <div class="bg-amber-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-500">รออนุมัติ</p>
+                    <p class="text-2xl font-bold text-amber-600" id="statEquipPending">0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders (Combined) -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-gray-800">รายการล่าสุด (ทั้งหมด)</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-600 text-sm uppercase">
+                        <th class="py-4">ประเภท</th>
+                        <th>เลขที่เอกสาร</th>
+                        <th>โครงการ</th>
+                        <th>เรื่อง</th>
+                        <th>วันที่สร้าง</th>
+                        <th>สถานะ</th>
+                        <th>จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="recentOrdersTable">
+                    <tr>
+                        <td colspan="7" class="text-center py-8 text-gray-400">
+                            <span class="loading loading-dots loading-md"></span> กำลังโหลดข้อมูล...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Workflow Guide -->
+    <div class="bg-indigo-900 rounded-xl shadow-lg text-white p-6 relative overflow-hidden">
+        <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full"></div>
+        <div class="relative z-10">
+            <h3 class="text-xl font-bold mb-3"><i class="fa-solid fa-file-signature mr-2"></i>ขั้นตอนการดำเนินการ</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                <div class="flex items-start">
+                    <div class="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3 flex-shrink-0">1</div>
+                    <div>
+                        <p class="font-bold text-indigo-100">สร้างใบขอซื้อ</p>
+                        <p class="text-sm text-indigo-200 mt-1">สร้างรายการในระบบ เลือกประเภท พัสดุ หรือ ครุภัณฑ์</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3 flex-shrink-0">2</div>
+                    <div>
+                        <p class="font-bold text-indigo-100">เสนอหัวหน้าภาควิชา</p>
+                        <p class="text-sm text-indigo-200 mt-1">นำเอกสารเสนอให้หัวหน้าลงนามอนุมัติ</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3 flex-shrink-0">3</div>
+                    <div>
+                        <p class="font-bold text-indigo-100">อัพโหลดหลักฐาน</p>
+                        <p class="text-sm text-indigo-200 mt-1">ถ่ายภาพเอกสารและอัพโหลดเข้าระบบ</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Load User Info
+        const user = JSON.parse(localStorage.getItem('user_info') || '{}');
+        document.getElementById('dashName').textContent = user.fullname || user.username || 'ผู้ใช้งาน';
+
+        // Load Orders
+        await loadDashboardData();
+    });
+
+    async function loadDashboardData() {
+        const user = JSON.parse(localStorage.getItem('user_info') || '{}');
+        try {
+            const response = await fetchAPI(`/api/orders/?user_id=${user.uid}`);
+            const orders = await response.json();
+
+            // Stats for พัสดุ
+            const supplyOrders = orders.filter(o => o.project_type === 'พัสดุ' || !o.project_type);
+            const equipOrders = orders.filter(o => o.project_type === 'ครุภัณฑ์');
+
+            document.getElementById('statSupplyTotal').textContent = supplyOrders.length;
+            document.getElementById('statSupplyPending').textContent = supplyOrders.filter(o => o.status === 'รอ' || o.status === 'Pending').length;
+            
+            document.getElementById('statEquipTotal').textContent = equipOrders.length;
+            document.getElementById('statEquipPending').textContent = equipOrders.filter(o => o.status === 'รอ' || o.status === 'Pending').length;
+
+            // Render Table (Top 5)
+            const tbody = document.getElementById('recentOrdersTable');
+            tbody.innerHTML = '';
+            
+            if (orders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-gray-500">ไม่พบรายการใบขอซื้อ</td></tr>`;
+                return;
+            }
+
+            orders.slice(0, 5).forEach(order => {
+                const typeClass = order.project_type === 'ครุภัณฑ์' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700';
+                const typeName = order.project_type || 'พัสดุ';
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td><span class="px-2 py-1 rounded-md text-xs font-medium ${typeClass}">${typeName}</span></td>
+                        <td class="font-semibold text-indigo-600">${order.order_no || '-'}</td>
+                        <td><span class="text-xs px-2 py-1 bg-gray-100 rounded-md truncate max-w-[150px] block">${order.project_name || '-'}</span></td>
+                        <td class="max-w-xs truncate">${order.order_title || '-'}</td>
+                        <td class="text-sm text-gray-500">${new Date(order.created_at).toLocaleDateString('th-TH')}</td>
+                        <td>${getStatusBadge(order.status)}</td>
+                        <td>
+                            <a href="/api/orders/${order.id}/view/" class="btn btn-xs btn-ghost text-indigo-600">
+                                <i class="fa-solid fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            });
+
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function getStatusBadge(status) {
+        const map = {
+            'Draft': '<span class="badge badge-ghost text-xs">ฉบับร่าง</span>',
+            'รอ': '<span class="badge badge-warning text-xs text-white">รออนุมัติ</span>',
+            'Pending': '<span class="badge badge-warning text-xs text-white">รออนุมัติ</span>',
+            'รอรับของ': '<span class="badge badge-info text-xs text-white">รอรับของ</span>',
+            'Approved': '<span class="badge badge-success text-xs text-white">อนุมัติแล้ว</span>',
+            'รับบางส่วน': '<span class="badge badge-info text-xs text-white">รับบางส่วน</span>',
+            'รับครบ': '<span class="badge badge-success text-xs text-white">รับครบ</span>',
+            'Rejected': '<span class="badge badge-error text-xs text-white">ไม่อนุมัติ</span>'
+        };
+        return map[status] || `<span class="badge badge-ghost text-xs">${status}</span>`;
+    }
+</script>
+{% endblock %}

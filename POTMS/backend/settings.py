@@ -44,7 +44,12 @@ if not os.environ.get('DJANGO_SECRET_KEY') and not DEBUG:
     )
 
 
-ALLOWED_HOSTS = ['.vercel.app', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = [
+    '.vercel.app', 
+    '127.0.0.1', 
+    'localhost',
+    '*.ngrok-free.app'
+]
 
 
 # Application definition
@@ -123,23 +128,19 @@ elif os.environ.get('VERCEL') or os.environ.get('DOCKER'):
     }
 else:
     # 3. Local Development: Use MySQL/Postgres locally as configured
+    # Read credentials from environment variables for security
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'potms_db',
-            'USER': 'postgres',
-            'PASSWORD': 'potms1234',
-            'HOST': 'localhost',
-            'PORT': '5432',
+            'NAME': os.environ.get('DB_NAME', 'potms_db'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
         }
     }
 
-ALLOWED_HOSTS = ['127.0.0.1',
-    'localhost',
-    '*.ngrok-free.app',
-    'hypnosporic-unconvictive-stephania.ngrok-free.app',
 
-]
 CSRF_TRUSTED_ORIGINS = ['https://hypnosporic-unconvictive-stephania.ngrok-free.app']
 
 # Password validation

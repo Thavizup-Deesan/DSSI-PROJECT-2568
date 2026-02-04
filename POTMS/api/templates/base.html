@@ -115,13 +115,10 @@
                     </a>
                 </div>
 
-                <!-- Admin Section -->
+                <!-- Admin Section - Only show จัดการบัญชีผู้ใช้ link -->
                 <div id="adminMenu" class="hidden">
-                    <p class="px-3 pt-4 text-xs font-semibold text-red-500 uppercase tracking-wider mb-1">
-                        <span class="w-2 h-2 bg-red-500 rounded-full inline-block mr-1"></span> ผู้ดูแลระบบ
-                    </p>
-                     <a href="/api/admin/users/page/" class="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-red-50 group transition-colors {% if '/api/admin/' in request.path %}sidebar-active{% endif %}">
-                        <i class="fa-solid fa-users-cog w-6 text-center text-gray-400 group-hover:text-red-500 transition-colors"></i>
+                     <a href="/api/admin/users/page/" class="flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-indigo-50 group transition-colors {% if '/api/admin/' in request.path %}sidebar-active{% endif %}">
+                        <i class="fa-solid fa-users-cog w-6 text-center text-indigo-500 group-hover:text-indigo-600 transition-colors"></i>
                         <span class="ml-2">จัดการบัญชีผู้ใช้</span>
                     </a>
                 </div>

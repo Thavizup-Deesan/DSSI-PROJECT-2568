@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ลงทะเบียน - POTMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>body { font-family: 'Sarabun', sans-serif; }</style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 to-blue-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="card w-full max-w-sm bg-indigo-50 shadow-xl border border-white/50">
+        <div class="card-body">
+            <!-- Header -->
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">สร้างบัญชีใหม่</h2>
+                <p class="text-gray-500 text-sm">กรอกข้อมูลเพื่อลงทะเบียนเข้าใช้งาน</p>
+            </div>
+            
+            <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3" autocomplete="off">
+                <div class="form-control w-full">
+                    <label class="label pointer-events-none pb-1"><span class="label-text font-medium text-gray-600">ชื่อผู้ใช้งาน (Username)</span></label>
+                    <input type="text" id="username" class="input input-bordered w-full focus:input-primary h-10 bg-white" required autocomplete="off" />
+                </div>
+
+                <div class="form-control w-full">
+                    <label class="label pointer-events-none pb-1"><span class="label-text font-medium text-gray-600">ชื่อ-นามสกุล</span></label>
+                    <input type="text" id="name" class="input input-bordered w-full focus:input-primary h-10 bg-white" required autocomplete="off" />
+                </div>
+
+                <div class="form-control w-full">
+                    <label class="label pointer-events-none pb-1"><span class="label-text font-medium text-gray-600">อีเมล</span></label>
+                    <input type="email" id="email" class="input input-bordered w-full focus:input-primary h-10 bg-white" required autocomplete="off" />
+                </div>
+
+                <div class="form-control w-full">
+                    <label class="label pointer-events-none pb-1"><span class="label-text font-medium text-gray-600">รหัสผ่าน</span></label>
+                    <input type="password" id="password" class="input input-bordered w-full focus:input-primary h-10 bg-white" required autocomplete="new-password" />
+                </div>
+
+                <div class="form-control w-full">
+                    <label class="label pointer-events-none pb-1"><span class="label-text font-medium text-gray-600">ยืนยันรหัสผ่าน</span></label>
+                    <input type="password" id="confirmPassword" class="input input-bordered w-full focus:input-primary h-10 bg-white" required autocomplete="new-password" />
+                </div>
+
+                <div class="form-control w-full">
+                    <label class="label pointer-events-none pb-1"><span class="label-text font-medium text-gray-600">บทบาท (Role)</span></label>
+                    <select id="role" class="select select-bordered w-full focus:select-primary h-10 bg-white" required>
+                        <option value="user" selected>ผู้ขอซื้อ</option>
+                    </select>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" class="btn btn-primary w-full text-white">สมัครสมาชิก</button>
+                </div>
+
+                <div class="divider text-xs text-gray-400">หรือ</div>
+
+                <div class="text-center text-sm">
+                    มีบัญชีอยู่แล้ว? <a href="/api/login/" class="link link-primary no-underline hover:text-indigo-700">เข้าสู่ระบบ</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script>
+        async function handleRegister(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const role = document.getElementById('role').value;
+
+            if (password !== confirmPassword) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'รหัสผ่านไม่ตรงกัน',
+                    text: 'กรุณากรอกรหัสผ่านให้ตรงกันทั้งสองช่อง'
+                });
+                return;
+            }
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span> กำลังบันทึก...';
+
+            try {
+                const res = await fetch('/api/auth/register/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, name, email, password, role })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สมัครสมาชิกสำเร็จ',
+                        text: 'คุณสามารถเข้าสู่ระบบได้ทันที',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = '/api/login/';
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่สามารถสมัครสมาชิกได้',
+                        text: data.error || 'กรุณาลองใหม่อีกครั้ง'
+                    });
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'
+                });
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+    </script>
+</body>
+</html>

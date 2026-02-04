@@ -85,8 +85,8 @@
                     // Determine redirect based on role
                     let redirectUrl = '/api/dashboard/';
                     const role = data.user.role;
-                    if (role === 'Admin') {
-                        redirectUrl = '/api/staff/dashboard/';
+                    if (role === 'Admin' || role === 'admin') {
+                        redirectUrl = '/api/admin/users/page/';
                     }
                     // ผู้ขอซื้อ, คณะกรรมการตรวจรับ, หัวหน้าภาควิชา -> all use requester dashboard
                     // (Committee/Boss work offline, only view items via QR)
