@@ -1,114 +1,134 @@
 @startuml
-' ตั้งค่าการแสดงผล
+' ER Diagram - POTMS (Purchase Order Tracking Management System)
+' Updated to match actual Django models
+
 skinparam linetype ortho
 hide circle
 skinparam packageStyle rectangle
 
-' --- Master Data Entities ---
+' === Master Data Entities ===
 
 entity "User (ผู้ใช้งาน)" as User {
-  *user_id : INT <<PK>>
+  *uid : VARCHAR(100) <<PK>>
   --
-  username : VARCHAR
-  role : ENUM (User, Staff, Admin)
-  department : VARCHAR
-}
-
-entity "Project (โครงการ)" as Project {
-  *project_id : INT <<PK>>
-  --
-  project_name : VARCHAR
-  budget_total : DECIMAL(10,2) (งบทั้งหมด)
-  budget_reserved : DECIMAL(10,2) (งบที่ถูกจอง)
-  budget_spent : DECIMAL(10,2) (งบจ่ายจริง)
-  status : ENUM (Active, Completed, Cancelled) << เพิ่ม: สถานะโครงการ >>
-  created_at : DATETIME
-}
-
-' --- Project Assignment (กำหนดผู้รับผิดชอบโครงการ) ---
-
-entity "ProjectAssignment (มอบหมายโครงการ)" as ProjectAssignment {
-  *assignment_id : INT <<PK>>
-  --
-  *project_id : INT <<FK>> (โครงการ)
-  *user_id : INT <<FK>> (User ที่รับผิดชอบ)
-  --
-  assigned_by : INT <<FK>> (Staff ที่กำหนด)
-  assigned_at : DATETIME
-  note : TEXT (หมายเหตุ)
-}
-
-' --- Transaction Entities ---
-
-entity "MainOrder (ใบสั่งซื้อหลัก)" as MainOrder {
-  *order_id : INT <<PK>>
-  --
-  *project_id : INT <<FK>>
-  *requester_id : INT <<FK>> (User ผู้สั่ง)
-  *approver_id : INT <<FK>> (Staff ผู้อนุมัติ)
-  --
-  order_no : VARCHAR (เลขที่เอกสาร)
-  vendor_name : VARCHAR (ชื่อร้านค้า/บริษัท)
-  status : ENUM (Draft, Ordered, CorrectionNeeded, SentToProcurement, Closed)
-  total_estimated_price : DECIMAL (ราคารวมประมาณการ)
-  inspection_committee : TEXT (รายชื่อกรรมการตรวจรับ)
-  staff_note : TEXT (บันทึกสิ่งที่ต้องแก้ไขจาก Staff)
+  email : VARCHAR (unique)
+  full_name : VARCHAR(255)
+  department : VARCHAR(255)
+  phone : VARCHAR(50)
+  password : VARCHAR(255) (hashed)
+  role : ENUM (user, staff, boss, admin)
+  is_active : BOOLEAN
   created_at : DATETIME
   updated_at : DATETIME
 }
 
+entity "Project (โครงการ)" as Project {
+  *id : INT <<PK>>
+  --
+  project_code : VARCHAR(50) (unique)
+  project_name : VARCHAR(255)
+  project_type : ENUM (พัสดุ, ครุภัณฑ์)
+  budget_total : DECIMAL(12,2)
+  budget_used : DECIMAL(12,2)
+  status : VARCHAR(50)
+  created_at : DATETIME
+}
+
+entity "Vendor (ผู้ขาย)" as Vendor {
+  *id : INT <<PK>>
+  --
+  vendor_name : VARCHAR(255)
+  phone : VARCHAR(50)
+  email : VARCHAR(255)
+  address : TEXT
+  created_at : DATETIME
+}
+
+entity "MasterItem (รายการสินค้าหลัก)" as MasterItem {
+  *id : INT <<PK>>
+  --
+  item_code : VARCHAR(50) (unique)
+  item_name : VARCHAR(255)
+  standard_unit : VARCHAR(50)
+  category : VARCHAR(100)
+  created_at : DATETIME
+}
+
+' === Transaction Entities ===
+
+entity "Order (ใบขอซื้อ)" as Order {
+  *id : INT <<PK>>
+  --
+  order_no : VARCHAR(50) (unique)
+  order_title : VARCHAR(255)
+  order_type : ENUM (พัสดุ, ครุภัณฑ์)
+  *project_id : INT <<FK>>
+  *requester_id : VARCHAR(100) <<FK>>
+  requester_name : VARCHAR(255)
+  vendor_name : VARCHAR(255)
+  status : ENUM (Draft, รอ, รอรับของ, รับบางส่วน, รับครบ, Rejected)
+  total_estimated_price : DECIMAL(12,2)
+  required_date : DATE
+  order_description : TEXT
+  staff_note : TEXT
+  created_at : DATETIME
+  updated_at : DATETIME
+  submitted_at : DATETIME
+}
+
 entity "OrderItem (รายการสินค้า)" as OrderItem {
-  *item_id : INT <<PK>>
+  *id : INT <<PK>>
   --
   *order_id : INT <<FK>>
-  --
-  item_name : VARCHAR
-  quantity_requested : INT
-  unit : VARCHAR
-  estimated_unit_price : DECIMAL
-  status : ENUM (Pending, Received, Cancelled)
+  item_name : VARCHAR(255)
+  quantity : INT
+  unit : VARCHAR(50)
+  estimated_unit_price : DECIMAL(12,2)
+  quantity_received : INT
 }
 
-entity "SubOrder (ใบตรวจรับ/รับของ)" as SubOrder {
-  *sub_order_id : INT <<PK>>
+entity "OrderImage (รูปภาพประกอบ)" as OrderImage {
+  *id : INT <<PK>>
   --
-  *main_order_id : INT <<FK>>
-  *receiver_id : INT <<FK>>
-  --
-  sub_order_no : VARCHAR
-  received_date : DATETIME
-  status : ENUM (WaitingInspection, Inspected, HandedOver)
-  note : TEXT
+  *order_id : INT <<FK>>
+  image : VARCHAR (file path)
+  description : VARCHAR(255)
+  uploaded_at : DATETIME
 }
 
-entity "InspectionDetail (รายละเอียดการรับของ)" as InspectionDetail {
-  *inspection_id : INT <<PK>>
+entity "DeliveryRecord (บันทึกการรับของ)" as DeliveryRecord {
+  *id : INT <<PK>>
   --
-  *sub_order_id : INT <<FK>>
-  *item_id : INT <<FK>>
-  --
-  qty_received : INT
-  actual_unit_price : DECIMAL
-  total_actual_price : DECIMAL
-  qr_code : VARCHAR
-  is_verified : BOOLEAN
+  *order_id : INT <<FK>>
+  *recorded_by_id : VARCHAR(100) <<FK>>
+  delivered_at : DATETIME
+  notes : TEXT
 }
 
-' --- Relationships ---
+entity "DeliveryItem (รายการรับของ)" as DeliveryItem {
+  *id : INT <<PK>>
+  --
+  *delivery_id : INT <<FK>>
+  *order_item_id : INT <<FK>>
+  quantity_received : INT
+}
 
-' User & Project Assignment (Many-to-Many ผ่าน ProjectAssignment)
-Project ||..o{ ProjectAssignment : "Has Assignees"
-User ||..o{ ProjectAssignment : "Assigned By (Staff)"
+' === Relationships ===
 
-' Orders
-User ||..o{ MainOrder : "Creates (Requester)"
-User ||..o{ SubOrder : "Receives Items (Staff)"
-Project ||..o{ MainOrder : "Has"
+' User relationships
+User ||..o{ Order : "Creates (Requester)"
+User ||..o{ DeliveryRecord : "Records (Staff)"
 
-MainOrder ||..|{ OrderItem : "Contains"
-MainOrder ||..o{ SubOrder : "Splits into"
+' Project relationships
+Project ||..o{ Order : "Has Orders"
 
-SubOrder ||..|{ InspectionDetail : "Includes"
-OrderItem ||..o{ InspectionDetail : "Fulfilled by"
+' Order relationships
+Order ||--|{ OrderItem : "Contains Items"
+Order ||..o{ OrderImage : "Has Images"
+Order ||..o{ DeliveryRecord : "Has Deliveries"
+
+' Delivery relationships
+DeliveryRecord ||--|{ DeliveryItem : "Contains Items"
+OrderItem ||..o{ DeliveryItem : "Received In"
 
 @enduml

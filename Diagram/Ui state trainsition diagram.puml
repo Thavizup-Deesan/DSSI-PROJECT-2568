@@ -1,63 +1,91 @@
 @startuml
 skinparam state {
   BackgroundColor<<Auth>> LightBlue
-  BackgroundColor<<Staff>> LightYellow
+  BackgroundColor<<Admin>> LightCoral
   BackgroundColor<<User>> LightGreen
+  BackgroundColor<<Committee>> LightPurple
 }
 
 [*] --> LoginPage
 
-' --- Authentication Group ---
-state "Login Page\n(UC-01)" as LoginPage <<Auth>>
-state "Register Page\n(UC-02)" as RegisterPage <<Auth>>
+' === Authentication ===
+state "หน้าเข้าสู่ระบบ\n(Login Page)" as LoginPage <<Auth>>
+state "หน้าลงทะเบียน\n(Register Page)" as RegisterPage <<Auth>>
 
-' --- Staff Section ---
-state "Staff Dashboard" as StaffDash <<Staff>>
-state "Project List Page\n(UC-04)" as ProjectList <<Staff>>
-state "Project Form (Create/Edit)\n(UC-04)" as ProjectForm <<Staff>>
-state "Import Data Page\n(UC-05)" as ImportPage <<Staff>>
-state "Order Approval List\n(UC-09)" as ApproveList <<Staff>>
-state "Order Review Detail\n(UC-09)" as OrderReview <<Staff>>
-state "Inspection Page\n(UC-10)" as InspectPage <<Staff>>
+' === Admin Section ===
+state "จัดการบัญชีผู้ใช้\n(User Management)" as AdminUsers <<Admin>>
 
-' --- User Section ---
-state "User Dashboard" as UserDash <<User>>
-state "Select Project Page\n(UC-06)" as SelectProject <<User>>
-state "Create Order Form\n(UC-07)" as CreateOrder <<User>>
-state "My Orders List\n(UC-08)" as MyOrders <<User>>
-state "Order Detail View\n(UC-08)" as OrderDetail <<User>>
+' === User/Staff Section (ใช้หน้าเดียวกัน) ===
+state "แดชบอร์ดผู้ขอซื้อ\n(Requester Dashboard)" as UserDash <<User>>
+state "เลือกโครงการ\n(Select Project)" as SelectProject <<User>>
+state "รายการโครงการ\n(Project List)" as ProjectList <<User>>
+state "สร้างใบขอซื้อ\n(Create Order)" as CreateOrder <<User>>
+state "รายการใบขอซื้อ\n(My Orders)" as MyOrders <<User>>
+state "รายละเอียดใบขอซื้อ\n(Order Detail)" as OrderDetail <<User>>
+state "แก้ไขใบขอซื้อ\n(Edit Order)" as EditOrder <<User>>
+state "หน้า QR Code\n(Order QR)" as OrderQR <<User>>
+state "บันทึกการรับของ\n(Receive Items)" as ReceiveItems <<User>>
+
+' === Committee Section ===
+state "สแกนดูรายการ\n(Scan Order)" as ScanOrder <<Committee>>
 
 ' === Transitions ===
 
 ' Auth Flow
-LoginPage --> RegisterPage : Click 'Register'
-RegisterPage --> LoginPage : Registration Success
-LoginPage --> StaffDash : Login Success (Role: Staff)
-LoginPage --> UserDash : Login Success (Role: User)
+LoginPage --> RegisterPage : กดลงทะเบียน
+RegisterPage --> LoginPage : ลงทะเบียนสำเร็จ
 
-' Logout (UC-03)
-StaffDash --> LoginPage : Logout (UC-03)
-UserDash --> LoginPage : Logout (UC-03)
+LoginPage --> AdminUsers : Login (Role: Admin)
+LoginPage --> UserDash : Login (Role: User/Staff/Boss)
 
-' Staff Flow
-StaffDash --> ProjectList : Menu 'Manage Projects'
-ProjectList --> ProjectForm : Click 'Add/Edit'
-ProjectForm --> ProjectList : Save Success
-StaffDash --> ImportPage : Menu 'Import Data'
-ImportPage --> StaffDash : Import Success
+' Logout
+AdminUsers --> LoginPage : Logout
+UserDash --> LoginPage : Logout
 
-StaffDash --> ApproveList : Menu 'Approve Orders'
-ApproveList --> OrderReview : Select Order
-OrderReview --> ApproveList : Approve/Reject Action
-OrderReview --> InspectPage : Click 'Inspect Items' (If Approved)
-InspectPage --> ApproveList : Confirm Receive
+' Admin Flow
+AdminUsers : เพิ่ม/แก้ไข/ลบผู้ใช้
+AdminUsers : เปลี่ยน Role
+AdminUsers : รีเซ็ตรหัสผ่าน
 
-' User Flow
-UserDash --> SelectProject : Menu 'New Order'
-SelectProject --> CreateOrder : Select Project
-CreateOrder --> MyOrders : Submit Order
-UserDash --> MyOrders : Menu 'History'
-MyOrders --> OrderDetail : View Detail
-OrderDetail --> MyOrders : Back
+' User/Staff Flow - พัสดุ
+UserDash --> SelectProject : สร้างใบขอซื้อพัสดุ/ครุภัณฑ์
+SelectProject --> ProjectList : เลือกประเภท
+ProjectList --> CreateOrder : เลือกโครงการ
+CreateOrder --> MyOrders : บันทึก/ส่ง
+
+UserDash --> MyOrders : ดูรายการใบขอซื้อ
+MyOrders --> OrderDetail : ดูรายละเอียด
+OrderDetail --> EditOrder : แก้ไข (Draft เท่านั้น)
+EditOrder --> OrderDetail : บันทึก
+OrderDetail --> OrderQR : ดู QR Code
+OrderDetail --> ReceiveItems : บันทึกรับของ
+ReceiveItems --> OrderDetail : บันทึกสำเร็จ
+
+' Committee Flow (Mobile)
+ScanOrder : สแกน QR จากมือถือ
+ScanOrder : ดูรายการสินค้า (อ่านอย่างเดียว)
+
+@enduml
+
+' User Flow - พัสดุ
+UserDash --> SelectProject : สร้างใบขอซื้อพัสดุ
+SelectProject --> ProjectList : เลือกประเภท
+ProjectList --> CreateOrder : เลือกโครงการ
+CreateOrder --> MyOrders : บันทึก/ส่ง
+
+UserDash --> MyOrders : ดูรายการใบขอซื้อ
+MyOrders --> OrderDetail : ดูรายละเอียด
+OrderDetail --> EditOrder : แก้ไข
+EditOrder --> OrderDetail : บันทึก
+OrderDetail --> OrderQR : ดู QR Code
+OrderDetail --> ReceiveItems : บันทึกรับของ
+ReceiveItems --> OrderDetail : บันทึกสำเร็จ
+
+UserDash --> OrderHistory : ประวัติใบขอซื้อ
+OrderHistory --> OrderDetail : ดูรายละเอียด
+
+' Committee Flow (Mobile)
+ScanOrder : สแกน QR จากมือถือ
+ScanOrder : ดูรายการสินค้า (อ่านอย่างเดียว)
 
 @enduml

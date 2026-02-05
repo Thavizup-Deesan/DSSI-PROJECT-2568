@@ -2,65 +2,62 @@
 left to right direction
 skinparam packageStyle rectangle
 
-actor "User (ผู้ขอซื้อ)" as User
-actor "Staff (เจ้าหน้าที่)" as Staff
+' === Actors ===
+actor "ผู้ขอซื้อ (Requester)" as User
+actor "หัวหน้าภาควิชา (Head of Dept)" as Boss
+actor "คณะกรรมการตรวจรับ (Committee)" as Committee
+
+' Note for Offline Roles
+note right of Boss : เซ็นเอกสาร Offline เท่านั้น\n(ไม่ได้เข้าใช้งานระบบ)
+note right of Committee : สแกน QR Code เพื่อดูรายการ\n(ไม่ต้อง Login)
 
 package "POTMS System" {
-    ' --- Authentication ---
+    ' === Authentication ===
     usecase "UC-01 เข้าสู่ระบบ (Login)" as UC01
+    usecase "UC-02 ลงทะเบียน (Register)" as UC02
+    usecase "UC-03 ออกจากระบบ (Logout)" as UC03
     
-    ' --- User Actions ---
-    usecase "UC-02 เลือกโครงการ (Select Project)" as UC02
-    usecase "UC-03 สร้างใบขอซื้อ (Create Order)" as UC03
-    usecase "UC-04 ติดตามสถานะ/แก้ไข (Track & Edit)" as UC04
-    usecase "UC-05 สแกน QR Code (Scan QR)" as UC05
-
-    ' --- Staff Actions ---
-    usecase "UC-06 จัดการข้อมูลโครงการ (Manage Projects)" as UC06
-    usecase "UC-07 ตรวจสอบใบขอซื้อ (Verify Order)" as UC07
-    usecase "UC-08 พิมพ์ใบสั่งซื้อ (Print Order)" as UC08
-    usecase "UC-09 บันทึกผลการอนุมัติ (Record Approval)" as UC09
-    usecase "UC-11 ดำเนินการจัดซื้อ (Send to Procurement)" as UC11
-    usecase "UC-12 ตรวจรับพัสดุ (Inspect Items)" as UC12
-    usecase "UC-13 ปิดงาน/ส่งมอบ (Handover & Close)" as UC13
-    usecase "UC-14 ออกรายงานสรุป (Generate Report)" as UC14
-
-    ' --- System Internal Processes (Included/Extended) ---
-    usecase "ตรวจสอบงบประมาณ\n(Check Budget)" as UC_CheckBudget
-    usecase "สร้าง QR Code\n(Generate QR)" as UC_GenQR
-    usecase "UC-10 ส่งคืนแก้ไข\n(Request Correction)" as UC10
-    usecase "ปฏิเสธรายการ\n(Reject Order)" as UC_Reject
+    ' === User Actions (Requester) ===
+    usecase "UC-04 เลือกโครงการ (Select Project)" as UC04
+    usecase "UC-05 สร้างใบขอซื้อ (Create Order)" as UC05
+    usecase "UC-06 ดูรายการใบขอซื้อ (View My Orders)" as UC06
+    usecase "UC-07 แก้ไขใบขอซื้อ (Edit Order)" as UC07
+    usecase "UC-08 ส่งขออนุมัติ (Submit Order)" as UC08
+    usecase "UC-09 บันทึกการรับของ (Record Receiving)" as UC09
+    usecase "UC-10 ดูประวัติ/ค้นหา/Export (Order History)" as UC10
+    usecase "UC-11 อัปโหลดรูปภาพประกอบ (Upload Order Images)" as UC11
+    
+    ' === Committee Actions ===
+    usecase "UC-12 สแกน QR ดูรายการ (Scan QR View Items)" as UC12
+    
+    ' === System Processes ===
+    usecase "สร้าง QR Code (Generate QR)" as UC_GenQR
 }
 
-' --- Relationships ---
+' === Relationships ===
 
-' Auth
+' Authentication (Requester Only)
 User -- UC01
-Staff -- UC01
-
-' User Flow
 User -- UC02
 User -- UC03
+
+' User Flow (Requester)
 User -- UC04
 User -- UC05
+User -- UC06
+User -- UC07
+User -- UC08
+User -- UC09
+User -- UC10
+User -- UC11
 
-' ** Include Relationships **
-UC03 ..> UC_CheckBudget : <<include>> \n(เช็คยอดเงินเสมอ)
-UC12 ..> UC_GenQR : <<include>> \n(สร้าง QR อัตโนมัติ)
+' Committee Flow (No Login, just Scan)
+Committee -- UC12
 
-' Staff Flow
-Staff -- UC05
-Staff -- UC06
-Staff -- UC07 : (ตรวจสอบ)
-Staff -- UC08
-Staff -- UC09 : (ตัดงบจริง)
-Staff -- UC11
-Staff -- UC12
-Staff -- UC13
-Staff -- UC14
+' Offline interactions (representation only, no system link)
+' Boss has no direct link to system use cases as per requirement
 
-' ** Extend Relationships **
-UC10 .> UC07 : <<extend>> \n(ถ้าข้อมูลผิด)
-UC_Reject .> UC09 : <<extend>> \n(ถ้าหัวหน้าไม่อนุมัติ)
+' Include Relationships
+UC08 ..> UC_GenQR : <<include>>\n(สร้าง QR อัตโนมัติเมื่อส่งออเดอร์)
 
 @enduml
