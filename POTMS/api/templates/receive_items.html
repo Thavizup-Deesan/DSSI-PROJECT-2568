@@ -17,7 +17,12 @@
             <h1 class="text-2xl font-bold text-gray-800">บันทึกการรับของ</h1>
             <p class="text-gray-500">เลขที่: <span id="order-no" class="font-mono font-bold">{{ order_id }}</span></p>
         </div>
-        <span id="order-status" class="badge badge-lg">กำลังโหลด...</span>
+        <div class="flex gap-2">
+            <button onclick="resetReceiving()" class="btn btn-sm btn-ghost text-error" title="ล้างข้อมูลการรับทั้งหมด">
+                <i class="fa-solid fa-rotate-left mr-1"></i> รีเซ็ต
+            </button>
+            <span id="order-status" class="badge badge-lg">กำลังโหลด...</span>
+        </div>
     </div>
 
     <!-- Order Summary -->
@@ -151,7 +156,7 @@
                 <tr class="hover:bg-gray-50">
                     <td>
                         <input type="checkbox" class="checkbox checkbox-primary checkbox-sm item-cb" 
-                               data-idx="${idx}" ${isComplete ? 'disabled checked' : ''} />
+                               data-id="${item.id}" ${isComplete ? 'disabled checked' : ''} />
                     </td>
                     <td>${idx + 1}</td>
                     <td>
@@ -164,7 +169,7 @@
                     </td>
                     <td class="text-center">
                         <input type="number" class="input input-bordered input-sm w-20 text-center qty-input" 
-                               data-idx="${idx}" min="0" max="${pending}" 
+                               data-id="${item.id}" min="0" max="${pending}" 
                                value="${isComplete ? 0 : pending}" 
                                ${isComplete ? 'disabled' : ''} />
                     </td>
@@ -187,10 +192,10 @@
     async function saveReceiving(isFinal) {
         const selectedItems = [];
         document.querySelectorAll('.item-cb:checked:not(:disabled)').forEach(cb => {
-            const idx = parseInt(cb.dataset.idx);
-            const qty = parseFloat(document.querySelector(`.qty-input[data-idx="${idx}"]`)?.value || 0);
+            const id = cb.dataset.id;
+            const qty = parseFloat(document.querySelector(`.qty-input[data-id="${id}"]`)?.value || 0);
             if (qty > 0) {
-                selectedItems.push({ item_index: idx, quantity_received: qty });
+                selectedItems.push({ item_id: id, quantity_received: qty });
             }
         });
 
@@ -239,7 +244,34 @@
                 throw new Error('Failed');
             }
         } catch (err) {
-            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกได้', 'error');
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกได้ ' + err.message, 'error');
+        }
+    }
+
+    async function resetReceiving() {
+        const result = await Swal.fire({
+            title: 'รีเซ็ตข้อมูลการรับ?',
+            text: 'ยอดที่รับทั้งหมดจะถูกล้างเป็น 0 และสถานะจะกลับไปเป็น "รอรับของ"',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'รีเซ็ต',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const res = await fetchAPI(`/api/api/orders/${orderId}/receive/`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    Swal.fire('สำเร็จ', 'รีเซ็ตข้อมูลเรียบร้อย', 'success').then(() => location.reload());
+                } else {
+                    throw new Error('Failed to reset');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'ไม่สามารถรีเซ็ตได้', 'error');
+            }
         }
     }
 

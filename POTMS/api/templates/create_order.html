@@ -42,10 +42,7 @@
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-bold text-gray-800">รายการสินค้า (Items)</h3>
             <div class="flex gap-2">
-                <label class="btn btn-sm btn-outline btn-secondary cursor-pointer">
-                    <i class="fa-solid fa-file-import mr-1"></i> นำเข้า Excel/CSV
-                    <input type="file" id="importFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleFileImport(event)" />
-                </label>
+
                 <button type="button" onclick="addItemRow()" class="btn btn-sm btn-outline btn-primary">
                     <i class="fa-solid fa-plus mr-1"></i> เพิ่มรายการ
                 </button>
@@ -138,7 +135,7 @@
 
 {% block extra_js %}
 <!-- SheetJS for Excel parsing -->
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('project_id');
@@ -168,57 +165,7 @@
         checkEmptyState();
     }
 
-    // ========== CSV/Excel Import ==========
-    async function handleFileImport(event) {
-        const file = event.target.files[0];
-        if (!file) return;
 
-        try {
-            Swal.fire({ title: 'กำลังอ่านไฟล์...', didOpen: () => Swal.showLoading() });
-            
-            const data = await file.arrayBuffer();
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-            const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-            
-            if (rows.length === 0) {
-                Swal.fire('ไม่พบข้อมูล', 'ไฟล์ไม่มีข้อมูลรายการ', 'warning');
-                return;
-            }
-
-            // Clear existing rows
-            document.getElementById('itemsTableBody').innerHTML = '';
-            
-            // Map column names (support Thai or English)
-            rows.forEach(row => {
-                const itemName = row['รายการ'] || row['item_name'] || row['name'] || row['ชื่อ'] || '';
-                const qty = parseFloat(row['จำนวน'] || row['quantity'] || row['qty'] || 1);
-                const unit = row['หน่วย'] || row['unit'] || 'ชิ้น';
-                const price = parseFloat(row['ราคา'] || row['price'] || row['ราคา/หน่วย'] || row['unit_price'] || 0);
-                const reason = row['เหตุผล'] || row['reason'] || row['หมายเหตุ'] || '';
-                
-                if (itemName) {
-                    addItemRowWithData(itemName, qty, unit, price, reason);
-                }
-            });
-            
-            calculateGrandTotal();
-            Swal.fire({
-                icon: 'success',
-                title: 'นำเข้าสำเร็จ',
-                text: `นำเข้า ${rows.length} รายการ`,
-                timer: 1500
-            });
-            
-        } catch (err) {
-            console.error(err);
-            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถอ่านไฟล์ได้', 'error');
-        }
-        
-        // Reset file input
-        event.target.value = '';
-    }
 
     function addItemRowWithData(name, qty, unit, price, reason) {
         const template = document.getElementById('itemRowTemplate');

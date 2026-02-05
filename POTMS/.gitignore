@@ -19,3 +19,7 @@ db.sqlite3
 # OS
 .DS_Store
 Thumbs.db
+
+# Build scripts and env examples
+build.sh
+.env.example

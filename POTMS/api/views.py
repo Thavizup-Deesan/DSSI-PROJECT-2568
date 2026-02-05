@@ -105,8 +105,7 @@ def order_detail_view(request, order_id):
 def edit_order_view(request, order_id):
     return render(request, 'edit_order.html', {'order_id': order_id})
 
-def staff_dashboard(request):
-    return render(request, 'staff_dashboard.html')
+
 
 def order_qr_view(request, order_id):
     """Display QR Code for order inspection"""
@@ -142,79 +141,9 @@ def equipment_order_detail_view(request, order_id):
 def equipment_edit_order_view(request, order_id):
     return render(request, 'temp2/edit_order.html', {'order_id': order_id})
 
-def print_order_view(request, order_id):
-    """Render printable order document"""
-    try:
-        order = get_object_or_404(Order, id=order_id)
-        items = order.items.all()
-        
-        total = sum(item.subtotal for item in items)
-        
-        # Format items
-        items_list = []
-        for item in items:
-            items_list.append({
-                'item_name': item.item_name,
-                'quantity': item.quantity,
-                'quantity_requested': item.quantity,
-                'unit': item.unit,
-                'estimated_unit_price': item.estimated_unit_price,
-                'formatted_price': "{:,.2f}".format(item.estimated_unit_price),
-                'formatted_total': "{:,.2f}".format(item.subtotal)
-            })
-        
-        context = {
-            'order': order,
-            'items': items_list,
-            'order_no': order.order_no,
-            'requester_name': order.requester_name or (order.requester.full_name if order.requester else '-'),
-            'requester_position': 'เจ้าหน้าที่',
-            'requester_phone': '-',
-            'project_name': order.project_name or '-',
-            'project_code': order.project_code or '-',
-            'created_date': order.created_at.strftime('%d/%m/%Y') if order.created_at else '',
-            'required_date': str(order.required_date) if order.required_date else '-',
-            'vendor_display': order.vendor_name or '-',
-            'grand_total': "{:,.2f}".format(total)
-        }
-        return render(request, 'print_order.html', context)
-    except Exception as e:
-        print(e)
-        return HttpResponse("Error loading order", status=404)
 
-def print_equipment_request_view(request, order_id):
-    try:
-        order = get_object_or_404(Order, id=order_id)
-        items = order.items.all()
-        
-        total = sum(item.subtotal for item in items)
-        
-        items_list = []
-        for item in items:
-            items_list.append({
-                'item_name': item.item_name,
-                'quantity': item.quantity,
-                'quantity_requested': item.quantity,
-                'unit': item.unit,
-                'estimated_unit_price': item.estimated_unit_price,
-                'formatted_price': "{:,.2f}".format(item.estimated_unit_price),
-                'formatted_total': "{:,.2f}".format(item.subtotal)
-            })
-        
-        context = {
-            'order': order,
-            'items': items_list,
-            'requester_name': order.requester_name or '-',
-            'requester_position': 'เจ้าหน้าที่',
-            'requester_phone': '-',
-            'project_name': order.project_name or '-',
-            'project_code': order.project_code or '-',
-            'grand_total': "{:,.2f}".format(total)
-        }
-        return render(request, 'print_equipment_request.html', context)
-    except Exception as e:
-        print(e)
-        return HttpResponse("Error loading order", status=404)
+
+
 
 def scan_order_view(request, order_id):
     return render(request, 'scan_order.html', {'order_id': order_id})
@@ -698,10 +627,12 @@ class ScanOrderDataAPIView(APIView):
             order = get_object_or_404(Order, id=order_id)
             
             items = [{
+                'id': item.id,
                 'item_name': item.item_name,
                 'quantity': item.quantity,
                 'unit': item.unit,
-                'quantity_received': item.quantity_received
+                'quantity_received': item.quantity_received,
+                'quantity_remaining': item.quantity - item.quantity_received
             } for item in order.items.all()]
             
             return Response({
@@ -718,8 +649,7 @@ class ScanOrderDataAPIView(APIView):
 # Staff Order Actions
 # ===================================================================
 
-def staff_order_detail_view(request, order_id):
-    return render(request, 'staff_order_detail.html', {'order_id': order_id})
+
 
 class OrderApproveAPIView(APIView):
     def post(self, request, order_id):
@@ -824,6 +754,13 @@ class ItemReceivingAPIView(APIView):
                 if item_id:
                     try:
                         order_item = order.items.get(id=item_id)
+                        
+                        # Validation: Prevent over-receiving
+                        if order_item.quantity_received + qty_this_round > order_item.quantity:
+                            return Response({
+                                'error': f'รายการ {order_item.item_name} รับเกินจำนวน (รับได้อีก {order_item.quantity - order_item.quantity_received})'
+                            }, status=400)
+                            
                         order_item.quantity_received += qty_this_round
                         order_item.save()
                     except OrderItem.DoesNotExist:
@@ -848,6 +785,20 @@ class ItemReceivingAPIView(APIView):
                 'new_status': new_status,
                 'all_complete': all_complete
             })
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+    def delete(self, request, order_id):
+        """Reset received quantities (For testing/correction)"""
+        try:
+            order = get_object_or_404(Order, id=order_id)
+            for item in order.items.all():
+                item.quantity_received = 0
+                item.save()
+            
+            order.status = ORDER_STATUS['WAIT_RECEIVE']
+            order.save()
+            return Response({'message': 'Reset successful'})
         except Exception as e:
             return Response({'error': str(e)}, status=500)
 

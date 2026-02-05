@@ -21,15 +21,12 @@ from .views import (
     # Page Views (Frontend)
     homepage, login_page, register_page, requester_dashboard,
     project_list_view, select_project_view, create_order_view,
-    my_orders_view, order_detail_view, edit_order_view, staff_dashboard, staff_order_detail_view,
+    my_orders_view, order_detail_view, edit_order_view,
     order_qr_view, receive_items_view, order_history_view,
     
     # Equipment Page Views
     equipment_select_project_view, equipment_project_list_view, equipment_my_orders_view,
     equipment_create_order_view, equipment_order_detail_view, equipment_edit_order_view,
-    
-    # Print Views
-    print_order_view, print_equipment_request_view,
 
     # Scan Views
     scan_order_view,
@@ -105,20 +102,8 @@ urlpatterns = [
     path('login/', login_page, name='page-login'),
     path('register/', register_page, name='page-register'),
     path('dashboard/', requester_dashboard, name='page-dashboard'),
-    path('staff/dashboard/', staff_dashboard, name='page-staff-dashboard'),
-    path('staff/orders/<str:order_id>/', staff_order_detail_view, name='page-staff-order-detail'),
-    
-    # path('projects/list/', project_list_view, name='page-project-list'), # Moved up
-    # path('projects/select/', select_project_view, name='page-project-select'), # Moved up
-    
-    # path('orders/create/', create_order_view, name='page-order-create'), # Moved up
-    # path('orders/my/', my_orders_view, name='page-my-orders'), # Moved up
     path('orders/<str:order_id>/view/', order_detail_view, name='page-order-view'),
     path('orders/<str:order_id>/edit/', edit_order_view, name='page-order-edit'),
-    
-    # Print Pages
-    path('orders/<str:order_id>/print/', print_order_view, name='page-order-print'),
-    path('orders/<str:order_id>/print-equipment/', print_equipment_request_view, name='page-order-print-equipment'),
     
     # Scan Pages (Mobile)
     path('scan/<str:order_id>/', scan_order_view, name='page-scan-order'),

@@ -50,8 +50,11 @@
 </head>
 <body class="bg-gray-50 text-gray-800 h-screen flex overflow-hidden">
 
+    <!-- Mobile Overlay -->
+    <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden glass"></div>
+
     <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm hidden md:flex">
+    <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm hidden md:flex md:static fixed inset-y-0 left-0 z-50 h-full transition-transform duration-300">
         <!-- Logo -->
         <div class="h-16 flex items-center px-6 border-b border-gray-100">
             <i class="fa-solid fa-box-open text-indigo-600 text-2xl mr-3"></i>
@@ -144,7 +147,7 @@
                 <i class="fa-solid fa-box-open text-indigo-600 text-xl mr-2"></i>
                 <span class="text-lg font-bold text-gray-800">POTMS</span>
             </div>
-            <button class="text-gray-500 p-2 rounded-lg hover:bg-gray-100">
+            <button id="mobileMenuBtn" onclick="toggleSidebar()" class="text-gray-500 p-2 rounded-lg hover:bg-gray-100 focus:outline-none">
                 <i class="fa-solid fa-bars text-xl"></i>
             </button>
         </header>
@@ -241,6 +244,22 @@
             }
 
             return response;
+        }
+
+        // Sidebar Toggle Logic
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            // Toggle classes for mobile
+            if (sidebar.classList.contains('hidden')) {
+                sidebar.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('hidden');
+            }
+            
+            // Toggle Overlay
+            overlay.classList.toggle('hidden');
         }
     </script>
     {% block extra_js %}{% endblock %}

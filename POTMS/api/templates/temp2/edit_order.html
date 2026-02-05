@@ -17,10 +17,7 @@
         <form id="editForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <input type="hidden" id="orderId" value="{{ order_id }}">
             
-            <div class="form-control col-span-2">
-                <label class="label font-semibold">หัวข้อเรื่อง</label>
-                <input type="text" id="orderTitle" class="input input-bordered focus:input-primary w-full" />
-            </div>
+
 
             <div class="form-control">
                 <label class="label font-semibold">ร้านค้า</label>
@@ -94,7 +91,7 @@
     });
 
     function populateForm(data) {
-        document.getElementById('orderTitle').value = data.order_title;
+
         document.getElementById('vendorName').value = data.vendor_name;
         document.getElementById('requiredDate').value = data.required_date;
         document.getElementById('orderDesc').value = data.order_description;
@@ -155,7 +152,7 @@
         });
 
         const payload = {
-            order_title: document.getElementById('orderTitle').value,
+
             vendor_name: document.getElementById('vendorName').value,
             required_date: document.getElementById('requiredDate').value,
             order_description: document.getElementById('orderDesc').value,

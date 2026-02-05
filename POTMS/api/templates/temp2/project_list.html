@@ -20,10 +20,7 @@
             <button onclick="showAddProjectModal()" class="btn btn-primary">
                 <i class="fa-solid fa-plus mr-2"></i> เพิ่มโครงการใหม่
             </button>
-            <label class="btn btn-outline btn-secondary cursor-pointer">
-                <i class="fa-solid fa-file-import mr-2"></i> นำเข้าจาก Excel/CSV
-                <input type="file" id="importProjectFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleProjectImport(event)" />
-            </label>
+
         </div>
     </div>
 
@@ -246,53 +243,6 @@
         }
     }
 
-    async function handleProjectImport(event) {
-        const file = event.target.files[0];
-        if (!file) return;
 
-        try {
-            Swal.fire({ 
-                title: 'กำลังนำเข้าข้อมูล...', 
-                text: 'กรุณารอสักครู่',
-                didOpen: () => Swal.showLoading() 
-            });
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('project_type', projectType);
-
-            const response = await fetch('/api/projects/import/', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'นำเข้าสำเร็จ',
-                    text: data.message || 'ข้อมูลโครงการถูกนำเข้าเรียบร้อยแล้ว',
-                    timer: 2000
-                });
-                window.location.reload();
-            } else {
-                throw new Error(data.error || 'เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
-            }
-
-        } catch (error) {
-            console.error('Import error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'นำเข้าไม่สำเร็จ',
-                text: error.message
-            });
-        }
-
-        event.target.value = '';
-    }
 </script>
 {% endblock %}

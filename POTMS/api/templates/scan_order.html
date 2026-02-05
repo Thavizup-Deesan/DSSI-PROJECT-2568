@@ -144,28 +144,46 @@
                         <p class="text-gray-400 text-sm">ไม่พบรายการพัสดุ</p>
                     </div>
                 `;
+                document.getElementById('action-bar').classList.add('hidden');
             } else {
-                listContainer.innerHTML = items.map((item, idx) => `
-                    <div class="p-4 hover:bg-gray-50/80 transition-colors group">
-                        <div class="flex gap-4">
+                let hasPending = false;
+                listContainer.innerHTML = items.map((item, idx) => {
+                    const isComplete = item.quantity_remaining <= 0;
+                    if (!isComplete) hasPending = true;
+
+                    return `
+                    <div class="p-4 bg-white hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
+                        <div class="flex gap-3 mb-3">
                             <div class="flex-none pt-1">
-                                <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-[10px] font-bold text-gray-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
-                                    ${idx + 1}
+                                <span class="flex items-center justify-center w-6 h-6 rounded-full ${isComplete ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'} text-[10px] font-bold">
+                                    ${isComplete ? '<i class="fa-solid fa-check"></i>' : idx + 1}
                                 </span>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="font-medium text-gray-800 break-words text-sm leading-snug mb-1">${item.item_name}</p>
-                                <p class="text-xs text-gray-500 font-mono">${item.brand ? item.brand : ''} ${item.model ? item.model : ''}</p>
-                            </div>
-                            <div class="flex-none text-right pl-2">
-                                <p class="font-bold text-gray-800 text-lg leading-none">${parseFloat(item.quantity || 0).toLocaleString()}</p>
-                                <p class="text-[10px] text-gray-400 mt-1">${item.unit || 'หน่วย'}</p>
+                                <p class="font-bold text-gray-800 break-words text-sm leading-snug">${item.item_name}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="badge badge-sm badge-ghost text-xs">สั่งซื้อ: ${parseFloat(item.quantity).toLocaleString()} ${item.unit}</span>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Progress Bar -->
+                        <div class="mb-3">
+                            <div class="flex justify-between text-xs mb-1 text-gray-500">
+                                <span>รับแล้ว ${item.quantity_received}</span>
+                                <span>เหลือ ${item.quantity_remaining}</span>
+                            </div>
+                            <progress class="progress ${isComplete ? 'progress-success' : 'progress-primary'} w-full h-2" value="${item.quantity_received}" max="${item.quantity}"></progress>
+                        </div>
                     </div>
-                `).join('');
+                `}).join('');
             }
         }
+
+        // Removed submitReceive function as requested (Read-only view)
+        
+        // Helper for CSRF if needed (Standard Django) -> Keeping just in case or removing if unused. 
+        // Since no POST action is left here, we can remove getCookie and submitReceive entirely.
 
         function showError(msg) {
             document.getElementById('loading').classList.add('hidden');
