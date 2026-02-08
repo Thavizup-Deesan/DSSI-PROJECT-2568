@@ -13,59 +13,6 @@
                 body {
                         font-family: 'Prompt', sans-serif;
                 }
-
-                /* Mobile responsive table */
-                @media (max-width: 768px) {
-                        .mobile-card {
-                                display: block !important;
-                        }
-
-                        .desktop-table {
-                                display: none !important;
-                        }
-
-                        .mobile-card-item {
-                                background: white;
-                                border-radius: 12px;
-                                padding: 16px;
-                                margin-bottom: 12px;
-                                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-                                border: 1px solid #e5e7eb;
-                        }
-
-                        .mobile-card-row {
-                                display: flex;
-                                justify-content: space-between;
-                                padding: 8px 0;
-                                border-bottom: 1px solid #f3f4f6;
-                        }
-
-                        .mobile-card-row:last-child {
-                                border-bottom: none;
-                        }
-
-                        .mobile-card-label {
-                                color: #6b7280;
-                                font-size: 0.875rem;
-                        }
-
-                        .mobile-card-value {
-                                color: #1f2937;
-                                font-weight: 500;
-                                text-align: right;
-                                max-width: 60%;
-                        }
-                }
-
-                @media (min-width: 769px) {
-                        .mobile-card {
-                                display: none !important;
-                        }
-
-                        .desktop-table {
-                                display: block !important;
-                        }
-                }
         </style>
 </head>
 
@@ -96,7 +43,11 @@
                 <!-- Page Header -->
                 <div class="mb-4 sm:mb-6">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                <h2 class="text-xl sm:text-2xl font-bold text-gray-800">รายการใบขอซื้อรอการอนุมัติ</h2>
+                                <div>
+                                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">รายการใบขอซื้อรอการอนุมัติ</h2>
+                                        <p class="text-xs sm:text-sm text-gray-600 mt-1">
+                                                ตรวจสอบและอนุมัติรายการขอซื้อจากผู้ใช้งานทั้งหมดในระบบ</p>
+                                </div>
                                 <a href="/api/staff-dashboard/"
                                         class="text-blue-600 hover:underline flex items-center gap-2 text-sm">
                                         <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
@@ -108,137 +59,173 @@
                                         <span class="sm:hidden">กลับ</span>
                                 </a>
                         </div>
-                        <p class="text-xs sm:text-sm text-gray-600 mt-1">
-                                ตรวจสอบและอนุมัติรายการขอซื้อจากผู้ใช้งานทั้งหมดในระบบ</p>
                 </div>
 
-                <!-- Filter Section -->
-                <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100">
-                        <h3 class="font-semibold text-gray-800 mb-3 sm:mb-4 text-sm sm:text-base">
-                                เครื่องมือค้นหาและเลือกรอง</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                                <!-- Search by Order No -->
-                                <div>
-                                        <label
-                                                class="block text-xs sm:text-sm text-gray-600 mb-1">ค้นหาตามเลขใบขอซื้อ</label>
-                                        <input type="text" id="searchOrderNo" placeholder="ค้นหาเลขใบขอซื้อ"
-                                                class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
-                                </div>
-
-                                <!-- Date From -->
-                                <div>
-                                        <label
-                                                class="block text-xs sm:text-sm text-gray-600 mb-1">กรองตามช่วงเวลา</label>
-                                        <input type="date" id="dateFrom"
-                                                class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
-                                </div>
-
-                                <!-- Date To -->
-                                <div>
-                                        <label class="block text-xs sm:text-sm text-gray-600 mb-1">ถึง</label>
-                                        <input type="date" id="dateTo"
-                                                class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
-                                </div>
-
-                                <!-- Status Filter -->
-                                <div>
-                                        <label class="block text-xs sm:text-sm text-gray-600 mb-1">สถานะ</label>
-                                        <select id="statusFilter" onchange="loadOrders()"
-                                                class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
-                                                <option value="" selected>ทั้งหมด</option>
-                                                <option value="Draft">ฉบับร่าง</option>
-                                                <option value="Pending">รออนุมัติ</option>
-                                                <option value="WaitingBossApproval">รอหัวหน้าเซ็น</option>
-                                                <option value="Approved">หัวหน้าอนุมัติแล้ว</option>
-                                                <option value="CorrectionNeeded">ต้องแก้ไข</option>
-                                                <option value="Rejected">ปฏิเสธ</option>
-                                                <option value="SentToProcurement">ส่งพัสดุแล้ว</option>
-                                                <option value="ReceivedFromProcurement">รับของจากพัสดุแล้ว</option>
-                                                <option value="WaitingInspection">รอตรวจรับ</option>
-                                                <option value="Inspected">ตรวจรับแล้ว</option>
-                                                <option value="Closed">ปิดแล้ว</option>
-                                        </select>
-                                </div>
-                        </div>
-
-                        <!-- Search Button -->
-                        <div class="mt-3 sm:mt-4 flex justify-end">
-                                <button onclick="loadOrders()"
-                                        class="w-full sm:w-auto px-4 sm:px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium text-sm">
-                                        ค้นหา
-                                </button>
-                        </div>
+                <!-- Breadcrumb Navigation -->
+                <div id="breadcrumb" class="mb-4 flex items-center gap-2 text-sm text-gray-600">
+                        <span id="breadcrumb-projects" class="text-blue-600 font-medium">รายการโครงการ</span>
+                        <span id="breadcrumb-separator" class="hidden">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                        </span>
+                        <span id="breadcrumb-orders" class="hidden font-medium text-gray-800"></span>
                 </div>
 
-                <!-- Orders Table -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        <!-- Table Header with Export -->
-                        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                                <h3 class="font-semibold text-gray-800">รายการขอซื้อ</h3>
+                <!-- Projects View -->
+                <div id="projectsView" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-100">
+                                <h3 class="font-semibold text-gray-800">รายการโครงการที่มีใบขอซื้อ</h3>
+                                <p id="projectCount" class="text-sm text-gray-500">พบ 0 โครงการ</p>
                         </div>
 
                         <!-- Loading -->
-                        <div id="loading" class="text-center py-10 hidden">
-                                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto">
-                                </div>
+                        <div id="loadingProjects" class="text-center py-10">
+                                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
                                 <p class="mt-2 text-gray-500">กำลังโหลดข้อมูล...</p>
                         </div>
 
-                        <!-- Table -->
-                        <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                        <thead class="bg-gray-50">
-                                                <tr>
-                                                        <th
-                                                                class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                                                                เลขใบขอซื้อ</th>
-                                                        <th
-                                                                class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                                                                วันที่ขอซื้อ</th>
-                                                        <th
-                                                                class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                                                                เรื่อง</th>
-                                                        <th
-                                                                class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                                                                ชื่อผู้ขอ</th>
-                                                        <th
-                                                                class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                                                                โครงการ</th>
-                                                        <th
-                                                                class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">
-                                                                ยอดเงินรวม</th>
-                                                        <th
-                                                                class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
-                                                                การอนุมัติ</th>
-                                                </tr>
-                                        </thead>
-                                        <tbody id="ordersTable" class="bg-white divide-y divide-gray-200">
-                                                <!-- Rows will be inserted here -->
-                                        </tbody>
-                                </table>
-                        </div>
+                        <!-- Projects Grid -->
+                        <div id="projectsGrid" class="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 hidden"></div>
 
                         <!-- Empty State -->
-                        <div id="emptyState" class="text-center py-10 hidden">
-                                <p class="text-gray-500">ไม่พบรายการใบขอซื้อ</p>
+                        <div id="emptyProjects" class="text-center py-10 hidden">
+                                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <p class="text-gray-500">ไม่มีโครงการที่มีใบขอซื้อ</p>
+                        </div>
+                </div>
+
+                <!-- Orders View (Initially Hidden) -->
+                <div id="ordersView" class="hidden">
+                        <!-- Back Button -->
+                        <button onclick="showProjectsView()" class="mb-4 flex items-center gap-2 text-blue-600 hover:text-blue-800 transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                กลับไปรายการโครงการ
+                        </button>
+
+                        <!-- Filter Section -->
+                        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100">
+                                <h3 class="font-semibold text-gray-800 mb-3 sm:mb-4 text-sm sm:text-base">
+                                        เครื่องมือค้นหาและเลือกรอง</h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                                        <!-- Search by Order No -->
+                                        <div>
+                                                <label class="block text-xs sm:text-sm text-gray-600 mb-1">ค้นหาตามเลขใบขอซื้อ</label>
+                                                <input type="text" id="searchOrderNo" placeholder="ค้นหาเลขใบขอซื้อ"
+                                                        class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                        </div>
+
+                                        <!-- Date From -->
+                                        <div>
+                                                <label class="block text-xs sm:text-sm text-gray-600 mb-1">กรองตามช่วงเวลา</label>
+                                                <input type="date" id="dateFrom"
+                                                        class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                        </div>
+
+                                        <!-- Date To -->
+                                        <div>
+                                                <label class="block text-xs sm:text-sm text-gray-600 mb-1">ถึง</label>
+                                                <input type="date" id="dateTo"
+                                                        class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                        </div>
+
+                                        <!-- Status Filter -->
+                                        <div>
+                                                <label class="block text-xs sm:text-sm text-gray-600 mb-1">สถานะ</label>
+                                                <select id="statusFilter" onchange="filterOrders()"
+                                                        class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                                        <option value="" selected>ทั้งหมด</option>
+                                                        <option value="Draft">ฉบับร่าง</option>
+                                                        <option value="Pending">รออนุมัติ</option>
+                                                        <option value="WaitingBossApproval">รอหัวหน้าเซ็น</option>
+                                                        <option value="Approved">หัวหน้าอนุมัติแล้ว</option>
+                                                        <option value="CorrectionNeeded">ต้องแก้ไข</option>
+                                                        <option value="Rejected">ปฏิเสธ</option>
+                                                        <option value="SentToProcurement">ส่งพัสดุแล้ว</option>
+                                                        <option value="ReceivedFromProcurement">รับของจากพัสดุแล้ว</option>
+                                                        <option value="WaitingInspection">รอตรวจรับ</option>
+                                                        <option value="Inspected">ตรวจรับแล้ว</option>
+                                                        <option value="Closed">ปิดแล้ว</option>
+                                                </select>
+                                        </div>
+                                </div>
+
+                                <!-- Search Button -->
+                                <div class="mt-3 sm:mt-4 flex justify-end">
+                                        <button onclick="filterOrders()"
+                                                class="w-full sm:w-auto px-4 sm:px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium text-sm">
+                                                ค้นหา
+                                        </button>
+                                </div>
                         </div>
 
-                        <!-- Pagination -->
-                        <div id="pagination"
-                                class="px-6 py-4 border-t border-gray-100 flex justify-between items-center">
-                                <p id="pageInfo" class="text-sm text-gray-600">แสดง 1-5 จาก 7 รายการ</p>
-                                <div class="flex gap-2">
-                                        <button onclick="previousPage()"
-                                                class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50">
-                                                &lt;
-                                        </button>
-                                        <button class="px-3 py-1 bg-cyan-500 text-white rounded">1</button>
-                                        <button
-                                                class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50">2</button>
-                                        <button onclick="nextPage()"
-                                                class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50">
-                                                &gt;
-                                        </button>
+                        <!-- Orders Table -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                <!-- Table Header -->
+                                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                                        <div>
+                                                <h3 id="ordersTableTitle" class="font-semibold text-gray-800">รายการขอซื้อ</h3>
+                                                <p id="orderCount" class="text-sm text-gray-500">พบ 0 รายการ</p>
+                                        </div>
+                                </div>
+
+                                <!-- Loading -->
+                                <div id="loadingOrders" class="text-center py-10 hidden">
+                                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
+                                        <p class="mt-2 text-gray-500">กำลังโหลดข้อมูล...</p>
+                                </div>
+
+                                <!-- Table -->
+                                <div class="overflow-x-auto">
+                                        <table class="min-w-full divide-y divide-gray-200">
+                                                <thead class="bg-gray-50">
+                                                        <tr>
+                                                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                                                                        เลขใบขอซื้อ</th>
+                                                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                                                                        วันที่ขอซื้อ</th>
+                                                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                                                                        เรื่อง</th>
+                                                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                                                                        ชื่อผู้ขอ</th>
+                                                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                                                                        สถานะ</th>
+                                                                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">
+                                                                        ยอดเงินรวม</th>
+                                                                <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
+                                                                        การจัดการ</th>
+                                                        </tr>
+                                                </thead>
+                                                <tbody id="ordersTable" class="bg-white divide-y divide-gray-200">
+                                                        <!-- Rows will be inserted here -->
+                                                </tbody>
+                                        </table>
+                                </div>
+
+                                <!-- Empty State -->
+                                <div id="emptyOrders" class="text-center py-10 hidden">
+                                        <p class="text-gray-500">ไม่พบรายการใบขอซื้อ</p>
+                                </div>
+
+                                <!-- Pagination -->
+                                <div id="pagination" class="px-6 py-4 border-t border-gray-100 flex justify-between items-center hidden">
+                                        <p id="pageInfo" class="text-sm text-gray-600">แสดง 1-5 จาก 7 รายการ</p>
+                                        <div class="flex gap-2">
+                                                <button onclick="previousPage()"
+                                                        class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50">
+                                                        &lt;
+                                                </button>
+                                                <button class="px-3 py-1 bg-cyan-500 text-white rounded">1</button>
+                                                <button onclick="nextPage()"
+                                                        class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50">
+                                                        &gt;
+                                                </button>
+                                        </div>
                                 </div>
                         </div>
                 </div>
@@ -246,10 +233,18 @@
         </main>
 
         <script>
-                let orders = [];
+                // ===================================================================
+                // Global Variables
+                // ===================================================================
+                let allOrders = [];
+                let projectsWithOrders = [];
+                let currentProjectId = null;
+                let currentProjectName = '';
                 let filteredOrders = [];
 
-                // Load orders on page load
+                // ===================================================================
+                // Initialize
+                // ===================================================================
                 document.addEventListener('DOMContentLoaded', async () => {
                         // Check if user is staff
                         const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -260,58 +255,229 @@
                         }
 
                         document.getElementById('staffName').textContent = `สำหรับ: ${user.fullname || 'Staff'}`;
-                        await loadOrders();
+                        await loadProjectsWithOrders();
                 });
 
-                // Load all orders
-                async function loadOrders() {
+                // ===================================================================
+                // Load Projects with Orders
+                // ===================================================================
+                async function loadProjectsWithOrders() {
                         try {
-                                document.getElementById('loading').classList.remove('hidden');
-                                document.getElementById('emptyState').classList.add('hidden');
+                                // Load all orders first
+                                const res = await fetch('/api/staff/orders/');
+                                if (!res.ok) throw new Error('ไม่สามารถโหลดข้อมูลได้');
+                                
+                                allOrders = await res.json();
 
-                                const statusFilter = document.getElementById('statusFilter').value;
-                                const url = statusFilter ? `/api/staff/orders/?status=${statusFilter}` : '/api/staff/orders/';
-
-                                const res = await fetch(url);
-                                orders = await res.json();
-
-                                if (!res.ok) {
-                                        throw new Error('ไม่สามารถโหลดข้อมูลได้');
+                                // Group orders by project
+                                const projectMap = new Map();
+                                
+                                for (const order of allOrders) {
+                                        const projectId = order.project_id;
+                                        if (!projectId) continue;
+                                        
+                                        if (!projectMap.has(projectId)) {
+                                                projectMap.set(projectId, {
+                                                        project_id: projectId,
+                                                        orders: [],
+                                                        total_amount: 0,
+                                                        pending_count: 0,
+                                                        project_name: null  // Will load separately
+                                                });
+                                        }
+                                        
+                                        const project = projectMap.get(projectId);
+                                        project.orders.push(order);
+                                        project.total_amount += parseFloat(order.total_estimated_price || 0);
+                                        
+                                        // Count pending orders
+                                        if (['Pending', 'WaitingBossApproval'].includes(order.status)) {
+                                                project.pending_count++;
+                                        }
                                 }
 
-                                // Apply filters
-                                filteredOrders = applyFilters(orders);
+                                projectsWithOrders = Array.from(projectMap.values());
 
-                                // Render table
-                                renderTable(filteredOrders);
+                                // Load project names
+                                await loadProjectNames();
 
-                                document.getElementById('loading').classList.add('hidden');
+                                // Render projects
+                                renderProjects();
 
                         } catch (e) {
-                                console.error('Error loading orders:', e);
-                                document.getElementById('loading').classList.add('hidden');
-                                document.getElementById('emptyState').classList.remove('hidden');
+                                console.error('Error loading projects:', e);
+                                document.getElementById('loadingProjects').classList.add('hidden');
+                                document.getElementById('emptyProjects').classList.remove('hidden');
                         }
                 }
 
-                // Apply search and date filters
-                function applyFilters(orders) {
-                        let result = [...orders];
+                // ===================================================================
+                // Load Project Names
+                // ===================================================================
+                async function loadProjectNames() {
+                        const promises = projectsWithOrders.map(async (project) => {
+                                try {
+                                        const res = await fetch(`/api/projects/${project.project_id}/`);
+                                        if (res.ok) {
+                                                const data = await res.json();
+                                                project.project_name = data.project_name || data.project_code || `โครงการ ${project.project_id.slice(-4).toUpperCase()}`;
+                                                project.project_code = data.project_code || '';
+                                                project.budget_total = data.budget_total || 0;
+                                        }
+                                } catch (e) {
+                                        project.project_name = `โครงการ ${project.project_id.slice(-4).toUpperCase()}`;
+                                }
+                        });
+                        
+                        await Promise.all(promises);
+                }
 
-                        // Search by order number
+                // ===================================================================
+                // Render Projects Grid
+                // ===================================================================
+                function renderProjects() {
+                        const grid = document.getElementById('projectsGrid');
+                        const loading = document.getElementById('loadingProjects');
+                        const empty = document.getElementById('emptyProjects');
+                        const count = document.getElementById('projectCount');
+
+                        loading.classList.add('hidden');
+
+                        if (projectsWithOrders.length === 0) {
+                                empty.classList.remove('hidden');
+                                grid.classList.add('hidden');
+                                count.textContent = 'พบ 0 โครงการ';
+                                return;
+                        }
+
+                        empty.classList.add('hidden');
+                        grid.classList.remove('hidden');
+                        count.textContent = `พบ ${projectsWithOrders.length} โครงการ`;
+
+                        grid.innerHTML = projectsWithOrders.map(project => `
+                                <div onclick="viewProjectOrders('${project.project_id}', '${escapeHtml(project.project_name)}')" 
+                                        class="bg-gradient-to-br from-white to-gray-50 rounded-xl p-5 border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer group">
+                                        
+                                        <!-- Project Header -->
+                                        <div class="flex items-start justify-between mb-4">
+                                                <div class="flex items-center gap-3">
+                                                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition">
+                                                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                                                </svg>
+                                                        </div>
+                                                        <div>
+                                                                <h4 class="font-semibold text-gray-800 group-hover:text-blue-600 transition line-clamp-1">
+                                                                        ${escapeHtml(project.project_name)}
+                                                                </h4>
+                                                                ${project.project_code ? `<p class="text-xs text-gray-500">${escapeHtml(project.project_code)}</p>` : ''}
+                                                        </div>
+                                                </div>
+                                                ${project.pending_count > 0 ? `
+                                                        <span class="bg-red-100 text-red-600 text-xs font-semibold px-2 py-1 rounded-full">
+                                                                ${project.pending_count} รออนุมัติ
+                                                        </span>
+                                                ` : ''}
+                                        </div>
+
+                                        <!-- Stats -->
+                                        <div class="grid grid-cols-2 gap-3">
+                                                <div class="bg-blue-50 rounded-lg p-3 text-center">
+                                                        <p class="text-2xl font-bold text-blue-600">${project.orders.length}</p>
+                                                        <p class="text-xs text-gray-600">ใบขอซื้อ</p>
+                                                </div>
+                                                <div class="bg-green-50 rounded-lg p-3 text-center">
+                                                        <p class="text-lg font-bold text-green-600">${formatNumber(project.total_amount)}</p>
+                                                        <p class="text-xs text-gray-600">บาท</p>
+                                                </div>
+                                        </div>
+
+                                        <!-- View Button -->
+                                        <div class="mt-4 flex justify-end">
+                                                <span class="text-blue-600 text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
+                                                        ดูรายการใบขอซื้อ
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                                        </svg>
+                                                </span>
+                                        </div>
+                                </div>
+                        `).join('');
+                }
+
+                // ===================================================================
+                // View Project Orders
+                // ===================================================================
+                function viewProjectOrders(projectId, projectName) {
+                        currentProjectId = projectId;
+                        currentProjectName = projectName;
+
+                        // Update breadcrumb
+                        document.getElementById('breadcrumb-projects').className = 'text-blue-600 hover:underline cursor-pointer';
+                        document.getElementById('breadcrumb-projects').onclick = showProjectsView;
+                        document.getElementById('breadcrumb-separator').classList.remove('hidden');
+                        document.getElementById('breadcrumb-orders').classList.remove('hidden');
+                        document.getElementById('breadcrumb-orders').textContent = projectName;
+
+                        // Switch views
+                        document.getElementById('projectsView').classList.add('hidden');
+                        document.getElementById('ordersView').classList.remove('hidden');
+
+                        // Update title
+                        document.getElementById('ordersTableTitle').textContent = `รายการขอซื้อ - ${projectName}`;
+
+                        // Filter and render orders
+                        filterOrders();
+                }
+
+                // ===================================================================
+                // Show Projects View
+                // ===================================================================
+                function showProjectsView() {
+                        currentProjectId = null;
+                        currentProjectName = '';
+
+                        // Reset breadcrumb
+                        document.getElementById('breadcrumb-projects').className = 'text-blue-600 font-medium';
+                        document.getElementById('breadcrumb-projects').onclick = null;
+                        document.getElementById('breadcrumb-separator').classList.add('hidden');
+                        document.getElementById('breadcrumb-orders').classList.add('hidden');
+
+                        // Switch views
+                        document.getElementById('projectsView').classList.remove('hidden');
+                        document.getElementById('ordersView').classList.add('hidden');
+                }
+
+                // ===================================================================
+                // Filter Orders by Current Project
+                // ===================================================================
+                function filterOrders() {
+                        if (!currentProjectId) return;
+
+                        // Get orders for current project
+                        let projectOrders = allOrders.filter(order => order.project_id === currentProjectId);
+
+                        // Apply search filter
                         const searchText = document.getElementById('searchOrderNo').value.toLowerCase();
                         if (searchText) {
-                                result = result.filter(order =>
+                                projectOrders = projectOrders.filter(order =>
                                         (order.order_no || '').toLowerCase().includes(searchText)
                                 );
                         }
 
-                        // Date range filter
+                        // Apply status filter
+                        const statusFilter = document.getElementById('statusFilter').value;
+                        if (statusFilter) {
+                                projectOrders = projectOrders.filter(order => order.status === statusFilter);
+                        }
+
+                        // Apply date filters
                         const dateFrom = document.getElementById('dateFrom').value;
                         const dateTo = document.getElementById('dateTo').value;
 
                         if (dateFrom) {
-                                result = result.filter(order => {
+                                projectOrders = projectOrders.filter(order => {
                                         const orderDate = order.created_at._seconds
                                                 ? new Date(order.created_at._seconds * 1000)
                                                 : new Date(order.created_at);
@@ -320,7 +486,7 @@
                         }
 
                         if (dateTo) {
-                                result = result.filter(order => {
+                                projectOrders = projectOrders.filter(order => {
                                         const orderDate = order.created_at._seconds
                                                 ? new Date(order.created_at._seconds * 1000)
                                                 : new Date(order.created_at);
@@ -328,22 +494,31 @@
                                 });
                         }
 
-                        return result;
+                        filteredOrders = projectOrders;
+                        renderOrdersTable(filteredOrders);
                 }
 
-                // Render orders table
-                function renderTable(orders) {
+                // ===================================================================
+                // Render Orders Table
+                // ===================================================================
+                function renderOrdersTable(orders) {
                         const tbody = document.getElementById('ordersTable');
+                        const empty = document.getElementById('emptyOrders');
+                        const pagination = document.getElementById('pagination');
+                        const count = document.getElementById('orderCount');
+
                         tbody.innerHTML = '';
 
                         if (orders.length === 0) {
-                                document.getElementById('emptyState').classList.remove('hidden');
-                                document.getElementById('pagination').classList.add('hidden');
+                                empty.classList.remove('hidden');
+                                pagination.classList.add('hidden');
+                                count.textContent = 'พบ 0 รายการ';
                                 return;
                         }
 
-                        document.getElementById('emptyState').classList.add('hidden');
-                        document.getElementById('pagination').classList.remove('hidden');
+                        empty.classList.add('hidden');
+                        pagination.classList.remove('hidden');
+                        count.textContent = `พบ ${orders.length} รายการ`;
 
                         orders.forEach(order => {
                                 const row = document.createElement('tr');
@@ -356,14 +531,19 @@
                                 const dateStr = createdDate.toLocaleDateString('th-TH');
                                 const timeStr = createdDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
+                                // Status badge
+                                const statusBadge = getStatusBadge(order.status);
+
                                 row.innerHTML = `
                                         <td class="px-6 py-4">
                                                 <span class="text-blue-600 font-medium">${order.order_no || order.id.slice(-6).toUpperCase()}</span>
                                         </td>
                                         <td class="px-6 py-4 text-sm text-gray-600">${dateStr} ${timeStr}</td>
-                                        <td class="px-6 py-4 text-sm text-gray-800">${order.order_title || order.order_description || '-'}</td>
+                                        <td class="px-6 py-4 text-sm text-gray-800">${escapeHtml(order.order_title || order.order_description || '-')}</td>
                                         <td class="px-6 py-4 text-sm text-gray-600" id="requester-${order.id}">กำลังโหลด...</td>
-                                        <td class="px-6 py-4 text-sm text-gray-600" id="project-${order.id}">กำลังโหลด...</td>
+                                        <td class="px-6 py-4">
+                                                ${statusBadge}
+                                        </td>
                                         <td class="px-6 py-4 text-sm text-right font-medium text-gray-800">
                                                 ${(order.total_estimated_price || 0).toLocaleString()} บาท
                                         </td>
@@ -376,217 +556,78 @@
                                 `;
                                 tbody.appendChild(row);
 
-                                // Load requester and project names
+                                // Load requester name
                                 loadRequesterName(order.requester_id, order.id);
-                                loadProjectCode(order.project_id, order.id);
                         });
 
                         // Update page info
                         document.getElementById('pageInfo').textContent = `แสดง 1-${orders.length} จาก ${orders.length} รายการ`;
                 }
 
-                // Load requester name
+                // ===================================================================
+                // Get Status Badge HTML
+                // ===================================================================
+                function getStatusBadge(status) {
+                        const statusMap = {
+                                'Draft': { text: 'ฉบับร่าง', class: 'bg-gray-100 text-gray-600' },
+                                'Pending': { text: 'รออนุมัติ', class: 'bg-yellow-100 text-yellow-700' },
+                                'WaitingBossApproval': { text: 'รอหัวหน้าเซ็น', class: 'bg-purple-100 text-purple-700' },
+                                'Approved': { text: 'อนุมัติแล้ว', class: 'bg-green-100 text-green-700' },
+                                'CorrectionNeeded': { text: 'ต้องแก้ไข', class: 'bg-orange-100 text-orange-700' },
+                                'Rejected': { text: 'ปฏิเสธ', class: 'bg-red-100 text-red-700' },
+                                'SentToProcurement': { text: 'ส่งพัสดุแล้ว', class: 'bg-indigo-100 text-indigo-700' },
+                                'ReceivedFromProcurement': { text: 'รับของแล้ว', class: 'bg-blue-100 text-blue-700' },
+                                'WaitingInspection': { text: 'รอตรวจรับ', class: 'bg-amber-100 text-amber-700' },
+                                'Inspected': { text: 'ตรวจรับแล้ว', class: 'bg-teal-100 text-teal-700' },
+                                'Closed': { text: 'ปิดแล้ว', class: 'bg-gray-200 text-gray-600' }
+                        };
+
+                        const statusInfo = statusMap[status] || { text: status || '-', class: 'bg-gray-100 text-gray-600' };
+                        return `<span class="px-3 py-1 text-xs font-semibold rounded-full ${statusInfo.class}">${statusInfo.text}</span>`;
+                }
+
+                // ===================================================================
+                // Load Requester Name
+                // ===================================================================
                 async function loadRequesterName(userId, orderId) {
                         try {
                                 const res = await fetch(`/api/users/${userId}/`);
                                 const user = await res.json();
-                                document.getElementById(`requester-${orderId}`).textContent = user.fullname || user.username || '-';
+                                const el = document.getElementById(`requester-${orderId}`);
+                                if (el) el.textContent = user.fullname || user.username || '-';
                         } catch (e) {
-                                document.getElementById(`requester-${orderId}`).textContent = '-';
+                                const el = document.getElementById(`requester-${orderId}`);
+                                if (el) el.textContent = '-';
                         }
                 }
 
-                // Load project code
-                async function loadProjectCode(projectId, orderId) {
-                        try {
-                                const res = await fetch(`/api/projects/${projectId}/`);
-                                const project = await res.json();
-                                if (res.ok) {
-                                        document.getElementById(`project-${orderId}`).textContent = project.project_name || project.project_code || '-';
-                                } else {
-                                        document.getElementById(`project-${orderId}`).textContent = '-';
-                                }
-                        } catch (e) {
-                                console.error('Error loading project:', e);
-                                document.getElementById(`project-${orderId}`).textContent = '-';
-                        }
-                }
-
-                // View order details and take action
+                // ===================================================================
+                // View Order Detail
+                // ===================================================================
                 function viewOrder(orderId) {
                         window.location.href = `/api/staff/orders/${orderId}/detail/`;
                 }
 
-                // Export to CSV with item details
-                async function exportToCSV() {
-                        if (filteredOrders.length === 0) {
-                                Swal.fire('Warning', 'ไม่มีข้อมูลสำหรับส่งออก', 'warning');
-                                return;
+                // ===================================================================
+                // Helper Functions
+                // ===================================================================
+                function formatNumber(num) {
+                        if (num >= 1000000) {
+                                return (num / 1000000).toFixed(1) + 'M';
+                        } else if (num >= 1000) {
+                                return (num / 1000).toFixed(1) + 'K';
                         }
-
-                        // Show loading
-                        Swal.fire({
-                                title: 'กำลังเตรียมข้อมูล...',
-                                allowOutsideClick: false,
-                                didOpen: () => {
-                                        Swal.showLoading();
-                                }
-                        });
-
-                        try {
-                                // Prepare CSV header - include item details for procurement
-                                const headers = [
-                                        'เลขใบขอซื้อ',
-                                        'วันที่ขอซื้อ',
-                                        'เรื่อง',
-                                        'ผู้ขอซื้อ',
-                                        'โครงการ',
-                                        'ร้านค้า/บริษัท',
-                                        'ลำดับรายการ',
-                                        'ชื่อรายการ',
-                                        'จำนวน',
-                                        'หน่วย',
-                                        'ราคาต่อหน่วย',
-                                        'ราคารวม',
-                                        'ยอดรวมทั้งหมด',
-                                        'สถานะ'
-                                ];
-
-                                let csvRows = [];
-                                csvRows.push(headers.join(','));
-
-                                // Process each order
-                                for (const order of filteredOrders) {
-                                        // Format date
-                                        const createdDate = order.created_at._seconds
-                                                ? new Date(order.created_at._seconds * 1000)
-                                                : new Date(order.created_at);
-                                        const dateStr = createdDate.toLocaleDateString('th-TH');
-
-                                        // Get requester name
-                                        let requesterName = '-';
-                                        try {
-                                                const res = await fetch(`/api/users/${order.requester_id}/`);
-                                                if (res.ok) {
-                                                        const user = await res.json();
-                                                        requesterName = user.fullname || user.username || '-';
-                                                }
-                                        } catch (e) { }
-
-                                        // Get project name
-                                        let projectName = '-';
-                                        try {
-                                                const res = await fetch(`/api/projects/${order.project_id}/`);
-                                                if (res.ok) {
-                                                        const project = await res.json();
-                                                        projectName = project.project_name || project.project_code || '-';
-                                                }
-                                        } catch (e) { }
-
-                                        // Get items array
-                                        const items = order.items || [];
-                                        const orderNo = order.order_no || order.id.slice(-6).toUpperCase();
-                                        const orderTitle = order.order_title || order.order_description || '-';
-                                        const vendorName = order.vendor_name || '-';
-                                        const totalPrice = (order.total_estimated_price || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
-                                        const status = order.status === 'Approved' ? 'อนุมัติแล้ว'
-                                                : order.status === 'Rejected' ? 'ปฏิเสธ'
-                                                        : order.status === 'Pending' ? 'รออนุมัติ' : (order.status || '-');
-
-                                        if (items.length === 0) {
-                                                // Order with no items
-                                                const row = [
-                                                        escapeCSV(orderNo),
-                                                        escapeCSV(dateStr),
-                                                        escapeCSV(orderTitle),
-                                                        escapeCSV(requesterName),
-                                                        escapeCSV(projectName),
-                                                        escapeCSV(vendorName),
-                                                        '0',
-                                                        'ไม่มีรายการ',
-                                                        '0',
-                                                        '-',
-                                                        '0',
-                                                        '0',
-                                                        escapeCSV(totalPrice),
-                                                        escapeCSV(status)
-                                                ];
-                                                csvRows.push(row.join(','));
-                                        } else {
-                                                // One row per item
-                                                items.forEach((item, index) => {
-                                                        const qty = parseFloat(item.quantity_requested || item.quantity || 0);
-                                                        const unitPrice = parseFloat(item.estimated_unit_price || item.unit_price || 0);
-                                                        const itemTotal = qty * unitPrice;
-
-                                                        const row = [
-                                                                escapeCSV(orderNo),
-                                                                escapeCSV(dateStr),
-                                                                escapeCSV(orderTitle),
-                                                                escapeCSV(requesterName),
-                                                                escapeCSV(projectName),
-                                                                escapeCSV(vendorName),
-                                                                (index + 1).toString(),
-                                                                escapeCSV(item.item_name || item.name || '-'),
-                                                                qty.toString(),
-                                                                escapeCSV(item.unit || 'ชิ้น'),
-                                                                unitPrice.toLocaleString('th-TH', { minimumFractionDigits: 2 }),
-                                                                itemTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 }),
-                                                                escapeCSV(totalPrice),
-                                                                escapeCSV(status)
-                                                        ];
-                                                        csvRows.push(row.join(','));
-                                                });
-                                        }
-                                }
-
-                                // Create CSV content with BOM for Excel Thai support
-                                const BOM = '\uFEFF';
-                                const csvContent = BOM + csvRows.join('\n');
-
-                                // Create download link
-                                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                                const url = URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-
-                                // Create filename with date
-                                const today = new Date();
-                                const fileName = `รายการใบขอซื้อ_${today.toLocaleDateString('th-TH').replace(/\//g, '-')}.csv`;
-
-                                link.setAttribute('href', url);
-                                link.setAttribute('download', fileName);
-                                link.style.visibility = 'hidden';
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                URL.revokeObjectURL(url);
-
-                                Swal.fire({
-                                        icon: 'success',
-                                        title: 'ส่งออกสำเร็จ!',
-                                        text: `ส่งออกข้อมูล ${filteredOrders.length} รายการเรียบร้อยแล้ว`,
-                                        timer: 2000,
-                                        showConfirmButton: false
-                                });
-
-                        } catch (error) {
-                                console.error('Export error:', error);
-                                Swal.fire('Error', 'เกิดข้อผิดพลาดในการส่งออกข้อมูล', 'error');
-                        }
+                        return num.toLocaleString();
                 }
 
-                // Helper function to escape CSV values
-                function escapeCSV(value) {
-                        if (value === null || value === undefined) return '';
-                        const str = String(value);
-                        // If contains comma, newline, or quotes, wrap in quotes and escape quotes
-                        if (str.includes(',') || str.includes('\n') || str.includes('"')) {
-                                return '"' + str.replace(/"/g, '""') + '"';
-                        }
-                        return str;
+                function escapeHtml(text) {
+                        if (!text) return '';
+                        const div = document.createElement('div');
+                        div.textContent = text;
+                        return div.innerHTML;
                 }
 
-                // Pagination functions
+                // Pagination
                 function previousPage() {
                         Swal.fire('Info', 'Pagination จะพัฒนาในระยะต่อไป', 'info');
                 }

@@ -160,29 +160,20 @@
         let allProjects = []; // เก็บโครงการทั้งหมดสำหรับ filter
 
         // ฟังก์ชันดึงข้อมูลโครงการ (เฉพาะที่ถูก assign)
+        // ฟังก์ชันดึงข้อมูลโครงการ (เฉพาะที่ถูก assign)
         async function fetchProjects() {
             try {
-                const userId = user.id;
+                // รองรับทั้ง user.id และ user.user_id
+                const userId = user.id || user.user_id;
 
-                // 1. ดึง assignments ของ User นี้
-                const assignRes = await fetch(`/api/project-assignments/`);
-                const assignments = await assignRes.json();
-
-                const myAssignments = assignments.filter(a => a.user_id === userId);
-                const myProjectIds = myAssignments.map(a => a.project_id);
-
-                if (myProjectIds.length === 0) {
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('noData').classList.remove('hidden');
-                    return;
+                // ใช้ API ที่ดึงโครงการโดยตรง (เหมือนหน้า Dashboard)
+                const response = await fetch(`/api/users/${userId}/projects/`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch projects');
                 }
-
-                // 2. ดึงโครงการทั้งหมด
-                const response = await fetch('/api/projects/');
-                const projects = await response.json();
-
-                // 3. กรองเฉพาะโครงการที่ถูก assign
-                allProjects = projects.filter(p => myProjectIds.includes(p.id));
+                
+                allProjects = await response.json();
                 renderProjects(allProjects);
 
             } catch (error) {

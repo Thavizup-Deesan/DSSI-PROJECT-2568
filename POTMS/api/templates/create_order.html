@@ -94,6 +94,15 @@
                                 <h2 class="text-lg font-bold text-blue-600">ข้อมูลใบขอซื้อ</h2>
                         </div>
 
+                        <!-- เลขที่ใบขอซื้อ (Optional) -->
+                        <div class="mb-4">
+                                <label class="block text-sm text-gray-600 mb-1">เลขที่ใบขอซื้อ (ถ้ามี)</label>
+                                <input type="text" id="order_no"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        placeholder="เช่น PO-2025-001">
+                                <p class="text-xs text-gray-500 mt-1">💡 ถ้าไม่ระบุ ระบบจะสร้างเลขที่ให้อัตโนมัติ</p>
+                        </div>
+
                         <!-- เรื่อง -->
                         <div class="mb-4">
                                 <label class="block text-sm text-gray-600 mb-1">เรื่อง *</label>
@@ -138,16 +147,18 @@
                         </div>
 
                         <!-- Table Header -->
-                        <div class="grid grid-cols-12 gap-2 mb-2 text-sm text-gray-500 font-medium">
-                                <div class="col-span-5">รายการ</div>
-                                <div class="col-span-2 text-center">จำนวน</div>
-                                <div class="col-span-2 text-center">หน่วย</div>
+                        <div class="hidden sm:grid grid-cols-12 gap-2 mb-2 text-sm text-gray-500 font-medium items-center">
+                                <div class="col-span-3">รายการ</div>
+                                <div class="col-span-1 text-center">จำนวน</div>
+                                <div class="col-span-1 text-center">หน่วย</div>
                                 <div class="col-span-2 text-center">ราคา/หน่วย</div>
+                                <div class="col-span-2">ลิงก์สินค้า</div>
+                                <div class="col-span-2">หมายเหตุ</div>
                                 <div class="col-span-1 text-center">ลบ</div>
                         </div>
 
                         <!-- Items Container -->
-                        <div id="items-container" class="space-y-2">
+                        <div id="items-container" class="space-y-3">
                                 <!-- Items will be added here -->
                         </div>
 
@@ -173,7 +184,7 @@
                                         onchange="importItems(event)">
                         </div>
                         <p class="text-xs text-gray-500 mt-2">
-                                รองรับไฟล์ CSV หรือ Excel (.xlsx) โดยคอลัมน์ต้องเป็น: รายการ, จำนวน, หน่วย, ราคา/หน่วย
+                                รองรับไฟล์ CSV หรือ Excel (.xlsx) โดยคอลัมน์ต้องเป็น: รายการ, จำนวน, หน่วย, ราคา/หน่วย, ลิงก์, หมายเหตุ
                         </p>
 
                         <!-- Total -->
@@ -219,7 +230,11 @@
                         // ถ้าเป็น edit mode ให้ดึง project_id จาก order
                         if (mode === 'edit' && editOrderId) {
                                 try {
-                                        const res = await fetch(`/api/orders/${editOrderId}/`);
+                                        const res = await fetch(`/api/orders/${editOrderId}/`, {
+                                                headers: {
+                                                        'Accept': 'application/json'
+                                                }
+                                        });
                                         const order = await res.json();
                                         if (res.ok && order.project_id) {
                                                 projectId = order.project_id;
@@ -257,7 +272,11 @@
                 // โหลดข้อมูลโครงการจาก API
                 async function loadProjectInfo() {
                         try {
-                                const res = await fetch(`/api/projects/${projectId}/`);
+                                const res = await fetch(`/api/projects/${projectId}/`, {
+                                        headers: {
+                                                'Accept': 'application/json'
+                                        }
+                                });
                                 if (!res.ok) throw new Error('ไม่พบโครงการ');
 
                                 projectData = await res.json();
@@ -291,7 +310,11 @@
                 // โหลดข้อมูล Order สำหรับแก้ไข
                 async function loadOrderForEdit(orderId) {
                         try {
-                                const res = await fetch(`/api/orders/${orderId}/`);
+                                const res = await fetch(`/api/orders/${orderId}/`, {
+                                        headers: {
+                                                'Accept': 'application/json'
+                                        }
+                                });
                                 const order = await res.json();
 
                                 if (!res.ok) {
@@ -323,13 +346,20 @@
                                                 const lastRow = rows[rows.length - 1];
 
                                                 if (lastRow) {
-                                                        const inputs = lastRow.querySelectorAll('input');
-                                                        if (inputs.length >= 4) {
-                                                                inputs[0].value = item.item_name || '';  // ชื่อสินค้า
-                                                                inputs[1].value = item.quantity_requested || 0;  // จำนวน
-                                                                inputs[2].value = item.unit || '';  // หน่วย
-                                                                inputs[3].value = item.estimated_unit_price || 0;  // ราคา
-                                                        }
+                                                        // ใช้ class selector แทน index
+                                                        const nameInput = lastRow.querySelector('.item-name');
+                                                        const qtyInput = lastRow.querySelector('.item-qty');
+                                                        const unitInput = lastRow.querySelector('.item-unit');
+                                                        const priceInput = lastRow.querySelector('.item-price');
+                                                        const linkInput = lastRow.querySelector('.item-link');
+                                                        const remarksInput = lastRow.querySelector('.item-remarks');
+
+                                                        if (nameInput) nameInput.value = item.item_name || '';
+                                                        if (qtyInput) qtyInput.value = item.quantity_requested || 0;
+                                                        if (unitInput) unitInput.value = item.unit || '';
+                                                        if (priceInput) priceInput.value = item.estimated_unit_price || 0;
+                                                        if (linkInput) linkInput.value = item.product_link || '';
+                                                        if (remarksInput) remarksInput.value = item.remarks || '';
                                                 }
                                         });
                                 }
@@ -359,26 +389,41 @@
                         const container = document.getElementById('items-container');
                         const row = document.createElement('div');
                         row.id = `item-${itemCount}`;
-                        row.className = 'grid grid-cols-12 gap-2 items-center';
+                        row.className = 'bg-gray-50 rounded-lg p-3 border border-gray-200';
                         row.innerHTML = `
-                <div class="col-span-5">
-                    <input type="text" class="item-name w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="ระบุรายการพัสดุ">
-                </div>
-                <div class="col-span-2">
-                    <input type="number" class="item-qty w-full px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500" value="1" min="1" onchange="calculateTotal()">
-                </div>
-                <div class="col-span-2">
-                    <input type="text" class="item-unit w-full px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500" placeholder="อัน">
-                </div>
-                <div class="col-span-2">
-                    <input type="number" class="item-price w-full px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500" value="0" min="0" step="0.01" onchange="calculateTotal()">
-                </div>
-                <div class="col-span-1 text-center">
-                    <button onclick="removeItem(${itemCount})" class="text-red-400 hover:text-red-600 p-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                    </button>
+                <div class="grid grid-cols-12 gap-2 items-center">
+                    <!-- Row 1: Main fields -->
+                    <div class="col-span-12 sm:col-span-3">
+                        <label class="block text-xs text-gray-500 mb-1 sm:hidden">รายการ</label>
+                        <input type="text" class="item-name w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="ระบุรายการพัสดุ">
+                    </div>
+                    <div class="col-span-6 sm:col-span-1">
+                        <label class="block text-xs text-gray-500 mb-1 sm:hidden">จำนวน</label>
+                        <input type="number" class="item-qty w-full px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500" value="1" min="1" onchange="calculateTotal()">
+                    </div>
+                    <div class="col-span-6 sm:col-span-1">
+                        <label class="block text-xs text-gray-500 mb-1 sm:hidden">หน่วย</label>
+                        <input type="text" class="item-unit w-full px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500" placeholder="อัน">
+                    </div>
+                    <div class="col-span-6 sm:col-span-2">
+                        <label class="block text-xs text-gray-500 mb-1 sm:hidden">ราคา/หน่วย</label>
+                        <input type="number" class="item-price w-full px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500" value="0" min="0" step="0.01" onchange="calculateTotal()">
+                    </div>
+                    <div class="col-span-6 sm:col-span-2">
+                        <label class="block text-xs text-gray-500 mb-1 sm:hidden">ลิงก์สินค้า</label>
+                        <input type="url" class="item-link w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="https://...">
+                    </div>
+                    <div class="col-span-10 sm:col-span-2">
+                        <label class="block text-xs text-gray-500 mb-1 sm:hidden">หมายเหตุ</label>
+                        <input type="text" class="item-remarks w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="หมายเหตุ...">
+                    </div>
+                    <div class="col-span-2 sm:col-span-1 text-center flex items-end pb-1 justify-center sm:justify-center">
+                        <button onclick="removeItem(${itemCount})" class="text-red-400 hover:text-red-600 p-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             `;
                         container.appendChild(row);
@@ -448,6 +493,8 @@
                                         const qty = parseFloat(cols[1]) || 1;
                                         const unit = String(cols[2] || 'อัน').trim();
                                         const price = parseFloat(cols[3]) || 0;
+                                        const link = String(cols[4] || '').trim();
+                                        const remarks = String(cols[5] || '').trim();
 
                                         if (itemName) {
                                                 addItem();
@@ -455,13 +502,19 @@
                                                 const lastRow = rows[rows.length - 1];
 
                                                 if (lastRow) {
-                                                        const inputs = lastRow.querySelectorAll('input');
-                                                        if (inputs.length >= 4) {
-                                                                inputs[0].value = itemName;
-                                                                inputs[1].value = qty;
-                                                                inputs[2].value = unit;
-                                                                inputs[3].value = price;
-                                                        }
+                                                        const nameInput = lastRow.querySelector('.item-name');
+                                                        const qtyInput = lastRow.querySelector('.item-qty');
+                                                        const unitInput = lastRow.querySelector('.item-unit');
+                                                        const priceInput = lastRow.querySelector('.item-price');
+                                                        const linkInput = lastRow.querySelector('.item-link');
+                                                        const remarksInput = lastRow.querySelector('.item-remarks');
+
+                                                        if (nameInput) nameInput.value = itemName;
+                                                        if (qtyInput) qtyInput.value = qty;
+                                                        if (unitInput) unitInput.value = unit;
+                                                        if (priceInput) priceInput.value = price;
+                                                        if (linkInput) linkInput.value = link;
+                                                        if (remarksInput) remarksInput.value = remarks;
                                                 }
                                                 importedCount++;
                                         }
@@ -503,11 +556,13 @@
                                 const cols = parseCSVLine(lines[i]);
 
                                 if (cols.length >= 4) {
-                                        // คอลัมน์: รายการ, จำนวน, หน่วย, ราคา
+                                        // คอลัมน์: รายการ, จำนวน, หน่วย, ราคา, ลิงก์, หมายเหตุ
                                         const itemName = cols[0]?.trim() || '';
                                         const qty = parseFloat(cols[1]) || 1;
                                         const unit = cols[2]?.trim() || 'อัน';
                                         const price = parseFloat(cols[3]) || 0;
+                                        const link = cols[4]?.trim() || '';
+                                        const remarks = cols[5]?.trim() || '';
 
                                         if (itemName) {
                                                 addItem();
@@ -515,13 +570,19 @@
                                                 const lastRow = rows[rows.length - 1];
 
                                                 if (lastRow) {
-                                                        const inputs = lastRow.querySelectorAll('input');
-                                                        if (inputs.length >= 4) {
-                                                                inputs[0].value = itemName;
-                                                                inputs[1].value = qty;
-                                                                inputs[2].value = unit;
-                                                                inputs[3].value = price;
-                                                        }
+                                                        const nameInput = lastRow.querySelector('.item-name');
+                                                        const qtyInput = lastRow.querySelector('.item-qty');
+                                                        const unitInput = lastRow.querySelector('.item-unit');
+                                                        const priceInput = lastRow.querySelector('.item-price');
+                                                        const linkInput = lastRow.querySelector('.item-link');
+                                                        const remarksInput = lastRow.querySelector('.item-remarks');
+
+                                                        if (nameInput) nameInput.value = itemName;
+                                                        if (qtyInput) qtyInput.value = qty;
+                                                        if (unitInput) unitInput.value = unit;
+                                                        if (priceInput) priceInput.value = price;
+                                                        if (linkInput) linkInput.value = link;
+                                                        if (remarksInput) remarksInput.value = remarks;
                                                 }
                                                 importedCount++;
                                         }
@@ -581,6 +642,8 @@
                                 const quantity_requested = parseFloat(row.querySelector('.item-qty')?.value) || 0;
                                 const unit = row.querySelector('.item-unit')?.value || 'อัน';
                                 const estimated_unit_price = parseFloat(row.querySelector('.item-price')?.value) || 0;
+                                const product_link = row.querySelector('.item-link')?.value || '';
+                                const remarks = row.querySelector('.item-remarks')?.value || '';
 
                                 if (item_name && quantity_requested > 0) {
                                         items.push({
@@ -588,6 +651,8 @@
                                                 quantity_requested,
                                                 unit,
                                                 estimated_unit_price,
+                                                product_link,
+                                                remarks,
                                                 status: 'Pending'
                                         });
                                 }
@@ -609,6 +674,7 @@
                         const orderData = {
                                 project_id: document.getElementById('project_id').value,
                                 requester_id: user.id,
+                                order_no: document.getElementById('order_no').value || null,  // Optional - auto-generate if empty
                                 order_title: document.getElementById('order_title').value,
                                 order_description: document.getElementById('order_description').value,
                                 required_date: document.getElementById('required_date').value,
@@ -682,6 +748,7 @@
                                         const orderData = {
                                                 project_id: projectId,
                                                 requester_id: user.id,
+                                                order_no: document.getElementById('order_no').value || null,  // Optional - auto-generate if empty
                                                 order_title: title,
                                                 order_description: document.getElementById('order_description').value,
                                                 required_date: document.getElementById('required_date').value,
@@ -694,7 +761,10 @@
                                         // บันทึก Draft
                                         const saveRes = await fetch('/api/orders/', {
                                                 method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
+                                                headers: {
+                                                        'Content-Type': 'application/json',
+                                                        'Accept': 'application/json'
+                                                },
                                                 body: JSON.stringify(orderData)
                                         });
                                         const saveData = await saveRes.json();
@@ -709,7 +779,10 @@
                                         // ขั้นตอน 2: ส่งเพื่อขออนุมัติ (ตรวจสอบงบประมาณ)
                                         const submitRes = await fetch(`/api/orders/${orderId}/submit/`, {
                                                 method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' }
+                                                headers: {
+                                                        'Content-Type': 'application/json',
+                                                        'Accept': 'application/json'
+                                                }
                                         });
                                         const submitData = await submitRes.json();
 

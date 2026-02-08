@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประวัติการแก้ไขใบขอซื้อ - POTMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+    }
+
+    .diff-added {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+
+    .diff-removed {
+      background-color: #fee2e2;
+      color: #dc2626;
+      text-decoration: line-through;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+  <nav
+    class="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+    <div class="flex items-center gap-2 sm:gap-4">
+      <a id="back-link" href="/api/staff-dashboard/" class="text-gray-500 hover:text-gray-700 transition flex items-center gap-1">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+      </a>
+      <h1 class="text-base sm:text-xl font-semibold text-gray-800">ประวัติการแก้ไขใบขอซื้อ</h1>
+    </div>
+
+    <div class="flex items-center gap-2 sm:gap-3">
+      <div class="text-right hidden sm:block">
+        <p id="user-name" class="text-sm font-medium text-gray-700">กำลังโหลด...</p>
+        <p id="user-role" class="text-xs text-gray-500">กำลังโหลด...</p>
+      </div>
+      <div class="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-gray-200 overflow-hidden border border-gray-300">
+        <img id="user-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Staff" alt="Profile"
+          class="h-full w-full object-cover">
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+
+    <!-- Projects Section -->
+    <div id="projects-section">
+      <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+        </svg>
+        เลือกโครงการเพื่อดูประวัติการแก้ไข
+      </h2>
+
+      <div id="project-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="text-center py-10 text-gray-400">กำลังโหลดโครงการ...</div>
+      </div>
+    </div>
+
+    <!-- Orders Section (hidden initially) -->
+    <div id="orders-section" class="hidden">
+      <div class="flex items-center gap-4 mb-4">
+        <button onclick="showProjects()"
+          class="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm font-medium">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          กลับไปเลือกโครงการ
+        </button>
+      </div>
+
+      <h2 id="selected-project-name" class="text-xl font-bold text-gray-800 mb-4">ใบขอซื้อในโครงการ</h2>
+
+      <div id="orders-list" class="space-y-4">
+        <div class="text-center py-10 text-gray-400">กำลังโหลดใบขอซื้อ...</div>
+      </div>
+    </div>
+
+    <!-- Order Detail Section (hidden initially) -->
+    <div id="detail-section" class="hidden">
+      <div class="flex items-center gap-4 mb-4">
+        <button onclick="backToOrders()"
+          class="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm font-medium">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          กลับไปรายการใบขอซื้อ
+        </button>
+      </div>
+
+      <div id="order-detail-content" class="bg-white rounded-xl shadow-sm p-6">
+        <div class="text-center py-10 text-gray-400">กำลังโหลด...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Load user role and set back link
+    (function loadUserRole() {
+      const nameEl = document.getElementById('user-name');
+      const roleEl = document.getElementById('user-role');
+      const backLink = document.getElementById('back-link');
+      const avatarEl = document.getElementById('user-avatar');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const roleMap = {
+        'Admin': 'ผู้ดูแลระบบ',
+        'Staff': 'เจ้าหน้าที่พัสดุ',
+        'User': 'ผู้ใช้งาน'
+      };
+      // Set username
+      if (nameEl) {
+        nameEl.textContent = user.username || 'ไม่ทราบชื่อ';
+      }
+      // Set role
+      if (roleEl) {
+        roleEl.textContent = roleMap[user.role] || user.role || 'ไม่ทราบบทบาท';
+      }
+      // Set avatar
+      if (avatarEl && user.username) {
+        avatarEl.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`;
+      }
+      // Set back link based on role
+      if (backLink) {
+        if (user.role === 'User') {
+          backLink.href = '/api/user-dashboard/';
+        } else {
+          backLink.href = '/api/staff-dashboard/';
+        }
+      }
+    })();
+
+    let selectedProjectId = null;
+    let selectedProjectName = null;
+
+    // Format date
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Format currency
+    function formatCurrency(amount) {
+      return parseFloat(amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) + ' บาท';
+    }
+
+    // Load projects
+    async function loadProjects() {
+      const container = document.getElementById('project-list');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+      try {
+        // Get all projects (staff can see all, users see only assigned)
+        let projects = [];
+
+        if (user.role === 'Staff' || user.role === 'Admin') {
+          const res = await fetch('/api/projects/');
+          const data = await res.json();
+          projects = Array.isArray(data) ? data : [];
+        } else {
+          // Get user's assigned projects
+          const assignRes = await fetch('/api/project-assignments/');
+          const assignData = await assignRes.json();
+          const assignments = Array.isArray(assignData) ? assignData : [];
+          const myProjectIds = assignments.filter(a => a.user_id === user.id).map(a => a.project_id);
+
+          const projRes = await fetch('/api/projects/');
+          const projData = await projRes.json();
+          const allProjects = Array.isArray(projData) ? projData : [];
+          projects = allProjects.filter(p => myProjectIds.includes(p.id));
+        }
+
+        if (projects.length === 0) {
+          container.innerHTML = `<div class="col-span-3 text-center py-10 text-gray-400">ไม่พบโครงการที่รับผิดชอบ</div>`;
+          return;
+        }
+
+        container.innerHTML = projects.map(project => `
+          <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100 hover:shadow-md hover:border-blue-200 transition cursor-pointer"
+               onclick="selectProject('${project.id}', '${project.project_name.replace(/'/g, "\\'")}')">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-gray-800 text-sm">${project.project_name}</h3>
+                <p class="text-xs text-gray-500">${project.project_code || 'ไม่มีรหัส'}</p>
+              </div>
+            </div>
+            <div class="text-xs text-gray-500">
+              <span>งบประมาณ: ${formatCurrency(project.budget_total)}</span>
+            </div>
+            <div class="mt-3 text-right">
+              <span class="text-blue-600 text-sm hover:underline">ดูประวัติ →</span>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (error) {
+        container.innerHTML = `<div class="col-span-3 text-center py-10 text-red-500">เกิดข้อผิดพลาด: ${error.message}</div>`;
+      }
+    }
+
+    // Select project and show orders
+    async function selectProject(projectId, projectName) {
+      selectedProjectId = projectId;
+      selectedProjectName = projectName;
+
+      document.getElementById('projects-section').classList.add('hidden');
+      document.getElementById('orders-section').classList.remove('hidden');
+      document.getElementById('detail-section').classList.add('hidden');
+      document.getElementById('selected-project-name').textContent = `ใบขอซื้อในโครงการ: ${projectName}`;
+
+      await loadOrders(projectId);
+    }
+
+    // Load orders for a project
+    async function loadOrders(projectId) {
+      const container = document.getElementById('orders-list');
+
+      try {
+        // Get orders for this project
+        const res = await fetch(`/api/orders/?project_id=${projectId}`);
+        const data = await res.json();
+        const orders = Array.isArray(data) ? data : [];
+
+        if (orders.length === 0) {
+          container.innerHTML = `<div class="text-center py-10 text-gray-400">ไม่มีใบขอซื้อในโครงการนี้</div>`;
+          return;
+        }
+
+        container.innerHTML = orders.map(order => `
+          <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100 hover:shadow-md transition cursor-pointer"
+               onclick="showOrderDetail('${order.order_id}')">
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <h3 class="font-semibold text-gray-800">${order.order_no}</h3>
+                <p class="text-sm text-gray-500">${order.order_title || 'ไม่มีชื่อ'}</p>
+              </div>
+              <span class="px-3 py-1 text-xs rounded-full ${getStatusColor(order.status)}">${order.status}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
+              <div><span class="font-medium">มูลค่า:</span> ${formatCurrency(order.total_estimated_price)}</div>
+              <div><span class="font-medium">สร้างเมื่อ:</span> ${formatDate(order.created_at)}</div>
+            </div>
+            <div class="text-right">
+              <span class="text-blue-600 text-sm hover:underline">ดูรายละเอียด →</span>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (error) {
+        container.innerHTML = `<div class="text-center py-10 text-red-500">เกิดข้อผิดพลาด: ${error.message}</div>`;
+      }
+    }
+
+    // Get status color
+    function getStatusColor(status) {
+      const colors = {
+        'Draft': 'bg-gray-100 text-gray-700',
+        'Pending': 'bg-yellow-100 text-yellow-700',
+        'รอ': 'bg-yellow-100 text-yellow-700',
+        'Approved': 'bg-green-100 text-green-700',
+        'Rejected': 'bg-red-100 text-red-700',
+        'รอรับของ': 'bg-blue-100 text-blue-700',
+        'รับบางส่วน': 'bg-orange-100 text-orange-700',
+        'รับครบ': 'bg-green-100 text-green-700',
+        'Completed': 'bg-green-100 text-green-700'
+      };
+      return colors[status] || 'bg-gray-100 text-gray-700';
+    }
+
+    // Show order detail (before/after edit comparison)
+    async function showOrderDetail(orderId) {
+      document.getElementById('orders-section').classList.add('hidden');
+      document.getElementById('detail-section').classList.remove('hidden');
+
+      const container = document.getElementById('order-detail-content');
+      container.innerHTML = '<div class="text-center py-10 text-gray-400">กำลังโหลด...</div>';
+
+      try {
+        // Get current order data
+        const res = await fetch(`/api/orders/${orderId}/`);
+        const order = await res.json();
+
+        // Get edit history for this order
+        let historyHtml = '<p class="text-gray-500 text-sm">ยังไม่มีประวัติการแก้ไข</p>';
+
+        try {
+          const historyRes = await fetch(`/api/order-edit-history/?order_no=${order.order_no}`);
+          const history = await historyRes.json();
+
+          if (history && history.length > 0) {
+            historyHtml = history.map(h => `
+              <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                <div class="flex justify-between items-center mb-3">
+                  <span class="px-3 py-1 text-sm rounded-full ${getActionColor(h.action)}">${getActionLabel(h.action)}</span>
+                  <span class="text-sm text-gray-500">${formatDate(h.changed_at)}</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">แก้ไขโดย: ${h.changed_by || 'ไม่ทราบ'}</p>
+                ${h.changed_fields && h.changed_fields.length > 0 ? `
+                  <p class="text-sm text-gray-500 mb-2">ฟิลด์ที่เปลี่ยน: ${h.changed_fields.join(', ')}</p>
+                ` : ''}
+              </div>
+            `).join('');
+          }
+        } catch (e) {
+          console.log('No history available');
+        }
+
+        container.innerHTML = `
+          <div class="mb-6 border-b border-gray-200 pb-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-2">${order.order_no}</h3>
+            <p class="text-gray-600">${order.order_title || 'ไม่มีชื่อ'}</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-blue-50 rounded-lg p-4">
+              <h4 class="font-semibold text-blue-800 mb-3">📋 ข้อมูลปัจจุบัน</h4>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between"><span class="text-gray-600">สถานะ:</span> <span class="font-medium">${order.status}</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">มูลค่ารวม:</span> <span class="font-medium">${formatCurrency(order.total_estimated_price)}</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">จำนวนรายการ:</span> <span class="font-medium">${order.items ? order.items.length : 0} รายการ</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">สร้างเมื่อ:</span> <span class="font-medium">${formatDate(order.created_at)}</span></div>
+                <div class="flex justify-between"><span class="text-gray-600">แก้ไขล่าสุด:</span> <span class="font-medium">${formatDate(order.updated_at)}</span></div>
+              </div>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h4 class="font-semibold text-gray-800 mb-3">📦 รายการสินค้า</h4>
+              <div class="space-y-2 text-sm max-h-48 overflow-y-auto">
+                ${order.items && order.items.length > 0 ? order.items.map((item, i) => `
+                  <div class="flex justify-between items-center py-1 border-b border-gray-100">
+                    <span class="text-gray-600">${i + 1}. ${item.item_name || item.name || 'ไม่ระบุ'}</span>
+                    <span class="font-medium">x${item.quantity_requested || item.quantity || 0}</span>
+                  </div>
+                `).join('') : '<p class="text-gray-400">ไม่มีรายการ</p>'}
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-lg p-4">
+            <h4 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              ประวัติการแก้ไข
+            </h4>
+            ${historyHtml}
+          </div>
+        `;
+
+      } catch (error) {
+        container.innerHTML = `<div class="text-center py-10 text-red-500">เกิดข้อผิดพลาด: ${error.message}</div>`;
+      }
+    }
+
+    // Get action color
+    function getActionColor(action) {
+      const colors = {
+        'create': 'bg-green-100 text-green-700',
+        'update': 'bg-blue-100 text-blue-700',
+        'status_change': 'bg-yellow-100 text-yellow-700',
+        'delete': 'bg-red-100 text-red-700'
+      };
+      return colors[action] || 'bg-gray-100 text-gray-700';
+    }
+
+    // Get action label
+    function getActionLabel(action) {
+      const labels = {
+        'create': 'สร้างใหม่',
+        'update': 'แก้ไข',
+        'status_change': 'เปลี่ยนสถานะ',
+        'delete': 'ลบ'
+      };
+      return labels[action] || action;
+    }
+
+    // Back to projects
+    function showProjects() {
+      document.getElementById('projects-section').classList.remove('hidden');
+      document.getElementById('orders-section').classList.add('hidden');
+      document.getElementById('detail-section').classList.add('hidden');
+    }
+
+    // Back to orders
+    function backToOrders() {
+      document.getElementById('orders-section').classList.remove('hidden');
+      document.getElementById('detail-section').classList.add('hidden');
+    }
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', loadProjects);
+  </script>
+
+</body>
+
+</html>

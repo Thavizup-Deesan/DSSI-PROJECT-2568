@@ -266,7 +266,12 @@
                 // ===================================================================
                 async function loadOrders() {
                         try {
-                                const res = await fetch(`/api/orders/?user_id=${user.id}`);
+                                const res = await fetch(`/api/orders/?user_id=${user.id}`, {
+                                        headers: {
+                                                'Accept': 'application/json',
+                                                'Content-Type': 'application/json'
+                                        }
+                                });
                                 allOrders = await res.json();
                                 filteredOrders = [...allOrders];
 
@@ -535,7 +540,11 @@
 
                         try {
                                 const res = await fetch(`/api/orders/${orderId}/`, {
-                                        method: 'DELETE'
+                                        method: 'DELETE',
+                                        headers: {
+                                                'Accept': 'application/json',
+                                                'Content-Type': 'application/json'
+                                        }
                                 });
                                 const data = await res.json();
 
@@ -567,7 +576,10 @@
                                 if (result.isConfirmed) {
                                         const res = await fetch(`/api/orders/${orderId}/submit/`, {
                                                 method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' }
+                                                headers: {
+                                                        'Content-Type': 'application/json',
+                                                        'Accept': 'application/json'
+                                                }
                                         });
 
                                         const data = await res.json();

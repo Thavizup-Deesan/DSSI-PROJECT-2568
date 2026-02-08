@@ -106,15 +106,15 @@ if os.environ.get('VERCEL') or os.environ.get('DOCKER'):
         }
     }
 else:
-    # สำหรับ Local Development: ใช้ MySQL
+    # สำหรับ Local Development: ใช้ PostgreSQL
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'potms',
-            'USER': 'root',
-            'PASSWORD': 'BookReserve2025',
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'potms_db',
+            'USER': 'postgres',
+            'PASSWORD': 'potms1234',  # เปลี่ยนเป็น password ของ PostgreSQL ของคุณ
             'HOST': 'localhost',
-            'PORT': '3306',
+            'PORT': '5432',
         }
     }
 

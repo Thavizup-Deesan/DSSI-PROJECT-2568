@@ -93,6 +93,18 @@
                                                         </svg>
                                                         ประวัติการสั่งซื้อ
                                                 </a>
+                                                <!-- ปุ่มดูประวัติการแก้ไข -->
+                                                <a href="/api/staff/order-history/"
+                                                        class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-full font-medium transition shadow-lg shadow-indigo-500/30 text-sm sm:text-base">
+                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                                class="h-4 w-4 sm:h-5 sm:w-5" fill="none"
+                                                                viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2"
+                                                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        ประวัติการแก้ไข
+                                                </a>
                                         </div>
                                 </div>
 
@@ -249,25 +261,25 @@
                 // โหลดโครงการที่รับผิดชอบ
                 async function loadMyProjects() {
                         try {
-                                // ดึง assignments
-                                const assignRes = await fetch('/api/project-assignments/');
-                                const assignments = await assignRes.json();
+                                // ใช้ API ดึงโครงการของ User โดยตรง (มีประสิทธิภาพกว่าและไม่ต้องกรองเอง)
+                                // รองรับทั้ง user.id และ user.user_id
+                                const userId = user.id || user.user_id; 
+                                const res = await fetch(`/api/users/${userId}/projects/`, {
+                                        headers: {
+                                                'Accept': 'application/json'
+                                        }
+                                });
+                                
+                                if (!res.ok) throw new Error('Failed to fetch projects');
+                                
+                                const myProjects = await res.json();
 
-                                const myAssignments = assignments.filter(a => a.user_id === user.id);
-                                const myProjectIds = myAssignments.map(a => a.project_id);
-
-                                if (myProjectIds.length === 0) {
+                                if (myProjects.length === 0) {
                                         document.getElementById('projectList').classList.add('hidden');
                                         document.getElementById('noProjects').classList.remove('hidden');
                                         document.getElementById('statProjects').innerText = '0';
                                         return;
                                 }
-
-                                // ดึงโครงการ
-                                const projRes = await fetch('/api/projects/');
-                                const allProjects = await projRes.json();
-
-                                const myProjects = allProjects.filter(p => myProjectIds.includes(p.id));
 
                                 // อัปเดตสถิติ
                                 document.getElementById('statProjects').innerText = myProjects.length;
@@ -286,7 +298,7 @@
                                         const card = document.createElement('div');
                                         card.className = 'border border-gray-100 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50/50 transition cursor-pointer';
                                         card.onclick = () => {
-                                                localStorage.setItem('selectedProjectId', project.id);
+                                                localStorage.setItem('selectedProjectId', project.project_id || project.id);
                                                 localStorage.setItem('selectedProjectName', project.project_name);
                                                 window.location.href = '/api/select_project/';
                                         };

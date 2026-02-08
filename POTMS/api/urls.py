@@ -19,7 +19,8 @@ from .views import (
     staff_orders_view, staff_order_detail_view, staff_po_management_view, staff_po_detail_view,  # Staff page views
     register_page, user_management_page, user_select_project_view, user_dashboard,  # Page Views
     print_order_view,  # Print Order Page
-    scan_suborder_view, ScanSuborderDataAPIView  # Scan QR Code
+    scan_suborder_view, ScanSuborderDataAPIView,  # Scan QR Code
+    OrderEditHistoryAPIView, OrderEditHistoryDetailAPIView, order_edit_history_view  # Order Edit History
 )
 
 
@@ -118,4 +119,11 @@ urlpatterns = [
     path('budget-summary/', BudgetSummaryAPIView.as_view(), name='budget-summary'),  # API สรุปงบประมาณ
     path('staff/reports/', staff_reports_view, name='staff-reports'),  # หน้ารายงานสรุป
     path('orders/<str:order_id>/export-csv/', ExportOrderCSVAPIView.as_view(), name='order-export-csv'),  # Export CSV
+    
+    # ===================================================================
+    # Order Edit History - ประวัติการแก้ไขใบสั่งซื้อ
+    # ===================================================================
+    path('order-edit-history/', OrderEditHistoryAPIView.as_view(), name='order-edit-history-list'),  # API ดึงประวัติ
+    path('order-edit-history/<int:history_id>/', OrderEditHistoryDetailAPIView.as_view(), name='order-edit-history-detail'),  # API รายละเอียด
+    path('staff/order-history/', order_edit_history_view, name='order-edit-history-page'),  # หน้าประวัติการแก้ไข
 ]

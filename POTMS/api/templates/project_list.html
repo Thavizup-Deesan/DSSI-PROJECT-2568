@@ -31,7 +31,7 @@
 
     <div class="flex items-center gap-2 sm:gap-3">
       <div class="text-right hidden sm:block">
-        <p class="text-sm font-medium text-gray-700">เจ้าหน้าที่พัสดุ</p>
+        <p id="user-role" class="text-sm font-medium text-gray-700">กำลังโหลด...</p>
       </div>
       <div class="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-gray-200 overflow-hidden border border-gray-300">
         <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Staff" alt="Profile"
@@ -84,29 +84,36 @@
       </div>
 
       <div class="overflow-x-auto border border-gray-200 rounded-lg">
-        <table class="min-w-full divide-y divide-gray-200">
+        <table class="min-w-full divide-y divide-gray-200" style="min-width: 1400px;">
           <thead class="bg-gray-50">
             <tr>
-              <th scope="col"
-                class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/6">
-                หมายเลขโครงการ (Ref ID)</th>
-              <th scope="col"
-                class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-2/6">
+              <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                รหัส UBUFMIS</th>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                รหัสโครงการ</th>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 ชื่อโครงการ</th>
-              <th scope="col"
-                class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/6">
-                งบประมาณโครงการ</th>
-              <th scope="col"
-                class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/6">สถานะ
-              </th>
-              <th scope="col"
-                class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/6">การกระทำ
-              </th>
+              <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                ค่าตอบแทน</th>
+              <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                ค่าใช้สอย</th>
+              <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                ค่าวัสดุ</th>
+              <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                ค่าครุภัณฑ์</th>
+              <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                รวม</th>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                ผู้รับผิดชอบ</th>
+              <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                สถานะ</th>
+              <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                การกระทำ</th>
             </tr>
           </thead>
           <tbody id="project-table-body" class="bg-white divide-y divide-gray-200">
             <tr>
-              <td colspan="5" class="px-6 py-10 text-center text-gray-500 animate-pulse">
+              <td colspan="11" class="px-6 py-10 text-center text-gray-500 animate-pulse">
                 กำลังโหลดข้อมูล...
               </td>
             </tr>
@@ -131,19 +138,79 @@
 
       <form id="projectForm" onsubmit="handleSave(event)">
         <input type="hidden" id="p_id">
-        <div class="mb-5">
-          <label class="block text-gray-700 text-sm font-medium mb-2">ชื่อโครงการ</label>
+        
+        <!-- Row 1: UBUFMIS Code & Project Code -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">รหัส UBUFMIS</label>
+            <input type="text" id="p_ubufmis"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm"
+              placeholder="เช่น สป.692001">
+          </div>
+          <div>
+            <label class="block text-gray-700 text-sm font-medium mb-2">รหัสโครงการ</label>
+            <input type="text" id="p_code"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm"
+              placeholder="เช่น 10011410001">
+          </div>
+        </div>
+        
+        <!-- Row 2: Project Name -->
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-2">ชื่อโครงการ <span class="text-red-500">*</span></label>
           <input type="text" id="p_name" required
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm"
             placeholder="ระบุชื่อโครงการ">
         </div>
-        <div class="mb-5">
-          <label class="block text-gray-700 text-sm font-medium mb-2">งบประมาณ (บาท)</label>
+        
+        <!-- Row 3: Budget Breakdown -->
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-2">แผนการใช้จ่ายงบประมาณ</label>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-gray-500 text-xs mb-1">ค่าตอบแทน</label>
+              <input type="number" id="p_budget_compensation" step="0.01" value="0"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                placeholder="0.00" onchange="calculateTotal()">
+            </div>
+            <div>
+              <label class="block text-gray-500 text-xs mb-1">ค่าใช้สอย</label>
+              <input type="number" id="p_budget_usage" step="0.01" value="0"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                placeholder="0.00" onchange="calculateTotal()">
+            </div>
+            <div>
+              <label class="block text-gray-500 text-xs mb-1">ค่าวัสดุ</label>
+              <input type="number" id="p_budget_materials" step="0.01" value="0"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                placeholder="0.00" onchange="calculateTotal()">
+            </div>
+            <div>
+              <label class="block text-gray-500 text-xs mb-1">ค่าครุภัณฑ์</label>
+              <input type="number" id="p_budget_equipment" step="0.01" value="0"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                placeholder="0.00" onchange="calculateTotal()">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Row 4: Budget Total -->
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-2">งบประมาณรวม (บาท) <span class="text-red-500">*</span></label>
           <input type="number" id="p_budget" required step="0.01"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm bg-blue-50"
             placeholder="0.00">
         </div>
-        <div id="statusField" class="mb-8 hidden">
+        
+        <!-- Row 5: Responsible Person -->
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-medium mb-2">ผู้รับผิดชอบโครงการ</label>
+          <input type="text" id="p_responsible"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm"
+            placeholder="เช่น ผศ.ดร.ชื่อ นามสกุล">
+        </div>
+        
+        <div id="statusField" class="mb-6 hidden">
           <label class="block text-gray-700 text-sm font-medium mb-2">สถานะโครงการ</label>
           <select id="p_status"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-sm bg-white">
@@ -163,6 +230,20 @@
   </div>
 
   <script>
+    // --- 0. Load User Role from localStorage ---
+    (function loadUserRole() {
+      const roleEl = document.getElementById('user-role');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const roleMap = {
+        'Admin': 'ผู้ดูแลระบบ',
+        'Staff': 'เจ้าหน้าที่พัสดุ',
+        'User': 'ผู้ใช้งาน'
+      };
+      if (roleEl) {
+        roleEl.textContent = roleMap[user.role] || user.role || 'ไม่ทราบบทบาท';
+      }
+    })();
+
     // --- 1. Load Data & Render Table ---
     async function loadProjects() {
       const tbody = document.getElementById('project-table-body');
@@ -202,20 +283,28 @@
           }
 
           // Render แถวตารางตาม UI ที่ออกแบบ
+          const formatCurrency = (val) => parseFloat(val || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+          
           const row = `
                         <tr class="hover:bg-blue-50 transition group border-b border-gray-50 last:border-b-0">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-600 font-mono">${shortId}</td>
-                            <td class="px-6 py-4 text-sm text-gray-800 font-medium">${project.project_name}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">฿${(parseFloat(project.budget_total || 0) - parseFloat(project.budget_reserved || 0) - parseFloat(project.budget_spent || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="openAssignModal('${project.id}', '${project.project_name}')" class="text-green-500 hover:text-green-700 bg-green-50 hover:bg-green-100 p-2 rounded-lg mr-2 transition" title="กำหนดผู้รับผิดชอบ">
+                            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-600 font-mono">${project.ubufmis_code || '-'}</td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-600 font-mono">${project.project_code || '-'}</td>
+                            <td class="px-3 py-3 text-sm text-gray-800 font-medium max-w-xs truncate" title="${project.project_name}">${project.project_name}</td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-600 text-right">${formatCurrency(project.budget_compensation)}</td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-600 text-right">${formatCurrency(project.budget_usage)}</td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-600 text-right">${formatCurrency(project.budget_materials)}</td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-600 text-right">${formatCurrency(project.budget_equipment)}</td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-800 font-semibold text-right">${formatCurrency(project.budget_total)}</td>
+                            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-600 max-w-[120px] truncate" title="${project.responsible_person || ''}">${project.responsible_person || '-'}</td>
+                            <td class="px-3 py-3 whitespace-nowrap">${statusBadge}</td>
+                            <td class="px-3 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                <button onclick="openAssignModal('${project.id}', '${project.project_name}')" class="text-green-500 hover:text-green-700 bg-green-50 hover:bg-green-100 p-1.5 rounded-lg mr-1 transition" title="กำหนดผู้รับผิดชอบ">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
                                 </button>
-                                <button onclick="openModal('${project.id}', '${project.project_name}', '${project.budget_total}', '${status}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-2 rounded-lg mr-2 transition" title="แก้ไข">
+                                <button onclick="openModal('${project.id}', '${project.project_name}', '${project.budget_total}', '${status}', '${project.project_code || ''}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg mr-1 transition" title="แก้ไข">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                 </button>
-                                <button onclick="deleteProject('${project.id}')" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition" title="ลบ">
+                                <button onclick="deleteProject('${project.id}')" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded-lg transition" title="ลบ">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 </button>
                             </td>
@@ -226,12 +315,12 @@
 
       } catch (error) {
         console.error(error);
-        tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">โหลดข้อมูลไม่สำเร็จ</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" class="px-6 py-4 text-center text-red-500">โหลดข้อมูลไม่สำเร็จ</td></tr>`;
       }
     }
 
     // --- 2. Modal Logic (Create/Edit) ---
-    function openModal(id = null, name = '', budget = '', status = 'Active') {
+    function openModal(id = null, name = '', budget = '', status = 'Active', code = '') {
       const modal = document.getElementById('createModal');
       const title = document.getElementById('modalTitle');
       const statusField = document.getElementById('statusField');
@@ -240,6 +329,7 @@
         title.innerText = "แก้ไขข้อมูลโครงการ";
         document.getElementById('p_id').value = id;
         document.getElementById('p_name').value = name;
+        document.getElementById('p_code').value = code;
         document.getElementById('p_budget').value = budget;
         document.getElementById('p_status').value = status;
         statusField.classList.remove('hidden'); // แสดง dropdown สถานะเมื่อแก้ไข
@@ -261,11 +351,29 @@
     async function handleSave(event) {
       event.preventDefault();
       const id = document.getElementById('p_id').value;
+      const ubufmis = document.getElementById('p_ubufmis').value;
+      const code = document.getElementById('p_code').value;
       const name = document.getElementById('p_name').value;
-      const budget = document.getElementById('p_budget').value;
+      const budget_compensation = parseFloat(document.getElementById('p_budget_compensation').value) || 0;
+      const budget_usage = parseFloat(document.getElementById('p_budget_usage').value) || 0;
+      const budget_materials = parseFloat(document.getElementById('p_budget_materials').value) || 0;
+      const budget_equipment = parseFloat(document.getElementById('p_budget_equipment').value) || 0;
+      const budget = parseFloat(document.getElementById('p_budget').value) || 0;
+      const responsible = document.getElementById('p_responsible').value;
       const status = document.getElementById('p_status').value;
 
-      let payload = { project_name: name, budget_total: budget, status: status };
+      let payload = { 
+        ubufmis_code: ubufmis || null,
+        project_code: code || null,
+        project_name: name, 
+        budget_compensation: budget_compensation,
+        budget_usage: budget_usage,
+        budget_materials: budget_materials,
+        budget_equipment: budget_equipment,
+        budget_total: budget, 
+        responsible_person: responsible || null,
+        status: status 
+      };
 
       let url = '/api/projects/';
       let method = 'POST';
@@ -277,7 +385,10 @@
       try {
         const response = await fetch(url, {
           method: method,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
           body: JSON.stringify(payload)
         });
         if (response.ok) {
@@ -285,9 +396,20 @@
           Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', timer: 1500, showConfirmButton: false });
           loadProjects();
         } else {
-          Swal.fire('Error', 'บันทึกไม่สำเร็จ', 'error');
+          const errData = await response.json();
+          Swal.fire('Error', errData.error || 'บันทึกไม่สำเร็จ', 'error');
         }
       } catch (error) { Swal.fire('Error', error.message, 'error'); }
+    }
+
+    // Auto-calculate total from budget breakdown
+    function calculateTotal() {
+      const compensation = parseFloat(document.getElementById('p_budget_compensation').value) || 0;
+      const usage = parseFloat(document.getElementById('p_budget_usage').value) || 0;
+      const materials = parseFloat(document.getElementById('p_budget_materials').value) || 0;
+      const equipment = parseFloat(document.getElementById('p_budget_equipment').value) || 0;
+      const total = compensation + usage + materials + equipment;
+      document.getElementById('p_budget').value = total.toFixed(2);
     }
 
     // --- 4. Delete Logic (API DELETE) ---
