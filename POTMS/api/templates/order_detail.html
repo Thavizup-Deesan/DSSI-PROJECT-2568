@@ -132,10 +132,9 @@
         </main>
 
         <script>
-                const urlParams = new URLSearchParams(window.location.search);
-                const orderId = urlParams.get('id');
+                const orderId = "{{ order_id }}";
 
-                if (!orderId) {
+                if (!orderId || orderId === "None") {
                         Swal.fire('Error', 'ไม่พบเลขที่ใบสั่งซื้อ', 'error')
                                 .then(() => window.location.href = '/api/my-orders/');
                 }
@@ -147,6 +146,11 @@
 
                                 if (!res.ok) {
                                         throw new Error(order.error || 'ไม่สามารถโหลดข้อมูลได้');
+                                }
+
+                                // Update Back Button
+                                if (order.project_id) {
+                                    document.querySelector('a[href="/api/my-orders/"]').href = `/api/my-orders/?project_id=${order.project_id}`;
                                 }
 
                                 // แสดงข้อมูลหลัก
@@ -253,6 +257,7 @@
                                         .then(() => window.location.href = '/api/my-orders/');
                         }
                 }
+
 
                 loadOrderDetail();
         </script>

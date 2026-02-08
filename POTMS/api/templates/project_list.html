@@ -230,7 +230,11 @@
   </div>
 
   <script>
+    // Global variable to store projects
+    let allProjects = [];
+
     // --- 0. Load User Role from localStorage ---
+    // --- 0. Load User Name & Role from localStorage ---
     (function loadUserRole() {
       const roleEl = document.getElementById('user-role');
       const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -239,8 +243,17 @@
         'Staff': 'เจ้าหน้าที่พัสดุ',
         'User': 'ผู้ใช้งาน'
       };
+      
       if (roleEl) {
-        roleEl.textContent = roleMap[user.role] || user.role || 'ไม่ทราบบทบาท';
+        // แสดงชื่อผู้ใช้ (ถ้ามี) หรือแสดงบทบาทถ้าไม่มีชื่อ
+        // Check for name, fullname, or username
+        const userName = user.name || user.fullname || user.username;
+        const userRole = roleMap[user.role] || user.role || 'ไม่ทราบบทบาท';
+        
+        roleEl.textContent = userName || userRole;
+        
+        // เพิ่ม Tooltip ให้แสดงบทบาทเมื่อเอาเมาส์ชี้
+        roleEl.title = `บทบาท: ${userRole}`;
       }
     })();
 
@@ -253,24 +266,24 @@
         // เรียก API ดึงข้อมูลจากตาราง Project
         const response = await fetch('/api/projects/');
         const projects = await response.json();
+        
+        // Store in global variable
+        allProjects = projects;
 
         countSpan.innerText = projects.length;
         tbody.innerHTML = '';
 
         if (projects.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-gray-400">ยังไม่มีข้อมูลโครงการ</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="11" class="px-6 py-10 text-center text-gray-400">ยังไม่มีข้อมูลโครงการ</td></tr>`;
           return;
         }
 
         projects.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         projects.forEach(project => {
-          // สร้าง Ref ID จำลองจาก Doc ID (เช่น PRJ-A1B2)
-          const shortId = "PRJ-" + project.id.slice(-4).toUpperCase();
-
           // Logic เลือกสีตามสถานะ
           let statusBadge = '';
-          const status = project.status || 'Active'; // ถ้าไม่มีสถานะ (ข้อมูลเก่า) ให้ถือว่าเป็น Active
+          const status = project.status || 'Active';
 
           if (status === 'Active') {
             statusBadge = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full whitespace-nowrap bg-green-100 text-green-700 border border-green-200">ดำเนินการ</span>`;
@@ -301,7 +314,7 @@
                                 <button onclick="openAssignModal('${project.id}', '${project.project_name}')" class="text-green-500 hover:text-green-700 bg-green-50 hover:bg-green-100 p-1.5 rounded-lg mr-1 transition" title="กำหนดผู้รับผิดชอบ">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
                                 </button>
-                                <button onclick="openModal('${project.id}', '${project.project_name}', '${project.budget_total}', '${status}', '${project.project_code || ''}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg mr-1 transition" title="แก้ไข">
+                                <button onclick="openModal('${project.id}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg mr-1 transition" title="แก้ไข">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                 </button>
                                 <button onclick="deleteProject('${project.id}')" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded-lg transition" title="ลบ">
@@ -320,20 +333,35 @@
     }
 
     // --- 2. Modal Logic (Create/Edit) ---
-    function openModal(id = null, name = '', budget = '', status = 'Active', code = '') {
+    function openModal(id = null) {
       const modal = document.getElementById('createModal');
       const title = document.getElementById('modalTitle');
       const statusField = document.getElementById('statusField');
 
       if (id) {
+        // Edit Mode: Find project from global array
+        const project = allProjects.find(p => p.id === id);
+        if (!project) return;
+        
         title.innerText = "แก้ไขข้อมูลโครงการ";
-        document.getElementById('p_id').value = id;
-        document.getElementById('p_name').value = name;
-        document.getElementById('p_code').value = code;
-        document.getElementById('p_budget').value = budget;
-        document.getElementById('p_status').value = status;
+        document.getElementById('p_id').value = project.id;
+        
+        // Populate fields
+        document.getElementById('p_ubufmis').value = project.ubufmis_code || '';
+        document.getElementById('p_code').value = project.project_code || '';
+        document.getElementById('p_name').value = project.project_name || '';
+        document.getElementById('p_responsible').value = project.responsible_person || '';
+        
+        document.getElementById('p_budget_compensation').value = project.budget_compensation || 0;
+        document.getElementById('p_budget_usage').value = project.budget_usage || 0;
+        document.getElementById('p_budget_materials').value = project.budget_materials || 0;
+        document.getElementById('p_budget_equipment').value = project.budget_equipment || 0;
+        document.getElementById('p_budget').value = project.budget_total || 0;
+        
+        document.getElementById('p_status').value = project.status || 'Active';
         statusField.classList.remove('hidden'); // แสดง dropdown สถานะเมื่อแก้ไข
       } else {
+        // Create Mode
         title.innerText = "เพิ่มโครงการใหม่";
         document.getElementById('projectForm').reset();
         document.getElementById('p_id').value = '';

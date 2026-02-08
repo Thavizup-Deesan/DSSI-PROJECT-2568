@@ -145,11 +145,17 @@ class ProjectDetailAPIView(APIView):
             project_data = {
                 'id': str(project.project_id),
                 'project_id': str(project.project_id),
+                'ubufmis_code': project.ubufmis_code or '',
                 'project_code': project.project_code or '',
                 'project_name': project.project_name,
+                'budget_compensation': float(project.budget_compensation),
+                'budget_usage': float(project.budget_usage),
+                'budget_materials': float(project.budget_materials),
+                'budget_equipment': float(project.budget_equipment),
                 'budget_total': float(project.budget_total),
                 'budget_reserved': float(project.budget_reserved),
                 'budget_spent': float(project.budget_spent),
+                'responsible_person': project.responsible_person or '',
                 'status': project.status
             }
             
@@ -187,13 +193,18 @@ class ProjectDetailAPIView(APIView):
             
             # Update project fields
             project.project_name = data.get('project_name', project.project_name)
+            project.ubufmis_code = data.get('ubufmis_code', project.ubufmis_code)
+            project.project_code = data.get('project_code', project.project_code)
+            project.responsible_person = data.get('responsible_person', project.responsible_person)
+            
+            project.budget_compensation = float(data.get('budget_compensation', project.budget_compensation))
+            project.budget_usage = float(data.get('budget_usage', project.budget_usage))
+            project.budget_materials = float(data.get('budget_materials', project.budget_materials))
+            project.budget_equipment = float(data.get('budget_equipment', project.budget_equipment))
             project.budget_total = float(data.get('budget_total', project.budget_total))
             
             if data.get('status'):
                 project.status = data.get('status')
-            
-            if data.get('project_code'):
-                project.project_code = data.get('project_code')
             
             project.save()
 
@@ -356,7 +367,8 @@ class UserLoginAPIView(APIView):
                     'username': user.username,
                     'role': user.role,
                     'department': user.department or '',
-                    'fullname': user.username  # Add fullname for compatibility
+                    'fullname': user.username,  # Add fullname for compatibility
+                    'name': user.username       # Add name for frontend (project_list.html) compatibility
                 }
             }, status=status.HTTP_200_OK)
 
@@ -2100,7 +2112,7 @@ def order_detail_view(request, order_id):
     - ปุ่มกลับไปหน้า My Orders
     ===================================================================
     """
-    return render(request, 'order_detail.html')
+    return render(request, 'order_detail.html', {'order_id': order_id})
 
 
 def edit_order_view(request, order_id):
@@ -2149,9 +2161,9 @@ class UserProjectsAPIView(APIView):
                     'project_id': str(project.project_id),
                     'project_code': project.project_code or '',
                     'project_name': project.project_name,
-                    'budget_total': float(project.budget_total),
-                    'budget_reserved': float(project.budget_reserved),
-                    'budget_spent': float(project.budget_spent),
+                    'budget_total': float(project.budget_total or 0),
+                    'budget_reserved': float(project.budget_reserved or 0),
+                    'budget_spent': float(project.budget_spent or 0),
                     'status': project.status,
                     'assignment_id': assign.assignment_id,
                     'assigned_at': assign.assigned_at

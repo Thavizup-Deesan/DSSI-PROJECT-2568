@@ -180,11 +180,10 @@
 
                 // Load order data on page load
                 document.addEventListener('DOMContentLoaded', async () => {
-                        // Get order_id from URL
-                        const pathParts = window.location.pathname.split('/');
-                        orderId = pathParts[3]; // /api/orders/<id>/edit/ → index 3
+                        // Get order_id from template
+                        orderId = "{{ order_id }}";
 
-                        if (!orderId) {
+                        if (!orderId || orderId === "None") {
                                 Swal.fire('Error', 'ไม่พบเลขที่ใบสั่งซื้อ', 'error')
                                         .then(() => window.location.href = '/api/my-orders/');
                                 return;
