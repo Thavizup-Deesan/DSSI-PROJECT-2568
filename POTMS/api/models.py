@@ -98,12 +98,13 @@ class MainOrder(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='orders')
     requester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders_requested', verbose_name='ผู้สั่ง')
     approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders_approved', verbose_name='ผู้อนุมัติ')
-    order_no = models.CharField(max_length=50, unique=True, verbose_name='เลขที่เอกสาร')
+    order_no = models.CharField(max_length=50, verbose_name='เลขที่เอกสาร')
     vendor_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='ชื่อร้านค้า/บริษัท')
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Draft')
     total_estimated_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name='ราคารวมประมาณการ')
     inspection_committee = models.TextField(blank=True, null=True, verbose_name='รายชื่อกรรมการตรวจรับ')
     staff_note = models.TextField(blank=True, null=True, verbose_name='บันทึกสิ่งที่ต้องแก้ไขจาก Staff')
+    correction_count = models.IntegerField(default=0, verbose_name='จำนวนครั้งที่ส่งแก้ไข')
     
     # ✅ Added fields for standard order form
     order_title = models.CharField(max_length=255, default='', verbose_name='เรื่อง')
@@ -115,6 +116,7 @@ class MainOrder(models.Model):
     
     class Meta:
         db_table = 'main_orders'
+        unique_together = ['project', 'order_no'] # ✅ Enforce uniqueness per project
     
     def __str__(self):
         return f"{self.order_no} - {self.project.project_name}"
@@ -159,7 +161,7 @@ class SubOrder(models.Model):
     
     sub_order_id = models.AutoField(primary_key=True)
     main_order = models.ForeignKey(MainOrder, on_delete=models.CASCADE, related_name='sub_orders')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sub_orders_received')
+    receiver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_orders_received')
     sub_order_no = models.CharField(max_length=50, unique=True)
     received_date = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='WaitingInspection')

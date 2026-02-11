@@ -367,11 +367,24 @@
                                 // เก็บ order_id สำหรับการ update
                                 currentEditOrderId = orderId;
 
+                                // ตรวจสอบสถานะ CorrectionNeeded
+                                if (order.status === 'CorrectionNeeded') {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'ต้องแก้ไขข้อมูล',
+                                        html: `<div class="text-left bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                            <p class="font-bold text-yellow-800 mb-2">สิ่งที่ต้องแก้ไข:</p>
+                                            <p class="text-yellow-700 whitespace-pre-line">${order.staff_note || '-'}</p>
+                                        </div>`,
+                                        confirmButtonText: 'รับทราบ'
+                                    });
+                                }
+
                                 // เปลี่ยนข้อความปุ่ม
                                 const saveButtons = document.querySelectorAll('button');
                                 saveButtons.forEach(btn => {
                                         if (btn.textContent.includes('บันทึกฉบับร่าง')) {
-                                                btn.innerHTML = 'อัปเดตร่าง';
+                                                btn.innerHTML = 'บันทึกการแก้ไข';
                                         }
                                 });
 

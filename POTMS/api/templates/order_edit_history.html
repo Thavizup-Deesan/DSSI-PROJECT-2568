@@ -180,12 +180,15 @@
           const assignRes = await fetch('/api/project-assignments/');
           const assignData = await assignRes.json();
           const assignments = Array.isArray(assignData) ? assignData : [];
-          const myProjectIds = assignments.filter(a => a.user_id === user.id).map(a => a.project_id);
+          // Ensure type safety (String comparison)
+          const myProjectIds = assignments
+            .filter(a => String(a.user_id) === String(user.id))
+            .map(a => String(a.project_id));
 
           const projRes = await fetch('/api/projects/');
           const projData = await projRes.json();
           const allProjects = Array.isArray(projData) ? projData : [];
-          projects = allProjects.filter(p => myProjectIds.includes(p.id));
+          projects = allProjects.filter(p => myProjectIds.includes(String(p.id)));
         }
 
         if (projects.length === 0) {

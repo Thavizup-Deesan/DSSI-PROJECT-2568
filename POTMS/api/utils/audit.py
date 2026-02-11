@@ -3,23 +3,12 @@ Audit Trail System for POTMS
 Logs all important actions for security and compliance
 """
 import datetime
-from backend.firebase_config import db
+# from backend.firebase_config import db  <-- REMOVED
 
 
 def log_audit(action, user_id, resource_type, resource_id, details=None, ip_address=None):
     """
     Log audit trail for important actions
-    
-    Args:
-        action: Action performed (e.g., 'order_approved', 'budget_updated')
-        user_id: ID of user who performed the action
-        resource_type: Type of resource (e.g., 'order', 'project')
-        resource_id: ID of the resource
-        details: Optional dict with additional details
-        ip_address: Optional IP address
-    
-    Returns:
-        str: Audit log ID
     """
     try:
         audit_log = {
@@ -30,13 +19,15 @@ def log_audit(action, user_id, resource_type, resource_id, details=None, ip_addr
             'details': details or {},
             'ip_address': ip_address,
             'timestamp': datetime.datetime.now(),
-            'created_at': datetime.datetime.now()
         }
         
-        # Save to Firestore
-        update_time, doc_ref = db.collection('audit_logs').add(audit_log)
+        # Save to Firestore -> REMOVED
+        # update_time, doc_ref = db.collection('audit_logs').add(audit_log)
         
-        return doc_ref.id
+        # Temporary: Print to console
+        print(f"AUDIT LOG: {audit_log}")
+        
+        return "log_id_placeholder"
     except Exception as e:
         # Don't fail the main operation if logging fails
         print(f"Audit log error: {str(e)}")

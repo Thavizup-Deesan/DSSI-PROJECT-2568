@@ -139,6 +139,16 @@
                                         </div>
                                 </div>
 
+                                <!-- ข้อมูลคณะกรรมการตรวจรับ (แสดงเมื่อมีการระบุแล้ว) -->
+                                <div id="inspectionCommitteeSection" class="hidden bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                                    <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                                        <span class="text-blue-500"></span>รายชื่อคณะกรรมการตรวจรับ
+                                    </h3>
+                                    <div class="p-4 bg-gray-50 rounded-lg text-gray-700 whitespace-pre-line" id="inspectionCommitteeText">
+                                        -
+                                    </div>
+                                </div>
+
                                 <!-- รายการพัสดุ -->
                                 <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                                         <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -864,23 +874,40 @@
 
                 // Approve order
                 async function approveOrder() {
+                        // Pre-fill if exists
+                        const existingCommittee = orderData.inspection_committee || '';
+
                         const result = await Swal.fire({
                                 title: 'ยืนยันการอนุมัติ?',
-                                text: 'คุณต้องการอนุมัติใบสั่งซื้อนี้หรือไม่?',
+                                html: `
+                                    <p class="mb-4 text-sm text-gray-600">คุณต้องการอนุมัติใบสั่งซื้อนี้หรือไม่?</p>
+                                    <div class="text-left">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">รายชื่อกรรมการตรวจรับ (ถ้ามี)</label>
+                                        <textarea id="swalInspectionCommittee" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500" 
+                                            rows="3" placeholder="ระบุชื่อกรรมการตรวจรับ...">${existingCommittee}</textarea>
+                                    </div>
+                                `,
                                 icon: 'question',
                                 showCancelButton: true,
                                 confirmButtonColor: '#22c55e',
                                 cancelButtonColor: '#6b7280',
                                 confirmButtonText: 'อนุมัติ',
-                                cancelButtonText: 'ยกเลิก'
+                                cancelButtonText: 'ยกเลิก',
+                                preConfirm: () => {
+                                    return document.getElementById('swalInspectionCommittee').value;
+                                }
                         });
 
                         if (result.isConfirmed) {
+                                const committee = result.value;
                                 try {
                                         const response = await fetch(`/api/orders/${orderId}/approve/`, {
                                                 method: 'POST',
                                                 headers: getAuthHeaders(),
-                                                body: JSON.stringify({ approver_id: currentUser.id })
+                                                body: JSON.stringify({ 
+                                                    approver_id: currentUser.id,
+                                                    inspection_committee: committee
+                                                })
                                         });
 
                                         const data = await response.json();
@@ -1304,8 +1331,16 @@
                         }
                 }
 
-                // Get Sub-order ID for this order (query from Firebase)
-                async function getSubOrderId() {
+                        // แสดง Inspection Committee
+                        if (order.inspection_committee && order.status !== 'Draft' && order.status !== 'Pending') {
+                            document.getElementById('inspectionCommitteeSection').classList.remove('hidden');
+                            document.getElementById('inspectionCommitteeText').textContent = order.inspection_committee;
+                        } else {
+                            document.getElementById('inspectionCommitteeSection').classList.add('hidden');
+                        }
+
+                        // Get Sub-order ID for this order (query from Firebase)
+                        async function getSubOrderId() {
                         // For now, we store sub-order ID in order data after creation
                         // In production, you'd query the sub_orders collection
 

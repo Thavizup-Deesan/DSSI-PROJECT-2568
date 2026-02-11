@@ -203,6 +203,10 @@
                     const spent = (project.budget_spent || 0) + (project.budget_reserved || 0);
                     const percent = total > 0 ? ((spent / total) * 100).toFixed(1) : 0;
                     const remaining = total - spent;
+
+                    const card = document.createElement('div');
+                    card.className = "bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition cursor-pointer border border-gray-100 group";
+                    card.onclick = () => selectProject(project);
                     
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-4">
@@ -330,12 +334,12 @@
                 `;
                 
                 if(orderStatus === 'Draft' || orderStatus === 'CorrectionNeeded') {
-                     // Add Submit for Draft
-                     if(orderStatus === 'Draft') {
+                     // Add Submit for Draft or CorrectionNeeded
+                     if(orderStatus === 'Draft' || orderStatus === 'CorrectionNeeded') {
                         actions += `
                         <button onclick="submitOrder('${order.id}')"
                             class="text-purple-600 hover:text-purple-800 text-xs font-semibold px-2">
-                            ส่งอนุมัติ
+                            ${orderStatus === 'CorrectionNeeded' ? 'ส่งแก้ไข' : 'ส่งอนุมัติ'}
                         </button>
                         `;
                      }

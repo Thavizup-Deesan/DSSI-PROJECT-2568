@@ -161,7 +161,7 @@ VALID_TRANSITIONS = {
     'WaitingInspection': ['Inspected'],
     'Inspected': ['Received'],
     'Received': ['Closed'],
-    'CorrectionNeeded': ['Draft'],
+    'CorrectionNeeded': ['Draft', 'Pending'],
     'Rejected': [],  # Terminal state
     'Cancelled': [],  # Terminal state
     'Closed': [],  # Terminal state

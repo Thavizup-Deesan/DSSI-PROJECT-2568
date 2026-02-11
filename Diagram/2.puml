@@ -1,0 +1,66 @@
+@startuml
+title ผังการทำงานหน้าจอระบบจัดซื้อวัสดุ (UI State Machine)
+
+state "Dashboard (หน้าหลัก)" as Dash {
+    Dash : แสดงสถานะงบประมาณ
+    Dash : แสดงงานที่รออนุมัติ
+}
+
+state "Project_Setup (ตั้งค่าโครงการ)" as Proj {
+    Proj : กรอกชื่อโครงการ/วงเงิน
+    Proj : Upload เอกสารอนุมัติงบ
+}
+
+state "PR_Creation (สร้างใบขอซื้อ)" as PR {
+    PR : เลือกรายการวัสดุ (Master Data)
+    PR : ระบุจำนวน/ราคา
+    PR : **Status: Draft**
+}
+
+state "PR_Approval (รออนุมัติ)" as PR_App {
+    PR_App : หัวหน้าตรวจสอบรายการ
+    PR_App : **Status: Pending Approval**
+}
+
+state "PO_Process (ออกใบสั่งซื้อ)" as PO {
+    PO : เลือกผู้ขาย (Vendor)
+    PO : ระบุวันส่งมอบ
+    PO : **Status: PO Generated**
+}
+
+state "Waiting_Delivery (รอส่งของ)" as Wait {
+    Wait : แสดง Countdown วันส่งของ
+    Wait : **Status: Waiting Delivery**
+}
+
+state "Inspection_Screen (หน้าจอตรวจรับ)" as Insp {
+    Insp : เช็คลิสต์รายการ (Checklist)
+    Insp : ช่องกรอกค่าปรับ (ถ้ามี)
+    Insp : Upload รูปถ่ายสินค้า
+    Insp : **Status: Inspecting**
+}
+
+state "Stock_Updated (คลังสินค้า)" as Stock {
+    Stock : ตัดยอดเข้า Stock Card
+    Stock : ออกใบตรวจรับ (Report)
+    Stock : **Status: Completed**
+}
+
+[*] --> Dash
+Dash --> Proj : กดปุ่ม "เพิ่มโครงการใหม่"
+Dash --> PR : กดปุ่ม "ขอซื้อวัสดุ"
+Proj --> PR : เลือกโครงการแล้วกด "ขอซื้อ"
+
+PR --> PR_App : กดปุ่ม "ส่งอนุมัติ"
+PR_App --> PR : กดปุ่ม "ตีกลับ" (Reject)
+PR_App --> PO : กดปุ่ม "อนุมัติ" (Approve)
+
+PO --> Wait : กดปุ่ม "ออกใบสั่งซื้อและส่งผู้ขาย"
+Wait --> Insp : ผู้ขายมาส่งของ -> กด "เริ่มตรวจรับ"
+
+Insp --> Wait : ตรวจไม่ผ่าน -> กด "ตีกลับสินค้า"
+Insp --> Stock : ตรวจผ่าน -> กด "ยืนยันรับของ"
+
+Stock --> Dash : จบกระบวนการ
+
+@enduml

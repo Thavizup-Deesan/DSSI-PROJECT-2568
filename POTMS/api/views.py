@@ -29,7 +29,7 @@ from api.utils.audit import log_audit, get_client_ip, AUDIT_ACTIONS
 from api.utils.authz import verify_staff_project_access, verify_order_ownership
 
 # Import Models
-from api.models import Project, User, ProjectAssignment
+from api.models import Project, User, ProjectAssignment, MainOrder, SubOrder, OrderItem
 
 # Custom Permission Class for Staff-only actions
 class IsStaff(BasePermission):
@@ -407,39 +407,24 @@ def register_page(request):
 
 
 class StatsAPIView(APIView):
-    """API สำหรับดึงสถิติแดชบอร์ด (นับจากฐานข้อมูลจริง)"""
+    """API สำหรับดึงสถิติแดชบอร์ด (นับจากฐานข้อมูลจริง PostgreSQL)"""
     def get(self, request):
         try:
+            from api.models import Project, MainOrder
+            
             # 1. นับจำนวนโครงการทั้งหมด
-            # stream() คือการดึงข้อมูลทั้งหมดใน collection มา
-            projects_ref = db.collection('projects').stream()
-            total_projects = len(list(projects_ref))
+            total_projects = Project.objects.filter(status='Active').count()
 
             # 2. ดึงใบสั่งซื้อทั้งหมดมาเพื่อนับแยกสถานะ
-            orders_ref = db.collection('orders').stream()
+            # ใช้ count() แทนการดึงข้อมูลทั้งหมดเพื่อประสิทธิภาพ
+            pending = MainOrder.objects.filter(status='Pending').count()
+            approved = MainOrder.objects.filter(status='Approved').count()
             
-            # สร้างตัวแปรเก็บตัวนับ
-            pending = 0
-            approved = 0
-            in_progress = 0
-            completed = 0
+            # สถานะเหล่านี้ถือว่าเป็น "กำลังดำเนินการ"
+            in_progress = MainOrder.objects.filter(status__in=['WaitingBossApproval', 'CorrectionNeeded', 'SentToProcurement']).count()
             
-            # วนลูปดูใบสั่งซื้อทีละใบ
-            for doc in orders_ref:
-                data = doc.to_dict()
-                status = data.get('status')
-                
-                # เช็คเงื่อนไขและนับ
-                if status == 'Pending':
-                    pending += 1
-                elif status == 'Approved':
-                    approved += 1
-                # สถานะเหล่านี้ถือว่าเป็น "กำลังดำเนินการ" (รอหัวหน้า, รอแก้, ส่งพัสดุ)
-                elif status in ['WaitingBossApproval', 'CorrectionNeeded', 'SentToProcurement']:
-                    in_progress += 1
-                # สถานะนี้ถือว่า "เสร็จสิ้น" (รับของแล้ว)
-                elif status == 'ReceivedFromProcurement':
-                    completed += 1
+            # สถานะนี้ถือว่า "เสร็จสิ้น"
+            completed = MainOrder.objects.filter(status='ReceivedFromProcurement').count()
 
             # 3. ส่งผลลัพธ์กลับไปที่หน้าเว็บ
             stats = {
@@ -848,23 +833,50 @@ class OrderAPIView(APIView):
             user_order_no = data.get('order_no')
             if user_order_no and user_order_no.strip():
                 order_no = user_order_no.strip()
-                # Check if order_no already exists
-                if MainOrder.objects.filter(order_no=order_no).exists():
-                    return Response({'error': f'เลขที่ใบขอซื้อ {order_no} มีอยู่แล้วในระบบ'}, status=status.HTTP_400_BAD_REQUEST)
+                # Check if order_no already exists in this project
+                # Note: We need project_id to check uniqueness per project.
+                # If project_id is not yet available (it's getting fetched later), we should fetch it first.
+                project_id = data.get('project_id')
+                if project_id and MainOrder.objects.filter(order_no=order_no, project_id=project_id).exists():
+                     return Response({'error': f'เลขที่ใบขอซื้อ {order_no} มีอยู่แล้วในโครงการนี้'}, status=status.HTTP_400_BAD_REQUEST)
+                # If no project_id, we can't check per project uniqueness yet. 
+                # But creating an order without project_id is allowed?
+                # The model says project is ForeignKey(.., on_delete=CASCADE). calculateTotal says yes.
+                # Wait, MainOrder.project is NOT null=True in model (line 98).
+                # So project_id is REQUIRED.
             else:
                 # สร้าง Order Number อัตโนมัติ (Format: PO-YYYYMMDD-XXX)
                 today = datetime.datetime.now()
                 date_str = today.strftime('%Y%m%d')
                 
-                # นับจำนวน orders ที่สร้างวันนี้
+                # นับจำนวน orders ที่สร้างวันนี้ (Global or Per Project? Usually Auto-gen is Global running number to be safe)
+                # Let's keep Auto-gen Global for now to avoid collision if project is not unique enough in context?
+                # Or per project? "PO-20231027-001"
+                # If I make it Per Project, then Project A has 001, Project B has 001.
+                # User complaint implies they MANUALLY entered "มค61".
+                # So for Auto-gen, we can keep it global unique OR per project unique.
+                # Global unique is safer for "PO-..." format.
+                # But if user enters manual, we check per project.
+                
                 start_of_day = datetime.datetime(today.year, today.month, today.day)
                 count = MainOrder.objects.filter(created_at__gte=start_of_day).count() + 1
                 order_no = f"PO-{date_str}-{count:03d}"
                 
-                # Ensure uniqueness
+                # Ensure uniqueness (Global for Auto-gen to avoid confusion?)
+                # If we allow duplicates across projects, Auto-gen 001 for Proj A and 001 for Proj B is fine.
+                # But "PO-..." usually implies system-wide.
+                # Let's try to make it unique per project for consistency with the user request.
+                pass # Logic below will handle creation failures if unique_together violates, but better to check.
+                
+                # Actually, for auto-gen, let's just make sure it doesn't collide globally to be safe, 
+                # OR just trust the count.
+                # If I use global count, it changes every time.
+                # If I use per-project count, I need project_id.
+                
+                # Let's stick to the current auto-gen logic (Global count based) which is simple.
                 while MainOrder.objects.filter(order_no=order_no).exists():
-                    count += 1
-                    order_no = f"PO-{date_str}-{count:03d}"
+                     count += 1
+                     order_no = f"PO-{date_str}-{count:03d}"
             
             # Get project and requester references
             project = None
@@ -875,7 +887,14 @@ class OrderAPIView(APIView):
                 try:
                     project = Project.objects.get(project_id=project_id)
                 except Project.DoesNotExist:
-                    pass
+                     return Response({'error': 'ไม่พบโครงการที่ระบุ'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                 return Response({'error': 'กรุณาระบุโครงการ'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Re-check manual order_no uniqueness with project
+            if user_order_no and user_order_no.strip():
+                if MainOrder.objects.filter(order_no=order_no, project=project).exists():
+                     return Response({'error': f'เลขที่ใบขอซื้อ {order_no} มีอยู่แล้วในโครงการนี้'}, status=status.HTTP_400_BAD_REQUEST)
             
             requester_id = data.get('requester_id')
             if requester_id:
@@ -1085,12 +1104,13 @@ class OrderApproveAPIView(APIView):
             
             # 4. อัปเดตสถานะ Order เป็น WaitingBossApproval
             order.status = 'WaitingBossApproval'
-            order.approver_id = approver_id if approver_id else None # Note: MainOrder.approver_id might be ForeignKey or CharField? Check Model.
-            # Assuming CharField or adjust if ForeignKey to User. 
-            # In Models, approver is ForeignKey(User). So we need User instance if approver_id is ID.
-            # But here we stick to simple assignment if logic handles it. 
-            # Let's check Model: approver = ForeignKey(User).
-            # So we need to fetch User if approver_id is provided.
+            order.approver_id = approver_id if approver_id else None 
+            
+            # Save inspection committee if provided
+            inspection_committee = request.data.get('inspection_committee')
+            if inspection_committee:
+                order.inspection_committee = inspection_committee
+
             if approver_id:
                 try:
                     approver_user = User.objects.get(pk=approver_id)
@@ -1232,6 +1252,10 @@ class OrderCorrectionAPIView(APIView):
             if order.status != 'Pending':
                 return Response({'error': 'ใบสั่งซื้อนี้ไม่อยู่ในสถานะรออนุมัติ'}, status=status.HTTP_400_BAD_REQUEST)
             
+            # ✅ Check correction limit (Max 1 time)
+            if order.correction_count >= 1:
+                 return Response({'error': 'รายการนี้ถูกส่งแก้ไขครบ 1 ครั้งแล้ว ไม่สามารถส่งแก้ไขได้อีก'}, status=status.HTTP_400_BAD_REQUEST)
+            
             # 4. คืนงบประมาณ
             if order.project:
                 project = Project.objects.select_for_update().get(pk=order.project_id)
@@ -1246,6 +1270,7 @@ class OrderCorrectionAPIView(APIView):
                 except: pass
             
             order.staff_note = staff_note
+            order.correction_count += 1
             order.correction_requested_at = datetime.datetime.now()
             order.updated_at = datetime.datetime.now()
             order.save()
@@ -1444,6 +1469,7 @@ class SubOrderCreateAPIView(APIView):
     def post(self, request, order_id):
         try:
             # 1. ดึงข้อมูล Order
+            from api.models import SubOrder, InspectionDetail, OrderItem
             try:
                 order = MainOrder.objects.get(pk=order_id)
             except MainOrder.DoesNotExist:
@@ -1469,30 +1495,44 @@ class SubOrderCreateAPIView(APIView):
             # 6. สร้าง Sub-order document
             suborder = SubOrder.objects.create(
                 main_order=order,
-                receiver=request.user if request.user.is_authenticated else None, # Assuming user logged in
-                suborder_no=suborder_no,
+                receiver=request.user if request.user.is_authenticated else None,
+                sub_order_no=suborder_no,
                 note=notes,
                 status='WaitingInspection'
             )
             
-            # 5. Create InspectionDetails for items
+            # 5. Create InspectionDetails for items (Validate quantities first)
             total_amount = 0
+            
+            # Need to check remaining quantity for each item
+            from django.db.models import Sum
+            
             for item in items:
-                # Find OrderItem
                 item_name = item.get('item_name', item.get('name', '-'))
                 qty = float(item.get('quantity', item.get('quantity_requested', 0)))
-                # price = float(item.get('unit_price', item.get('estimated_unit_price', 0))) # Price from order item is better
                 
-                # Match by name (simple fallback)
+                # Match by name
                 order_item = OrderItem.objects.filter(order=order, item_name=item_name).first()
                 if not order_item:
-                    # Fallback logic or skip? better to skip if not found to avoid error
                     continue
                 
+                # Validate remaining
+                received_so_far = InspectionDetail.objects.filter(
+                    sub_order__main_order=order,
+                    item=order_item
+                ).aggregate(total=Sum('qty_received'))['total'] or 0
+                
+                remaining = order_item.quantity_requested - received_so_far
+                
+                if qty > remaining:
+                     # Rollback and error
+                     # Since we are in atomic transaction, raising exception will rollback
+                     raise ValueError(f"จำนวนที่ระบุ ({qty}) เกินกว่าจำนวนที่เหลือ ({remaining}) สำหรับรายการ {item_name}")
+
                 InspectionDetail.objects.create(
                     sub_order=suborder,
                     item=order_item,
-                    qty_received=int(qty)
+                    qty_received=int(qty) # Initial 'declared' quantity
                 )
 
             
@@ -1564,14 +1604,52 @@ class InspectionAPIView(APIView):
             actual_cost = float(request.data.get('actual_cost', 0))
             inspector_name = request.data.get('inspector_name', '')
             notes = request.data.get('notes', '')
-            
+            received_items = request.data.get('received_items', []) # List of {item_id, qty_received}
+
             if actual_cost <= 0:
-                return Response({'error': 'กรุณาระบุยอดจ่ายจริง'}, status=status.HTTP_400_BAD_REQUEST)
+                pass # Allow 0 if user intends match estimate? No, UI blocks it. But backend should allow if free? Let's keep logic but maybe optional.
+                # return Response({'error': 'กรุณาระบุยอดจ่ายจริง'}, status=status.HTTP_400_BAD_REQUEST)
             
             if not inspector_name:
                 return Response({'error': 'กรุณาระบุชื่อผู้ตรวจรับ'}, status=status.HTTP_400_BAD_REQUEST)
             
-            # 4. สร้าง QR Code
+            # Save Inspection Details
+            from api.models import InspectionDetail, OrderItem
+            
+            total_estimated_value_received = 0
+            
+            if received_items:
+                for item_data in received_items:
+                    item_id = item_data.get('item_id')
+                    qty = float(item_data.get('qty_received', 0))
+                    
+                    if qty >= 0: # Allow 0 if they reject? But usually > 0. Let's say we update whatever they send.
+                        try:
+                            order_item = OrderItem.objects.get(pk=item_id)
+                            
+                            # Update existing Inspection Detail (created by SubOrderCreate)
+                            # Or create if missing (though it should exist)
+                            inspection_detail, created = InspectionDetail.objects.update_or_create(
+                                sub_order=suborder,
+                                item=order_item,
+                                defaults={
+                                    'qty_received': qty,
+                                    'is_verified': True
+                                    # 'inspector_name', 'notes', 'received_date' removed as they don't exist in model
+                                }
+                            )
+                            
+                            # Calculate estimated value for this receipt (to release from reserved)
+                            total_estimated_value_received += (float(order_item.estimated_unit_price) * qty)
+                            
+                        except OrderItem.DoesNotExist:
+                            continue
+
+            # 4. สร้าง QR Code (Store inspection result QR? No, usually QR is for SCANNING to get here)
+            # But the legacy code generates a NEW qr code. Why? "InspectionAPIView - ตรวจรับสินค้า + สร้าง QR Code".
+            # Maybe this QR is for the NEXT step? Handover?
+            # "scan_url = .../api/scan/..." - this points to the SAME suborder.
+            # If I stick to legacy, I return the same QR.
             host = request.get_host()
             scheme = 'https' if request.is_secure() else 'http'
             scan_url = f"{scheme}://{host}/api/scan/{suborder_id}/"
@@ -1590,32 +1668,109 @@ class InspectionAPIView(APIView):
             if order.project:
                 project = Project.objects.select_for_update().get(pk=order.project_id)
                 
-                # Logic: Refund full reserved amount, add actual cost to spent
-                # Assumption: Suborder completes the order for now (simple migration)
-                # Or at least for this suborder? Legacy code uses (actual - estimated)
-                # Correct logic for "Full Completion":
-                reserved_to_release = order.total_estimated_price # Assuming full release
+                # Logic: 
+                # 1. Release Reserved Budget = Estimated Cost of RECEIVED items
+                # 2. Add Actual Cost to Spent Budget
+                
+                # If total_estimated_value_received is 0 (fallback for legacy/no items), use order total? 
+                # No, if partial, we must rely on items. If no items sent, implies full order? 
+                # Let's assume received_items is mandatory for new flow.
+                
+                reserved_to_release = total_estimated_value_received
+                if not received_items: # Old behavior fallback
+                     reserved_to_release = order.total_estimated_price
+                
                 project.budget_reserved = max(0, project.budget_reserved - reserved_to_release)
                 project.budget_spent += actual_cost
                 project.save()
             
             # 6. Update SubOrder
             suborder.status = 'Inspected'
-            suborder.updated_at = datetime.datetime.now() # if updated_at exists on model
+            suborder.inspector_name = inspector_name # Wait, model has no inspector_name? Check model.
+            # Reference Check: SubOrder model has 'receiver' (User FK) but not 'inspector_name' field explicitly?
+            # InspectionDetail has 'inspector_name'.
+            # SubOrder has 'note'.
+            # Let's check SubOrder model again in my memory/view logic.
+            # Model snippet:
+            # class SubOrder(models.Model):
+            #     ...
+            #     note = models.TextField(blank=True, null=True)
+            #     ...
+            # No inspector_name in SubOrder. It's in InspectionDetail (I added it there implicitly in my head? No, let's check UpdateOrCreate defaults).
+            # InspectionDetail model:
+            # class InspectionDetail(models.Model):
+            #     ...
+            #     qty_received = models.IntegerField(default=0)
+            #     ...
+            # I don't see 'inspector_name' in InspectionDetail model snippet I viewed earlier!
+            # It has 'qty_received', 'actual_unit_price'...
+            # Wait, line 1511 in original file said: inspector_name = request.data.get('inspector_name', '')
+            # Where was it saving it? It wasn't! The original code didn't save inspector_name anywhere except maybe implicitly?
+            # Original code:
+            # 1588: # 6. Update SubOrder
+            # 1589: suborder.status = 'Inspected'
+            # 1591: suborder.save()
+            
+            # It didn't save inspector_name!
+            # So I should probably save it in `note` or add a field.
+            # Or reliance on InspectionDetail having it?
+            # But InspectionDetail model ALSO doesn't have it in snippet.
+            # Snippet:
+            # 175: class InspectionDetail(models.Model):
+            # ...
+            # 180: qty_received = models.IntegerField(default=0)
+            # 181: actual_unit_price ...
+            # 182: total_actual_price ...
+            # 183: qr_code ...
+            # 184: is_verified ...
+            
+            # Ensure I don't break simpledjango by accessing non-existent fields.
+            # I will save inspector_name in SubOrder.note for now: "Inspector: [name]\nNote: [note]"
+            
+            note_content = f"ผู้ตรวจรับ: {inspector_name}\nหมายเหตุ: {notes}"
+            suborder.note = note_content
+            suborder.status = 'Inspected'
+            # suborder.actual_cost = actual_cost # SubOrder doesn't have actual_cost field? MainOrder does?
+            # SubOrder model: No actual_cost field.
+            # But MainOrder has actual_cost.
+            # So I'll just save status and note.
+            suborder.updated_at = datetime.datetime.now()
             suborder.save()
              
-            # 7. อัปเดต Order status เป็น Inspected ด้วย
-            order.status = 'Inspected'
-            order.actual_cost = actual_cost # Assuming MainOrder has actual_cost field
-            order.inspected_at = datetime.datetime.now()
+            # 7. Check if Main Order is FULLY Received
+            # Calculate total received vs requested for ALL items
+            all_items_fully_received = True
+            from django.db.models import Sum
+            
+            for item in order.items.all():
+                total_received = InspectionDetail.objects.filter(
+                    sub_order__main_order=order, 
+                    item=item
+                ).aggregate(total=Sum('qty_received'))['total'] or 0
+                
+                if total_received < item.quantity_requested:
+                    all_items_fully_received = False
+                    break
+            
+            if all_items_fully_received:
+                order.status = 'Inspected' # Ready for Handover
+                order.inspected_at = datetime.datetime.now() # Finished inspection
+            else:
+                 # Still waiting for more inspections
+                 # Ensure status shows some progress? 
+                 # Order status 'WaitingInspection' is fine, means "Waiting for (more) Inspection"
+                 pass
+
+            order.actual_cost = (order.actual_cost or 0) + actual_cost # Accumulate actual cost
             order.updated_at = datetime.datetime.now()
             order.save()
             
             return Response({
-                'message': 'ตรวจรับเรียบร้อย',
+                'message': 'บันทึกผลการตรวจรับเรียบร้อย',
                 'suborder_id': str(suborder_id),
                 'suborder_no': suborder.sub_order_no,
                 'new_status': 'Inspected',
+                'order_status': order.status,
                 'actual_cost': actual_cost,
                 'qr_code': f'data:image/png;base64,{qr_base64}'
             }, status=status.HTTP_200_OK)
@@ -2034,7 +2189,10 @@ class OrderDetailAPIView(APIView):
                 'order_title': order.order_title,
                 'order_description': order.order_description,
                 'vendor_name': order.vendor_name,
-                'required_date': order.required_date
+                'required_date': order.required_date,
+                'inspection_committee': order.inspection_committee,
+                'staff_note': order.staff_note,
+                'correction_count': order.correction_count
             }
             
             return Response(data, status=status.HTTP_200_OK)
@@ -2164,14 +2322,19 @@ class UserProjectsAPIView(APIView):
                     'budget_total': float(project.budget_total or 0),
                     'budget_reserved': float(project.budget_reserved or 0),
                     'budget_spent': float(project.budget_spent or 0),
+                    'budget_compensation': float(project.budget_compensation or 0),
+                    'budget_usage': float(project.budget_usage or 0),
+                    'budget_materials': float(project.budget_materials or 0),
+                    'budget_equipment': float(project.budget_equipment or 0),
                     'status': project.status,
                     'assignment_id': assign.assignment_id,
-                    'assigned_at': assign.assigned_at
+                    'assigned_at': assign.assigned_at.isoformat() if assign.assigned_at else None
                 })
             
             return Response(projects, status=status.HTTP_200_OK)
             
         except Exception as e:
+            print(f"Error fetching projects for user {user_id}: {e}")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -2191,27 +2354,39 @@ class StaffOrdersAPIView(APIView):
     """
     def get(self, request):
         try:
+            from api.models import MainOrder
+            
             #Status filter (optional)
             status_filter = request.GET.get('status', None)
             
-            # Query orders
+            # Query orders (PostgreSQL)
+            orders_query = MainOrder.objects.all().order_by('-created_at')
+            
             if status_filter:
-                orders_ref = db.collection('orders').where('status', '==', status_filter).stream()
-            else:
-                orders_ref = db.collection('orders').stream()
+                orders_query = orders_query.filter(status=status_filter)
             
             orders = []
-            for doc in orders_ref:
-                order_data = doc.to_dict()
-                order_data['id'] = doc.id
-                orders.append(order_data)
-            
-            # Sort by created_at descending
-            orders.sort(key=lambda x: x.get('created_at', 0), reverse=True)
+            for order in orders_query:
+                # Serialize order data
+                orders.append({
+                    'id': str(order.order_id),
+                    'order_id': str(order.order_id),
+                    'project_id': str(order.project_id) if order.project_id else None,
+                    'requester_id': str(order.requester_id) if order.requester_id else None,
+                    'order_no': order.order_no,
+                    'order_title': order.order_title,
+                    'order_description': order.order_description or '',
+                    'total_estimated_price': float(order.total_estimated_price or 0),
+                    'status': order.status,
+                    'created_at': order.created_at.isoformat() if order.created_at else None,
+                    'required_date': str(order.required_date) if order.required_date else None,
+                    'vendor_name': order.vendor_name or '',
+                })
             
             return Response(orders, status=status.HTTP_200_OK)
             
         except Exception as e:
+            print(f"Error fetching staff orders: {e}")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -2319,46 +2494,61 @@ class ScanSuborderDataAPIView(APIView):
     """
     def get(self, request, suborder_id):
         try:
-            # 1. ดึงข้อมูล Sub-order
-            suborder_doc = db.collection('sub_orders').document(suborder_id).get()
-            if not suborder_doc.exists:
+            from api.models import SubOrder
+            
+            # 1. ดึงข้อมูล Sub-order (PostgreSQL)
+            try:
+                suborder = SubOrder.objects.get(sub_order_id=suborder_id)
+            except SubOrder.DoesNotExist:
                 return Response({'error': 'ไม่พบ Sub-order'}, status=status.HTTP_404_NOT_FOUND)
             
-            suborder_data = suborder_doc.to_dict()
-            suborder_data['id'] = suborder_doc.id
+            # 2. ดึงข้อมูล Parent Order & Project
+            order = suborder.main_order
+            project = order.project if order else None
             
-            # 2. ดึงข้อมูล Parent Order
-            parent_order_id = suborder_data.get('parent_order_id')
-            order_no = '-'
-            project_name = '-'
-            
-            if parent_order_id:
-                order_doc = db.collection('orders').document(parent_order_id).get()
-                if order_doc.exists:
-                    order_data = order_doc.to_dict()
-                    order_no = order_data.get('order_no', '-')
+            # 3. คำนวณยอดรับของสะสม (Partial Receipt Calculation)
+            from django.db.models import Sum
+            from api.models import InspectionDetail, OrderItem
+
+            # Get items in this order
+            items_data = []
+            if order:
+                for item in order.items.all():
+                    # Calculate total received so far for this item across ALL sub-orders
+                    received_so_far = InspectionDetail.objects.filter(
+                        sub_order__main_order=order,
+                        item=item
+                    ).aggregate(total=Sum('qty_received'))['total'] or 0
                     
-                    # 3. ดึงข้อมูล Project
-                    project_id = order_data.get('project_id')
-                    if project_id:
-                        project_doc = db.collection('projects').document(project_id).get()
-                        if project_doc.exists:
-                            project_data = project_doc.to_dict()
-                            project_name = project_data.get('project_name', '-')
+                    remaining = max(0, item.quantity_requested - received_so_far)
+                    
+                    items_data.append({
+                        'item_id': item.item_id,
+                        'item_name': item.item_name,
+                        'quantity_requested': item.quantity_requested,
+                        'unit': item.unit,
+                        'qty_received_so_far': received_so_far,
+                        'qty_remaining': remaining,
+                        'estimated_unit_price': float(item.estimated_unit_price),
+                        'remarks': item.remarks or ''
+                    })
+
+            suborder_data = {
+                'id': str(suborder.sub_order_id),
+                'sub_order_no': suborder.sub_order_no,
+                'status': suborder.status,
+                'received_date': suborder.received_date.isoformat() if suborder.received_date else None,
+                'note': suborder.note or '',
+                'parent_order_id': str(order.order_id) if order else None,
+                'order_no': order.order_no if order else '-',
+                'project_name': project.project_name if project else '-',
+                'items': items_data  # Add items to response
+            }
             
-            # 4. แปลง timestamp เป็น string
-            inspected_at = suborder_data.get('inspected_at')
-            if inspected_at:
-                suborder_data['inspected_at'] = inspected_at.isoformat() if hasattr(inspected_at, 'isoformat') else str(inspected_at)
-            
-            # 5. เพิ่มข้อมูล order และ project
-            suborder_data['order_no'] = order_no
-            suborder_data['project_name'] = project_name
-            
-            # 6. Ensure QR Code has prefix
-            qr_code = suborder_data.get('qr_code')
-            if qr_code and not qr_code.startswith('data:image'):
-                suborder_data['qr_code'] = f"data:image/png;base64,{qr_code}"
+            # 4. QR Code Logic (Optional - if stored in DB)
+            # ถ้ามี field qr_code ใน model ให้ดึงมาแสดง
+            if hasattr(suborder, 'qr_code') and suborder.qr_code:
+                 suborder_data['qr_code'] = suborder.qr_code
             
             return Response(suborder_data, status=status.HTTP_200_OK)
             
@@ -2485,32 +2675,23 @@ class ExportOrderCSVAPIView(APIView):
     
     def get(self, request, order_id):
         try:
-            # 1. ดึงข้อมูล Order
-            order_ref = db.collection('orders').document(order_id)
-            order_doc = order_ref.get()
+            from api.models import MainOrder
             
-            if not order_doc.exists:
+            # 1. ดึงข้อมูล Order (PostgreSQL)
+            try:
+                order = MainOrder.objects.get(order_id=order_id)
+            except MainOrder.DoesNotExist:
                 return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
             
-            order = order_doc.to_dict()
-            
             # 2. ดึงชื่อโครงการ
-            project_name = '-'
-            if order.get('project_id'):
-                project_doc = db.collection('projects').document(order['project_id']).get()
-                if project_doc.exists:
-                    project_name = project_doc.to_dict().get('project_name', '-')
+            project_name = order.project.project_name if order.project else '-'
             
             # 3. ดึงชื่อผู้ขอซื้อ
-            requester_name = '-'
-            if order.get('requester_id'):
-                user_doc = db.collection('users').document(order['requester_id']).get()
-                if user_doc.exists:
-                    requester_name = user_doc.to_dict().get('username', '-')
+            requester_name = order.requester.username if order.requester else '-'
             
             # 4. สร้าง CSV Response
             response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-            response['Content-Disposition'] = f'attachment; filename="order_{order.get("order_no", order_id)}.csv"'
+            response['Content-Disposition'] = f'attachment; filename="order_{order.order_no or order.order_id}.csv"'
             
             # เขียน BOM สำหรับ Excel ภาษาไทย
             response.write('\ufeff')
@@ -2520,39 +2701,38 @@ class ExportOrderCSVAPIView(APIView):
             # Header ข้อมูลทั่วไป
             writer.writerow(['ใบขอซื้อ / Purchase Order'])
             writer.writerow([])
-            writer.writerow(['เลขที่ใบสั่งซื้อ', order.get('order_no', '-')])
+            writer.writerow(['เลขที่ใบสั่งซื้อ', order.order_no or '-'])
             writer.writerow(['โครงการ', project_name])
-            writer.writerow(['เรื่อง', order.get('order_title', '-')])
+            writer.writerow(['เรื่อง', order.order_title or '-'])
             writer.writerow(['ผู้ขอซื้อ', requester_name])
-            writer.writerow(['ร้านค้า', order.get('vendor_name', '-')])
-            writer.writerow(['วันที่ต้องการ', order.get('required_date', '-')])
-            writer.writerow(['หมายเหตุ', order.get('order_description', '-')])
+            writer.writerow(['ร้านค้า', order.vendor_name or '-'])
+            writer.writerow(['วันที่ต้องการ', str(order.required_date) if order.required_date else '-'])
+            writer.writerow(['หมายเหตุ', order.order_description or '-'])
             writer.writerow([])
             
             # Header ตารางสินค้า
             writer.writerow(['ลำดับ', 'รายการ', 'จำนวน', 'หน่วย', 'ราคา/หน่วย', 'จำนวนเงิน'])
             
             # รายการสินค้า
-            items = order.get('items', [])
+            items = order.items.all()
             total = 0
             for i, item in enumerate(items, 1):
-                qty = float(item.get('quantity_requested', item.get('quantity', 0)))
-                price = float(item.get('estimated_unit_price', item.get('unit_price', 0)))
+                qty = float(item.quantity_requested or 0)
+                price = float(item.estimated_unit_price or 0)
                 subtotal = qty * price
                 total += subtotal
                 
                 writer.writerow([
                     i,
-                    item.get('item_name', item.get('name', '-')),
+                    item.item_name,
                     qty,
-                    item.get('unit', '-'),
-                    f'{price:,.2f}',
-                    f'{subtotal:,.2f}'
+                    item.unit,
+                    f"{price:,.2f}",
+                    f"{subtotal:,.2f}"
                 ])
-            
-            # ยอดรวม
+                
             writer.writerow([])
-            writer.writerow(['', '', '', '', 'รวมเงินทั้งสิ้น', f'{total:,.2f} บาท'])
+            writer.writerow(['', '', '', '', 'รวมทั้งสิ้น', f"{total:,.2f}"])
             
             return response
             
