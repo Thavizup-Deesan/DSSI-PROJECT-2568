@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}ปิดโครงการ{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">สรุปและปิดโครงการ</h1>
+        <p class="text-sm text-base-content/50">UC-10: สรุปโครงการและปิดโครงการ</p>
+    </div>
+</div>
+
+<div class="card bg-base-200 border border-base-content/5 mb-6">
+    <div class="card-body">
+        <h2 class="card-title text-lg mb-3">เลือกโครงการ Active</h2>
+        <select class="select select-bordered w-full max-w-md" id="projectSelect" onchange="loadProjectSummary()">
+            <option value="">เลือกโครงการ...</option>
+        </select>
+    </div>
+</div>
+
+<div id="summarySection" class="hidden">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="summaryGrid"></div>
+    <div class="text-center">
+        <button class="btn btn-error btn-lg gap-2" onclick="closeProject()">
+            <span class="material-icons-outlined">lock</span> ปิดโครงการ
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadProjects() {
+        const projects = await apiFetch('/api/projects/');
+        const select = document.getElementById('projectSelect');
+        projects.filter(p => p.status === 'Active').forEach(p => {
+            select.innerHTML += `<option value="${p.project_id}">${p.project_name}</option>`;
+        });
+    }
+
+    async function loadProjectSummary() {
+        const id = document.getElementById('projectSelect').value;
+        if (!id) { document.getElementById('summarySection').classList.add('hidden'); return; }
+        const p = await apiFetch(`/api/projects/${id}/`);
+        document.getElementById('summarySection').classList.remove('hidden');
+        document.getElementById('summaryGrid').innerHTML = `
+            <div class="stat bg-base-200 rounded-xl border border-base-content/5">
+                <div class="stat-figure text-primary"><span class="material-icons-outlined text-3xl">payments</span></div>
+                <div class="stat-title">งบประมาณทั้งหมด</div>
+                <div class="stat-value text-primary text-xl">฿${parseFloat(p.total_budget).toLocaleString()}</div>
+            </div>
+            <div class="stat bg-base-200 rounded-xl border border-base-content/5">
+                <div class="stat-figure text-warning"><span class="material-icons-outlined text-3xl">savings</span></div>
+                <div class="stat-title">กันวงเงินแล้ว</div>
+                <div class="stat-value text-warning text-xl">฿${parseFloat(p.reserved_budget).toLocaleString()}</div>
+            </div>
+            <div class="stat bg-base-200 rounded-xl border border-base-content/5">
+                <div class="stat-figure text-success"><span class="material-icons-outlined text-3xl">account_balance</span></div>
+                <div class="stat-title">คงเหลือ</div>
+                <div class="stat-value text-success text-xl">฿${parseFloat(p.remaining_budget).toLocaleString()}</div>
+            </div>
+            <div class="stat bg-base-200 rounded-xl border border-base-content/5">
+                <div class="stat-figure text-secondary"><span class="material-icons-outlined text-3xl">group</span></div>
+                <div class="stat-title">ผู้เข้าร่วม</div>
+                <div class="stat-value text-secondary text-xl">${p.participants ? p.participants.length : 0}</div>
+            </div>
+        `;
+    }
+
+    async function closeProject() {
+        const id = document.getElementById('projectSelect').value;
+        if (!confirm('ยืนยันปิดโครงการ? (ไม่สามารถย้อนกลับได้)')) return;
+        const res = await apiFetch(`/api/projects/${id}/close/`, { method: 'POST' });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message);
+        setTimeout(() => window.location.href = '/projects/', 1500);
+    }
+
+    loadProjects();
+</script>
+{% endblock %}

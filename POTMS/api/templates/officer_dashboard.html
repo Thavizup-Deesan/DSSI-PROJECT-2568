@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Officer Dashboard{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">Dashboard</h1>
+        <p class="text-sm text-base-content/50">ภาพรวมระบบจัดซื้อ — เจ้าหน้าที่พัสดุ</p>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="statsGrid">
+    <div class="stat bg-base-200 rounded-xl border border-base-content/5">
+        <div class="stat-figure text-primary"><span class="material-icons-outlined text-3xl">folder</span></div>
+        <div class="stat-title">โครงการ Active</div>
+        <div class="stat-value text-primary" id="activeProjects">—</div>
+    </div>
+    <div class="stat bg-base-200 rounded-xl border border-base-content/5">
+        <div class="stat-figure text-info"><span class="material-icons-outlined text-3xl">receipt_long</span></div>
+        <div class="stat-title">ใบสั่งซื้อทั้งหมด</div>
+        <div class="stat-value text-info" id="totalOrders">—</div>
+    </div>
+    <div class="stat bg-base-200 rounded-xl border border-base-content/5">
+        <div class="stat-figure text-warning"><span class="material-icons-outlined text-3xl">pending_actions</span></div>
+        <div class="stat-title">รออนุมัติ</div>
+        <div class="stat-value text-warning" id="pendingOrders">—</div>
+    </div>
+    <div class="stat bg-base-200 rounded-xl border border-base-content/5">
+        <div class="stat-figure text-success"><span class="material-icons-outlined text-3xl">payments</span></div>
+        <div class="stat-title">เบิกจ่ายแล้ว</div>
+        <div class="stat-value text-success" id="totalPayments">—</div>
+    </div>
+</div>
+
+<!-- Recent Orders -->
+<div class="card bg-base-200 border border-base-content/5">
+    <div class="card-body">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="card-title text-lg">ใบสั่งซื้อล่าสุด</h2>
+            <a href="/officer/orders/" class="btn btn-ghost btn-sm">ดูทั้งหมด →</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead><tr><th>เลขที่</th><th>โครงการ</th><th>ผู้ขอ</th><th>จำนวน</th><th>สถานะ</th><th>วันที่</th></tr></thead>
+                <tbody id="ordersTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadDashboard() {
+        const stats = await apiFetch('/api/stats/');
+        document.getElementById('activeProjects').textContent = stats.active_projects || 0;
+        document.getElementById('totalOrders').textContent = stats.total_orders || 0;
+        document.getElementById('pendingOrders').textContent = stats.pending_approval || 0;
+        document.getElementById('totalPayments').textContent = stats.total_payments || 0;
+
+        const orders = await apiFetch('/api/orders/');
+        const tbody = document.getElementById('ordersTable');
+        if (orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-base-content/40">ยังไม่มีใบสั่งซื้อ</td></tr>';
+            return;
+        }
+        tbody.innerHTML = orders.slice(0, 10).map(o => `
+            <tr class="hover">
+                <td><a href="/orders/detail/?id=${o.order_id}" class="link link-primary font-medium">${o.order_no}</a></td>
+                <td>${o.project_name}</td>
+                <td>${o.requester_name}</td>
+                <td>฿${parseFloat(o.total_amount).toLocaleString()}</td>
+                <td>${getStatusBadge(o.status)}</td>
+                <td class="text-sm opacity-60">${new Date(o.created_at).toLocaleDateString('th-TH')}</td>
+            </tr>
+        `).join('');
+    }
+    loadDashboard();
+</script>
+{% endblock %}

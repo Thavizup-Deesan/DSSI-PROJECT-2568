@@ -1,462 +1,53 @@
-<!DOCTYPE html>
-<html lang="th">
+{% extends "base.html" %}
+{% block title %}ใบสั่งซื้อของฉัน{% endblock %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>รายการใบขอซื้อทั้งหมด - POTMS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Prompt', sans-serif; }
-    </style>
-</head>
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">ใบสั่งซื้อของฉัน</h1>
+        <p class="text-sm text-base-content/50">รายการใบสั่งซื้อที่สร้างโดยคุณ</p>
+    </div>
+    <a href="/orders/create/" class="btn btn-primary btn-sm gap-2">
+        <span class="material-icons-outlined text-base">add</span> สร้างใบสั่งซื้อ
+    </a>
+</div>
 
-<body class="bg-gray-100 min-h-screen">
-
-    <!-- Header -->
-    <header class="bg-gradient-to-r from-gray-800 to-gray-900 text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-blue-500 p-2 rounded-lg">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold">ระบบจัดการติดตามการสั่งซื้อ</h1>
-                    <p class="text-xs text-gray-400">Purchase Management System</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-4">
-                <a href="/api/user-dashboard/" class="flex items-center gap-1 text-sm hover:text-blue-300 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                    กลับหน้าหลัก
-                </a>
-                <div class="flex items-center gap-2">
-                    <img id="userAvatar" src="" alt="User" class="h-8 w-8 rounded-full bg-amber-400 object-cover">
-                    <span id="userName" class="text-sm">Loading...</span>
-                </div>
-                <button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm flex items-center gap-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    ออกจากระบบ
-                </button>
-            </div>
+<div class="card bg-base-200 border border-base-content/5">
+    <div class="card-body">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead><tr><th>เลขที่</th><th>โครงการ</th><th>จำนวนเงิน</th><th>รายการ</th><th>สถานะ</th><th>วันที่สร้าง</th><th>การดำเนินการ</th></tr></thead>
+                <tbody id="ordersTable"></tbody>
+            </table>
         </div>
-    </header>
+    </div>
+</div>
+{% endblock %}
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 py-6">
-
-        <!-- Section 1: Project List (แสดงโครงการที่รับผิดชอบ) -->
-        <div id="projectListSection">
-            <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-800">โครงการของฉัน</h2>
-                    <p class="text-gray-500 text-sm mt-1">เลือกโครงการเพื่อดูรายการใบขอซื้อ</p>
-                </div>
-                <a href="/api/select_project/" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 text-sm font-medium shadow-sm">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    สร้างใบขอซื้อใหม่
-                </a>
-            </div>
-
-            <div id="loadingProjects" class="text-center py-12">
-                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-                <p class="mt-3 text-gray-500">กำลังโหลดโครงการ...</p>
-            </div>
-
-            <div id="projectGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
-                <!-- Project Cards will be injected here -->
-            </div>
-            
-            <div id="noProjects" class="hidden text-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
-                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                <h3 class="text-lg font-medium text-gray-900">ไม่พบโครงการที่รับผิดชอบ</h3>
-                <p class="text-gray-500 mt-1">คุณยังไม่มีโครงการที่ได้รับมอบหมาย</p>
-            </div>
-        </div>
-
-        <!-- Section 2: Order List (แสดงใบสั่งซื้อในโครงการ) -->
-        <div id="orderListSection" class="hidden">
-            <button onclick="backToProjects()" class="mb-4 text-gray-500 hover:text-blue-600 flex items-center gap-2 transition text-sm font-medium">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                กลับไปหน้ารวมโครงการ
-            </button>
-
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold text-blue-600" id="selectedProjectName">ชื่อโครงการ...</h2>
-                    <p class="text-gray-500 text-sm mt-1" id="selectedProjectCode">รหัสโครงการ: ...</p>
-                </div>
-                <div class="flex gap-2">
-                    <select id="statusFilter" onchange="filterOrders()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">ทุกสถานะ</option>
-                        <option value="Draft">ร่าง</option>
-                        <option value="Pending">รออนุมัติ</option>
-                        <option value="Approved">อนุมัติแล้ว</option>
-                        <option value="CorrectionNeeded">ต้องแก้ไข</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">เลขที่ใบขอซื้อ</th>
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">วันที่และเวลาที่สร้าง</th>
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">เรื่อง</th>
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">สถานะ</th>
-                                <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">การจัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ordersTableBody" class="bg-white divide-y divide-gray-100">
-                            <!-- Orders Recrods -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="noOrders" class="hidden text-center py-10 text-gray-500">
-                    <p>ยังไม่มีรายการใบขอซื้อในโครงการนี้</p>
-                    <a href="/api/select_project/" class="text-blue-500 hover:underline text-sm mt-2 inline-block">สร้างใบขอซื้อใหม่</a>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <script>
-        // Global variables
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        let currentOrders = [];
-        let userProjects = []; // Store projects globally for lookup
-
-        // Check Login
-        if (!user.id) window.location.href = '/api/login-page/';
-        
-        // Setup User Info
-        document.getElementById('userName').textContent = user.name || user.username || 'User';
-        document.getElementById('userAvatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`;
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadUserProjects();
-            
-            // Handle Deep Linking / Back Button Navigation
-            const urlParams = new URLSearchParams(window.location.search);
-            const projectId = urlParams.get('project_id');
-            
-            if (projectId) {
-                const project = userProjects.find(p => p.id === projectId || p.project_id === projectId);
-                if (project) {
-                    selectProject(project, false); // Don't push state on initial load
-                }
-            }
-        });
-
-        // Handle Browser Back/Forward
-        window.addEventListener('popstate', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const projectId = urlParams.get('project_id');
-            
-            if (projectId) {
-                const project = userProjects.find(p => p.id === projectId || p.project_id === projectId);
-                if (project) {
-                    selectProject(project, false);
-                }
-            } else {
-                backToProjects(false);
-            }
-        });
-
-        // --- 1. Load Projects ---
-        async function loadUserProjects() {
-            try {
-                const res = await fetch(`/api/users/${user.id}/projects/`);
-                userProjects = await res.json();
-                
-                const grid = document.getElementById('projectGrid');
-                const loading = document.getElementById('loadingProjects');
-                const noProjects = document.getElementById('noProjects');
-                
-                loading.classList.add('hidden');
-                
-                if (userProjects.length === 0) {
-                    noProjects.classList.remove('hidden');
-                    return;
-                }
-
-                grid.innerHTML = '';
-                userProjects.forEach(project => {
-                    // Calculate Budget
-                    const total = project.budget_total || 0;
-                    const spent = (project.budget_spent || 0) + (project.budget_reserved || 0);
-                    const percent = total > 0 ? ((spent / total) * 100).toFixed(1) : 0;
-                    const remaining = total - spent;
-
-                    const card = document.createElement('div');
-                    card.className = "bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition cursor-pointer border border-gray-100 group";
-                    card.onclick = () => selectProject(project);
-                    
-                    card.innerHTML = `
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition">
-                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                                </svg>
-                            </div>
-                            <span class="px-2 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded-full">Active</span>
-                        </div>
-                        <h3 class="font-bold text-gray-800 text-lg mb-1 group-hover:text-blue-600 transition">${project.project_name}</h3>
-                        <p class="text-sm text-gray-500 mb-4">รหัส: ${project.project_code || '-'}</p>
-                        
-                        <div class="mt-4 border-t pt-3">
-                            <div class="flex justify-between items-end mb-1">
-                                <span class="text-xs text-gray-500">การใช้นบประมาณ</span>
-                                <span class="text-xs font-bold ${percent > 90 ? 'text-red-500' : 'text-blue-600'}">${percent}%</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-1.5 mb-2 overflow-hidden">
-                                <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
-                            </div>
-                            <div class="flex justify-between text-[11px] text-gray-500">
-                                <span>ใช้ไป: ฿${spent.toLocaleString()}</span>
-                                <span class="font-medium">คงเหลือ: ฿${remaining.toLocaleString()}</span>
-                            </div>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
-                
-                grid.classList.remove('hidden');
-
-            } catch (error) {
-                console.error(error);
-                Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลโครงการได้', 'error');
-            }
+{% block extra_js %}
+<script>
+    async function loadOrders() {
+        const orders = await apiFetch('/api/orders/');
+        const tbody = document.getElementById('ordersTable');
+        if (orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-base-content/40">ยังไม่มีใบสั่งซื้อ</td></tr>';
+            return;
         }
-
-        // --- 2. Select Project & Load Orders ---
-        async function selectProject(project, pushState = true) {
-            // Update URL
-            if (pushState) {
-                const url = new URL(window.location);
-                url.searchParams.set('project_id', project.id);
-                window.history.pushState({}, '', url);
-            }
-
-            // UI Toggle
-            document.getElementById('projectListSection').classList.add('hidden');
-            document.getElementById('orderListSection').classList.remove('hidden');
-            
-            // Set Header Info
-            document.getElementById('selectedProjectName').textContent = project.project_name;
-            document.getElementById('selectedProjectCode').textContent = `รหัสโครงการ: ${project.project_code || '-'}`;
-            
-            // Load Orders
-            await loadOrders(project.id);
-        }
-
-        function backToProjects(pushState = true) {
-            // Update URL
-            if (pushState) {
-                const url = new URL(window.location);
-                url.searchParams.delete('project_id');
-                window.history.pushState({}, '', url);
-            }
-
-            document.getElementById('orderListSection').classList.add('hidden');
-            document.getElementById('projectListSection').classList.remove('hidden');
-        }
-
-        async function loadOrders(projectId) {
-            const tbody = document.getElementById('ordersTableBody');
-            const noOrders = document.getElementById('noOrders');
-            
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">กำลังโหลด...</td></tr>';
-            
-            try {
-                const res = await fetch(`/api/orders/?user_id=${user.id}&project_id=${projectId}`);
-                currentOrders = await res.json();
-                
-                filterOrders(); // Render with filter
-
-            } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>`;
-            }
-        }
-
-        function renderOrdersTable(orders) {
-            const tbody = document.getElementById('ordersTableBody');
-            const noOrders = document.getElementById('noOrders');
-            
-            tbody.innerHTML = '';
-            
-            if (orders.length === 0) {
-                noOrders.classList.remove('hidden');
-                return;
-            }
-            
-            noOrders.classList.add('hidden');
-            
-            orders.forEach(order => {
-                // Format Date & Time
-                let dateStr = '-';
-                if (order.created_at) {
-                    const date = new Date(order.created_at);
-                    dateStr = date.toLocaleDateString('th-TH', { 
-                        year: 'numeric', month: 'short', day: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
-                    });
-                }
-                
-                // Status Color
-                let statusClass = 'bg-gray-100 text-gray-600';
-                let statusText = order.status;
-                if(order.status === 'Pending') { statusClass = 'bg-yellow-100 text-yellow-700'; statusText = 'รออนุมัติ'; }
-                else if(order.status === 'Approved') { statusClass = 'bg-green-100 text-green-700'; statusText = 'อนุมัติแล้ว'; }
-                else if(order.status === 'CorrectionNeeded') { statusClass = 'bg-orange-100 text-orange-700'; statusText = 'ต้องแก้ไข'; }
-                
-                let orderStatus = order.status ? order.status.trim() : '';
-
-                // Actions
-                let actions = `
-                    <button onclick="window.location.href='/api/orders/${order.id}/detail/'" class="text-blue-600 hover:text-blue-800 text-xs font-semibold px-2">ดูรายละเอียด</button>
-                `;
-                
-                if(orderStatus === 'Draft' || orderStatus === 'CorrectionNeeded') {
-                     // Add Submit for Draft or CorrectionNeeded
-                     if(orderStatus === 'Draft' || orderStatus === 'CorrectionNeeded') {
-                        actions += `
-                        <button onclick="submitOrder('${order.id}')"
-                            class="text-purple-600 hover:text-purple-800 text-xs font-semibold px-2">
-                            ${orderStatus === 'CorrectionNeeded' ? 'ส่งแก้ไข' : 'ส่งอนุมัติ'}
-                        </button>
-                        `;
-                     }
-
-                    actions += `
-                        <button onclick="window.location.href='/api/orders/${order.id}/edit/'" class="text-orange-600 hover:text-orange-800 text-xs font-semibold px-2">แก้ไข</button>
-                    `;
-                }
-
-                if(orderStatus === 'Draft') {
-                     actions += `
-                        <button onclick="deleteOrder('${order.id}')" class="text-red-600 hover:text-red-800 text-xs font-semibold px-2">ลบ</button>
-                    `;
-                }
-
-                const row = `
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${order.order_no}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${dateStr}</td>
-                        <td class="px-6 py-4 text-sm text-gray-800 max-w-xs truncate">${order.order_title}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
-                                ${statusText}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                            ${actions}
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-        }
-
-        function filterOrders() {
-            const status = document.getElementById('statusFilter').value;
-            let filtered = currentOrders;
-            
-            if (status) {
-                filtered = currentOrders.filter(o => o.status === status);
-            }
-            
-            // Sort by Date Descending
-            filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            
-            renderOrdersTable(filtered);
-        }
-
-        async function submitOrder(orderId) {
-            try {
-                const result = await Swal.fire({
-                    title: 'ยืนยันการส่งอนุมัติ',
-                    text: "คุณต้องการส่งใบขอซื้อนี้เพื่ออนุมัติใช่หรือไม่?",
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#9333ea', // purple-600
-                    confirmButtonText: 'ยืนยัน',
-                    cancelButtonText: 'ยกเลิก'
-                });
-
-                if (result.isConfirmed) {
-                    const res = await fetch(`/api/orders/${orderId}/submit/`, { 
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': '{{ csrf_token }}', // Assuming Django template, but simpler to skip if DRF handles it via cookies or we are in SPA mode. My code lacks CSRF setup? Usually Django needs it.
-                            // But usually DRF auth header or Session is used.
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    // Note: If using SessionAuth, CSRF is needed. If using Token, it's not.
-                    // Assuming Token or Session with exempt?
-                    // Let's assume the previous code worked or we rely on backend setup. 
-                    // To be safe, adding CSRF logic if simple fetch fails is a good idea, but here we keep it simple.
-                    
-                    if(res.ok) {
-                        Swal.fire('ส่งอนุมัติเรียบร้อย', '', 'success');
-                        
-                        // Reload orders
-                        await loadOrders(new URLSearchParams(window.location.search).get('project_id'));
-                    } else {
-                         const data = await res.json();
-                         Swal.fire('เกิดข้อผิดพลาด', data.error || 'ส่งอนุมัติไม่สำเร็จ', 'error');
-                    }
-                }
-            } catch(e) { 
-                console.error(e);
-                Swal.fire('Error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
-            }
-        }
-
-        async function deleteOrder(orderId) {
-            const result = await Swal.fire({
-                title: 'ยืนยันการลบ?',
-                text: "ข้อมูลจะถูกลบถาวร",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'ลบเลย'
-            });
-
-            if (result.isConfirmed) {
-                try {
-                    const res = await fetch(`/api/orders/${orderId}/`, { method: 'DELETE' });
-                    if(res.ok) {
-                        Swal.fire('ลบสำเร็จ', '', 'success');
-                        currentOrders = currentOrders.filter(o => o.id !== orderId);
-                        filterOrders();
-                    }
-                } catch(e) { console.error(e); }
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem('user');
-            window.location.href = '/api/login-page/';
-        }
-    </script>
-</body>
-</html>
+        tbody.innerHTML = orders.map(o => `
+            <tr class="hover">
+                <td><a href="/orders/detail/?id=${o.order_id}" class="link link-primary font-medium">${o.order_no}</a></td>
+                <td>${o.project_name}</td>
+                <td>฿${parseFloat(o.total_amount).toLocaleString()}</td>
+                <td>${o.items_count} รายการ</td>
+                <td>${getStatusBadge(o.status)}</td>
+                <td class="text-sm opacity-60">${new Date(o.created_at).toLocaleDateString('th-TH')}</td>
+                <td>
+                    <a href="/orders/detail/?id=${o.order_id}" class="btn btn-ghost btn-xs">ดู</a>
+                    ${['Draft','Rejected'].includes(o.status) ? `<a href="/orders/edit/?id=${o.order_id}" class="btn btn-outline btn-xs">แก้ไข</a>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+    loadOrders();
+</script>
+{% endblock %}

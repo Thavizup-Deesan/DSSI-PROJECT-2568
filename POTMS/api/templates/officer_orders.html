@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}จัดการใบสั่งซื้อ — Officer{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">จัดการใบสั่งซื้อ</h1>
+        <p class="text-sm text-base-content/50">เจ้าหน้าที่พัสดุ — ใบสั่งซื้อทั้งหมด</p>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="card bg-base-200 border border-base-content/5 mb-4">
+    <div class="card-body py-3">
+        <div class="flex gap-3 flex-wrap items-center">
+            <select class="select select-bordered select-sm w-auto min-w-[160px]" id="filterStatus" onchange="loadOrders()">
+                <option value="">ทุกสถานะ</option>
+                <option value="Draft">Draft</option>
+                <option value="Reserved">Reserved</option>
+                <option value="Pending_Approval">Pending Approval</option>
+                <option value="Approved">Approved</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Completed">Completed</option>
+            </select>
+            <select class="select select-bordered select-sm w-auto min-w-[200px]" id="filterProject" onchange="loadOrders()">
+                <option value="">ทุกโครงการ</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="card bg-base-200 border border-base-content/5">
+    <div class="card-body">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead><tr><th>เลขที่</th><th>โครงการ</th><th>ผู้ขอซื้อ</th><th>จำนวนเงิน</th><th>รายการ</th><th>สถานะ</th><th>วันที่</th><th>การดำเนินการ</th></tr></thead>
+                <tbody id="ordersTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadProjects() {
+        const projects = await apiFetch('/api/projects/');
+        const select = document.getElementById('filterProject');
+        projects.forEach(p => { select.innerHTML += `<option value="${p.project_id}">${p.project_name}</option>`; });
+    }
+
+    async function loadOrders() {
+        let url = '/api/orders/';
+        const projectId = document.getElementById('filterProject').value;
+        if (projectId) url += `?project_id=${projectId}`;
+
+        const orders = await apiFetch(url);
+        const statusFilter = document.getElementById('filterStatus').value;
+        const filtered = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;
+
+        const tbody = document.getElementById('ordersTable');
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-base-content/40">ไม่พบใบสั่งซื้อ</td></tr>';
+            return;
+        }
+        tbody.innerHTML = filtered.map(o => `
+            <tr class="hover">
+                <td><a href="/orders/detail/?id=${o.order_id}" class="link link-primary font-medium">${o.order_no}</a></td>
+                <td>${o.project_name}</td>
+                <td>${o.requester_name}</td>
+                <td>฿${parseFloat(o.total_amount).toLocaleString()}</td>
+                <td>${o.items_count} รายการ</td>
+                <td>${getStatusBadge(o.status)}</td>
+                <td class="text-sm opacity-60">${new Date(o.created_at).toLocaleDateString('th-TH')}</td>
+                <td><a href="/orders/detail/?id=${o.order_id}" class="btn btn-ghost btn-xs">ดู</a></td>
+            </tr>
+        `).join('');
+    }
+
+    loadProjects();
+    loadOrders();
+</script>
+{% endblock %}

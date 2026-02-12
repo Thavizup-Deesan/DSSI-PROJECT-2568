@@ -1,63 +1,76 @@
 @startuml
+title UI State Diagram: POTMS System
+hide empty description
+
+' Define Styles
 skinparam state {
-  BackgroundColor<<Auth>> LightBlue
-  BackgroundColor<<Staff>> LightYellow
-  BackgroundColor<<User>> LightGreen
+  BackgroundColor White
+  BorderColor #333333
+  ArrowColor #333333
+  BackgroundColor<<Composite>> #F0F8FF
+  BorderColor<<Composite>> #4682B4
 }
 
-[*] --> LoginPage
+state "Project Initialization Phase" as Phase1 <<Composite>> {
+    state "Project Draft" as S1 : [UC-01] หน้าจอนำเข้า/แก้ไขโครงการ\nStatus: Draft
+    state "Participant Setup" as S2 : [UC-02] หน้าจอระบุผู้รับผิดชอบ\nStatus: Verifying
 
-' --- Authentication Group ---
-state "Login Page\n(UC-01)" as LoginPage <<Auth>>
-state "Register Page\n(UC-02)" as RegisterPage <<Auth>>
+    [*] --> S1
+    S1 --> S2 : Data Verified
+    S2 --> S1 : Request Edit
+    S2 --> ProjectActive : Click 'Start PRJ'
+}
 
-' --- Staff Section ---
-state "Staff Dashboard" as StaffDash <<Staff>>
-state "Project List Page\n(UC-04)" as ProjectList <<Staff>>
-state "Project Form (Create/Edit)\n(UC-04)" as ProjectForm <<Staff>>
-state "Import Data Page\n(UC-05)" as ImportPage <<Staff>>
-state "Order Approval List\n(UC-09)" as ApproveList <<Staff>>
-state "Order Review Detail\n(UC-09)" as OrderReview <<Staff>>
-state "Inspection Page\n(UC-10)" as InspectPage <<Staff>>
+state "Project Active" as ProjectActive {
+    
+    state "Order Processing Phase" as Phase2 <<Composite>> {
+        state "Order Entry" as S3 : [UC-03] หน้าจอบันทึกใบขอซื้อ\nStatus: Drafting
+        state "Budget Validation" as S4 : [UC-04] ระบบตรวจสอบวงเงิน\n(System Process)
+        state "Budget Reserved" as S5 : [UC-04] หน้าจอ Export XLSX\nและระบุกรรมการ
+        state "Approval Pending" as S6 : [UC-05] รอหัวหน้าภาคอนุมัติ\nStatus: Pending
 
-' --- User Section ---
-state "User Dashboard" as UserDash <<User>>
-state "Select Project Page\n(UC-06)" as SelectProject <<User>>
-state "Create Order Form\n(UC-07)" as CreateOrder <<User>>
-state "My Orders List\n(UC-08)" as MyOrders <<User>>
-state "Order Detail View\n(UC-08)" as OrderDetail <<User>>
+        [*] --> S3
+        S3 --> S4 : Submit Order
+        S4 --> S3 : [Error] Insufficient Budget
+        S4 --> S5 : [Success] Budget Reserved
+        S5 --> S6 : Send for Approval
+        S6 --> S3 : [Action] Request Modification
+        S6 --> Approved : [Action] Approve
+    }
 
-' === Transitions ===
+    state "Fulfillment Phase" as Phase3 <<Composite>> {
+        state "Ready to Order" as Approved : ใบสั่งซื้อได้รับการอนุมัติ\nส่งต่อเจ้าหน้าที่พัสดุ
+        state "Partial Receive Entry" as S7 : [UC-06] หน้าจอบันทึกใบเสร็จ\nStatus: Partial/Pending
+        
+        state "Inspection Process" as S8 {
+            state "Waiting Inspection" as S8_1 : [UC-07] รอตรวจรับ
+            state "Inspection Result" as S8_Choice <<Choice>>
+            
+            S8_1 --> S8_Choice : Committee Action
+        }
 
-' Auth Flow
-LoginPage --> RegisterPage : Click 'Register'
-RegisterPage --> LoginPage : Registration Success
-LoginPage --> StaffDash : Login Success (Role: Staff)
-LoginPage --> UserDash : Login Success (Role: User)
+        Approved --> S7
+        S7 --> S8_1 : Save & Send to Committee
+        
+        S8_Choice --> S7 : [Reject] Goods Invalid\n(Return to Seller/Edit)
+        S8_Choice --> CheckComplete : [Confirm] Goods Valid
+    }
 
-' Logout (UC-03)
-StaffDash --> LoginPage : Logout (UC-03)
-UserDash --> LoginPage : Logout (UC-03)
+    state "Completion Check" as CheckComplete <<Choice>>
+    
+    state "Payment Phase" as Phase4 <<Composite>> {
+        state "Payment Processing" as S9 : [UC-08] หน้าจอตั้งเบิกจ่าย\nStatus: Ready for Payment
+    }
 
-' Staff Flow
-StaffDash --> ProjectList : Menu 'Manage Projects'
-ProjectList --> ProjectForm : Click 'Add/Edit'
-ProjectForm --> ProjectList : Save Success
-StaffDash --> ImportPage : Menu 'Import Data'
-ImportPage --> StaffDash : Import Success
+    CheckComplete --> S7 : Items Not Complete\n(Create Next Sub-Order)
+    CheckComplete --> S9 : All Items Received
+    
+    S9 --> S3 : Project Not Closed\n(New Order Cycle)
+}
 
-StaffDash --> ApproveList : Menu 'Approve Orders'
-ApproveList --> OrderReview : Select Order
-OrderReview --> ApproveList : Approve/Reject Action
-OrderReview --> InspectPage : Click 'Inspect Items' (If Approved)
-InspectPage --> ApproveList : Confirm Receive
+state "Project Closure" as S10 : [UC-09] หน้าจรสรุปและปิดโครงการ\nStatus: Closed
 
-' User Flow
-UserDash --> SelectProject : Menu 'New Order'
-SelectProject --> CreateOrder : Select Project
-CreateOrder --> MyOrders : Submit Order
-UserDash --> MyOrders : Menu 'History'
-MyOrders --> OrderDetail : View Detail
-OrderDetail --> MyOrders : Back
+ProjectActive --> S10 : Click 'Close Project'
+S10 --> [*]
 
 @enduml

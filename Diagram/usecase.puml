@@ -1,66 +1,83 @@
 @startuml
+title Use Case Diagram: ระบบจัดซื้อวัสดุภาครัฐ (Offline Approval Flow)
 left to right direction
 skinparam packageStyle rectangle
 
-actor "User (ผู้ขอซื้อ)" as User
-actor "Staff (เจ้าหน้าที่)" as Staff
+' --- Actors ---
+actor "เจ้าหน้าที่พัสดุ\n(Officer)" as Officer
+actor "ผู้เข้าร่วมโครงการ\n(User)" as User
+actor "กรรมการตรวจรับ\n(Inspection Committee)" as Committee
+actor "ระบบอัตโนมัติ\n(System)" as System <<Secondary>>
 
-package "POTMS System" {
-    ' --- Authentication ---
-    usecase "UC-01 เข้าสู่ระบบ (Login)" as UC01
+rectangle "ระบบจัดซื้อวัสดุภาครัฐ (System Boundary)" {
+
+    ' --- Group 1: Project Setup ---
+    usecase "UC-01: นำเข้าและตั้งค่าโครงการ\n(Import & Setup Project)" as UC01
+    usecase "UC-02: ระบุผู้รับผิดชอบโครงการ\n(Assign Participants)" as UC02
+    usecase "UC-03: เริ่มโครงการ\n(Start Project)" as UC03
+
+    ' --- Group 2: Ordering ---
+    usecase "UC-04: สร้างใบสั่งซื้อ\n(Create Order)" as UC04
+    usecase "UC-04a: แก้ไขใบสั่งซื้อ\n(Edit Order)" as UC05
+    usecase "UC-05: ตรวจสอบวงเงินคงเหลือ\n(Check Budget)" as UC06
     
-    ' --- User Actions ---
-    usecase "UC-02 เลือกโครงการ (Select Project)" as UC02
-    usecase "UC-03 สร้างใบขอซื้อ (Create Order)" as UC03
-    usecase "UC-04 ติดตามสถานะ/แก้ไข (Track & Edit)" as UC04
-    usecase "UC-05 สแกน QR Code (Scan QR)" as UC05
+    ' --- Group 3: Export for Offline Process ---
+    usecase "UC-06: กันวงเงินและ Export ข้อมูล\n(Reserve & Export Data)" as UC07
+    
+    note bottom of UC07
+        <b>Offline Process:</b>
+        นำเอกสารไปให้หัวหน้าภาคเซ็นอนุมัติ
+        - ถ้าอนุมัติ -> ไปขั้นตอน UC-08
+        - ถ้าแก้ไข -> แจ้ง User ทำ UC-04a
+    end note
 
-    ' --- Staff Actions ---
-    usecase "UC-06 จัดการข้อมูลโครงการ (Manage Projects)" as UC06
-    usecase "UC-07 ตรวจสอบใบขอซื้อ (Verify Order)" as UC07
-    usecase "UC-08 พิมพ์ใบสั่งซื้อ (Print Order)" as UC08
-    usecase "UC-09 บันทึกผลการอนุมัติ (Record Approval)" as UC09
-    usecase "UC-11 ดำเนินการจัดซื้อ (Send to Procurement)" as UC11
-    usecase "UC-12 ตรวจรับพัสดุ (Inspect Items)" as UC12
-    usecase "UC-13 ปิดงาน/ส่งมอบ (Handover & Close)" as UC13
-    usecase "UC-14 ออกรายงานสรุป (Generate Report)" as UC14
+    ' --- Group 4: Fulfillment ---
+    usecase "UC-08: สร้างใบสั่งซื้อย่อยและแนบใบเสร็จ\n(Create Sub-Order & Upload Receipt)" as UC09
+    usecase "UC-10: ตรวจรับพัสดุ\n(Inspect Goods)" as UC10
+    usecase "UC-10a: ยืนยัน/ปฏิเสธ การตรวจรับ\n(Confirm/Reject Inspection)" as UC11
 
-    ' --- System Internal Processes (Included/Extended) ---
-    usecase "ตรวจสอบงบประมาณ\n(Check Budget)" as UC_CheckBudget
-    usecase "สร้าง QR Code\n(Generate QR)" as UC_GenQR
-    usecase "UC-10 ส่งคืนแก้ไข\n(Request Correction)" as UC10
-    usecase "ปฏิเสธรายการ\n(Reject Order)" as UC_Reject
+    ' --- Group 5: Closing ---
+    usecase "UC-11: คำนวณยอดและตั้งเบิกจ่าย\n(Process Payment)" as UC12
+    usecase "UC-12: สรุปและปิดโครงการ\n(Close Project)" as UC13
+
+    ' --- Relationships ---
+
+    ' Officer Actions
+    Officer -- UC01
+    Officer -- UC02
+    Officer -- UC03
+    Officer -- UC07
+    Officer -- UC09
+    Officer -- UC12
+    Officer -- UC13
+
+    ' User Actions
+    User -- UC04
+    User -- UC05
+
+    ' Committee Actions
+    Committee -- UC10
+
+    ' System Actions
+    UC06 -- System : Auto Check
+    UC12 -- System : Auto Calculate
+
+    ' --- Logic & Dependencies ---
+    
+    ' Ordering Logic
+    UC04 ..> UC06 : <<include>>
+    UC05 .> UC04 : <<extend>> 
+    note on link
+        กรณีงบไม่พอ หรือ
+        หัวหน้าแจ้งแก้ไข (Offline)
+    end note
+
+    ' Inspection Logic
+    UC09 ..> UC10 : prerequisite
+    UC11 .> UC10 : <<extend>>
+    
+    ' Payment Logic
+    UC12 .> UC11 : <<include>>
 }
-
-' --- Relationships ---
-
-' Auth
-User -- UC01
-Staff -- UC01
-
-' User Flow
-User -- UC02
-User -- UC03
-User -- UC04
-User -- UC05
-
-' ** Include Relationships **
-UC03 ..> UC_CheckBudget : <<include>> \n(เช็คยอดเงินเสมอ)
-UC12 ..> UC_GenQR : <<include>> \n(สร้าง QR อัตโนมัติ)
-
-' Staff Flow
-Staff -- UC05
-Staff -- UC06
-Staff -- UC07 : (ตรวจสอบ)
-Staff -- UC08
-Staff -- UC09 : (ตัดงบจริง)
-Staff -- UC11
-Staff -- UC12
-Staff -- UC13
-Staff -- UC14
-
-' ** Extend Relationships **
-UC10 .> UC07 : <<extend>> \n(ถ้าข้อมูลผิด)
-UC_Reject .> UC09 : <<extend>> \n(ถ้าหัวหน้าไม่อนุมัติ)
 
 @enduml

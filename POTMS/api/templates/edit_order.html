@@ -1,455 +1,113 @@
-<!DOCTYPE html>
-<html lang="th">
+{% extends "base.html" %}
+{% block title %}แก้ไขใบสั่งซื้อ{% endblock %}
 
-<head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>แก้ไขใบขอซื้อ - POTMS</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap"
-                rel="stylesheet">
-        <style>
-                body {
-                        font-family: 'Prompt', sans-serif;
-                }
-        </style>
-</head>
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">แก้ไขใบสั่งซื้อ</h1>
+        <p class="text-sm text-base-content/50">แก้ไขรายการ — Draft/Rejected เท่านั้น</p>
+    </div>
+    <span class="badge badge-lg badge-ghost" id="orderNo">—</span>
+</div>
 
-<body class="bg-gray-50 min-h-screen">
+<div class="card bg-base-200 border border-base-content/5 mb-6">
+    <div class="card-body">
+        <div class="form-control">
+            <label class="label"><span class="label-text">เหตุผลในการจัดซื้อ</span></label>
+            <textarea class="textarea textarea-bordered" id="reason" rows="3"></textarea>
+        </div>
+    </div>
+</div>
 
-        <!-- Header -->
-        <header class="bg-white border-b border-gray-200">
-                <div class="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
-                        <div class="flex items-center gap-2 sm:gap-3">
-                                <a href="/api/my-orders/" class="text-gray-600 hover:text-blue-600">
-                                        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                        </svg>
-                                </a>
-                                <h1 id="pageTitle" class="text-base sm:text-xl font-bold text-gray-800">แก้ไขใบขอซื้อ
-                                </h1>
-                        </div>
-                        <button onclick="saveDraft()"
-                                class="px-4 sm:px-6 py-1.5 sm:py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium text-sm">
-                                <span class="hidden sm:inline">บันทึกร่าง</span>
-                                <span class="sm:hidden">บันทึก</span>
-                        </button>
-                </div>
-        </header>
+<div class="card bg-base-200 border border-base-content/5 mb-6">
+    <div class="card-body">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="card-title text-lg">รายการวัสดุ</h2>
+            <button class="btn btn-outline btn-sm gap-1" onclick="addItemRow()">
+                <span class="material-icons-outlined text-base">add</span> เพิ่มรายการ
+            </button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="table">
+                <thead><tr><th>ชื่อวัสดุ</th><th class="w-24">จำนวน</th><th class="w-24">หน่วย</th><th class="w-32">ราคาต่อหน่วย</th><th class="w-28">รวม</th><th class="w-16"></th></tr></thead>
+                <tbody id="itemsTable"></tbody>
+            </table>
+        </div>
+        <div class="text-right mt-4 text-lg font-bold">
+            รวมทั้งหมด: <span class="text-primary">฿<span id="grandTotal">0</span></span>
+        </div>
+    </div>
+</div>
 
-        <!-- Main Content -->
-        <main class="max-w-6xl mx-auto px-4 py-4 sm:py-6">
+<div class="flex gap-3 justify-end">
+    <button class="btn btn-ghost" onclick="window.history.back()">ยกเลิก</button>
+    <button class="btn btn-primary gap-2" onclick="saveOrder()">
+        <span class="material-icons-outlined text-base">save</span> บันทึก
+    </button>
+</div>
+{% endblock %}
 
-                <!-- Loading -->
-                <div id="loading" class="text-center py-10">
-                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-                        <p class="mt-2 text-gray-500">กำลังโหลดข้อมูล...</p>
-                </div>
+{% block extra_js %}
+<script>
+    const orderId = new URLSearchParams(window.location.search).get('id');
+    let rowCount = 0;
 
-                <!-- Content -->
-                <div id="content" class="hidden space-y-4 sm:space-y-6">
+    async function loadOrder() {
+        const data = await apiFetch(`/api/orders/${orderId}/`);
+        if (data.error) { showToast(data.error, 'error'); return; }
+        document.getElementById('orderNo').textContent = data.order_no;
+        document.getElementById('reason').value = data.reason || '';
+        data.items.forEach(item => addItemRow(item));
+        calcTotal();
+    }
 
-                        <!-- Section 1: ข้อมูลโครงการ -->
-                        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
-                                <h2 class="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">ข้อมูลโครงการ</h2>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                        <div>
-                                                <label class="block text-sm text-gray-600 mb-1">หมายเลขโครงการ *</label>
-                                                <select id="project_id"
-                                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                                        <option value="">เลือกโครงการ...</option>
-                                                </select>
-                                        </div>
-                                        <div>
-                                                <label class="block text-sm text-gray-600 mb-1">วันที่สร้าง</label>
-                                                <input type="text" id="created_date" readonly
-                                                        class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600">
-                                        </div>
-                                </div>
+    function addItemRow(item = {}) {
+        rowCount++;
+        const tbody = document.getElementById('itemsTable');
+        const tr = document.createElement('tr');
+        tr.id = `itemRow${rowCount}`;
+        tr.innerHTML = `
+            <td><input type="text" class="input input-bordered input-sm w-full item-name" value="${item.material_name || ''}"></td>
+            <td><input type="number" class="input input-bordered input-sm w-full item-qty" value="${item.quantity || 1}" min="1" onchange="calcTotal()"></td>
+            <td><input type="text" class="input input-bordered input-sm w-full item-unit" value="${item.unit || 'ชิ้น'}"></td>
+            <td><input type="number" class="input input-bordered input-sm w-full item-price" value="${item.unit_price || 0}" step="0.01" onchange="calcTotal()"></td>
+            <td class="item-total font-medium">฿0</td>
+            <td><button class="btn btn-error btn-xs btn-outline" onclick="this.closest('tr').remove();calcTotal()">ลบ</button></td>
+        `;
+        tbody.appendChild(tr);
+    }
 
-                                <!-- เรื่อง -->
-                                <div class="mt-4">
-                                        <label class="block text-sm text-gray-600 mb-1">เรื่อง *</label>
-                                        <input type="text" id="order_title"
-                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                placeholder="ระบุเรื่องที่ต้องการขอซื้อ">
-                                </div>
+    function calcTotal() {
+        let grand = 0;
+        document.querySelectorAll('#itemsTable tr').forEach(row => {
+            const qty = parseInt(row.querySelector('.item-qty')?.value || 0);
+            const price = parseFloat(row.querySelector('.item-price')?.value || 0);
+            const total = qty * price;
+            row.querySelector('.item-total').textContent = `฿${total.toLocaleString()}`;
+            grand += total;
+        });
+        document.getElementById('grandTotal').textContent = grand.toLocaleString();
+    }
 
-                                <!-- รายละเอียด -->
-                                <div class="mt-4">
-                                        <label class="block text-sm text-gray-600 mb-1">รายละเอียดการขอซื้อ</label>
-                                        <textarea id="order_description" rows="3"
-                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                placeholder="ระบุรายละเอียดเพิ่มเติม หรือวัตถุประสงค์การขอซื้อ..."></textarea>
-                                </div>
+    async function saveOrder() {
+        const items = [];
+        document.querySelectorAll('#itemsTable tr').forEach(row => {
+            items.push({
+                material_name: row.querySelector('.item-name').value,
+                quantity: parseInt(row.querySelector('.item-qty').value),
+                unit: row.querySelector('.item-unit').value,
+                unit_price: parseFloat(row.querySelector('.item-price').value),
+            });
+        });
+        const res = await apiFetch(`/api/orders/${orderId}/`, {
+            method: 'PUT',
+            body: JSON.stringify({ reason: document.getElementById('reason').value, items })
+        });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message);
+        setTimeout(() => window.history.back(), 1000);
+    }
 
-                                <!-- วันที่ต้องการใช้งาน + ชื่อร้านค้า -->
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                        <div>
-                                                <label
-                                                        class="block text-sm text-gray-600 mb-1">วันที่ต้องการใช้งาน</label>
-                                                <input type="date" id="required_date"
-                                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                        </div>
-                                        <div>
-                                                <label
-                                                        class="block text-sm text-gray-600 mb-1">ชื่อร้านค้า/บริษัท</label>
-                                                <input type="text" id="vendor_name"
-                                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                        placeholder="ระบุชื่อร้านค้า (ถ้ามี)">
-                                        </div>
-                                </div>
-                        </div>
-
-                        <!-- Section 2: รายการพัสดุ -->
-                        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                                <div class="flex justify-between items-center mb-4">
-                                        <h2 class="text-lg font-bold text-gray-800">รายการพัสดุ</h2>
-                                        <button onclick="addRow()"
-                                                class="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition font-medium text-sm">
-                                                + เพิ่มรายการพัสดุ
-                                        </button>
-                                </div>
-
-                                <!-- Table -->
-                                <div class="overflow-x-auto">
-                                        <table class="min-w-full border-collapse">
-                                                <thead class="bg-gray-50">
-                                                        <tr>
-                                                                <th
-                                                                        class="px-4 py-3 text-left text-sm font-semibold text-gray-600 border-b">
-                                                                        ลำดับ</th>
-                                                                <th
-                                                                        class="px-4 py-3 text-left text-sm font-semibold text-gray-600 border-b">
-                                                                        ชื่อสินค้า</th>
-                                                                <th
-                                                                        class="px-4 py-3 text-center text-sm font-semibold text-gray-600 border-b">
-                                                                        จำนวน</th>
-                                                                <th
-                                                                        class="px-4 py-3 text-center text-sm font-semibold text-gray-600 border-b">
-                                                                        หน่วย</th>
-                                                                <th
-                                                                        class="px-4 py-3 text-right text-sm font-semibold text-gray-600 border-b">
-                                                                        ราคา/หน่วย</th>
-                                                                <th
-                                                                        class="px-4 py-3 text-right text-sm font-semibold text-gray-600 border-b">
-                                                                        รวม</th>
-                                                                <th
-                                                                        class="px-4 py-3 text-center text-sm font-semibold text-gray-600 border-b">
-                                                                        ลบ</th>
-                                                        </tr>
-                                                </thead>
-                                                <tbody id="itemsTable">
-                                                        <!-- Rows will be added here -->
-                                                </tbody>
-                                        </table>
-                                </div>
-
-                                <!-- Total -->
-                                <div class="mt-4 border-t pt-4">
-                                        <div class="flex justify-end">
-                                                <p class="text-lg font-bold text-gray-800">
-                                                        ยอดรวมทั้งสิ้น: <span id="grandTotal"
-                                                                class="text-cyan-600">฿0.00 บาท</span>
-                                                </p>
-                                        </div>
-                                </div>
-                        </div>
-
-                        <!-- Footer Buttons -->
-                        <div class="flex justify-end gap-3">
-                                <button onclick="cancel()"
-                                        class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">
-                                        ยกเลิก
-                                </button>
-                                <button onclick="saveChanges()"
-                                        class="px-6 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition font-medium">
-                                        บันทึกการแก้ไข
-                                </button>
-                        </div>
-                </div>
-        </main>
-
-        <script>
-                let orderId = null;
-                let rowCounter = 0;
-                let projects = [];
-
-                // Load order data on page load
-                document.addEventListener('DOMContentLoaded', async () => {
-                        // Get order_id from template
-                        orderId = "{{ order_id }}";
-
-                        if (!orderId || orderId === "None") {
-                                Swal.fire('Error', 'ไม่พบเลขที่ใบสั่งซื้อ', 'error')
-                                        .then(() => window.location.href = '/api/my-orders/');
-                                return;
-                        }
-
-                        await loadProjects();
-                        await loadOrderData();
-                });
-
-                // Load projects list
-                async function loadProjects() {
-                        try {
-                                const user = JSON.parse(localStorage.getItem('user') || '{}');
-                                const res = await fetch(`/api/users/${user.id}/projects/`);
-                                projects = await res.json();
-
-                                const select = document.getElementById('project_id');
-                                projects.forEach(project => {
-                                        const option = document.createElement('option');
-                                        option.value = project.id;
-                                        option.textContent = project.project_name || 'ไม่ระบุชื่อ';
-                                        select.appendChild(option);
-                                });
-                        } catch (e) {
-                                console.error('Error loading projects:', e);
-                        }
-                }
-
-                // Load order data
-                async function loadOrderData() {
-                        try {
-                                const res = await fetch(`/api/orders/${orderId}/`);
-                                const order = await res.json();
-
-                                if (!res.ok) {
-                                        throw new Error(order.error || 'ไม่สามารถโหลดข้อมูลได้');
-                                }
-
-                                // Check if editable (Draft or CorrectionNeeded)
-                                if (order.status !== 'Draft' && order.status !== 'CorrectionNeeded') {
-                                        Swal.fire('Error', 'ไม่สามารถแก้ไขใบสั่งซื้อที่ส่งแล้ว', 'error')
-                                                .then(() => window.location.href = '/api/my-orders/');
-                                        return;
-                                }
-
-                                // Show staff note if CorrectionNeeded
-                                if (order.status === 'CorrectionNeeded' && order.staff_note) {
-                                        Swal.fire({
-                                                title: 'สิ่งที่ต้องแก้ไข',
-                                                text: order.staff_note,
-                                                icon: 'info',
-                                                confirmButtonText: 'เข้าใจแล้ว'
-                                        });
-                                }
-
-                                // Update title
-                                document.getElementById('pageTitle').textContent = `แก้ไขใบขอซื้อเลขที่ ${order.order_no || orderId.slice(-6).toUpperCase()}`;
-
-                                // Fill form
-                                document.getElementById('project_id').value = order.project_id || '';
-                                document.getElementById('order_title').value = order.order_title || '';
-                                document.getElementById('order_description').value = order.order_description || '';
-                                document.getElementById('required_date').value = order.required_date || '';
-                                document.getElementById('vendor_name').value = order.vendor_name || '';
-
-                                // Format created date
-                                if (order.created_at) {
-                                        const date = order.created_at._seconds
-                                                ? new Date(order.created_at._seconds * 1000)
-                                                : new Date(order.created_at);
-                                        document.getElementById('created_date').value = date.toLocaleDateString('th-TH');
-                                }
-
-                                // Load items
-                                if (order.items && order.items.length > 0) {
-                                        order.items.forEach(item => {
-                                                addRow(item);
-                                        });
-                                } else {
-                                        addRow(); // Add one empty row
-                                }
-
-                                // Show content
-                                document.getElementById('loading').classList.add('hidden');
-                                document.getElementById('content').classList.remove('hidden');
-
-                        } catch (e) {
-                                console.error('Error:', e);
-                                Swal.fire('Error', e.message, 'error')
-                                        .then(() => window.location.href = '/api/my-orders/');
-                        }
-                }
-
-                // Add table row
-                function addRow(item = null) {
-                        rowCounter++;
-                        const tbody = document.getElementById('itemsTable');
-                        const row = document.createElement('tr');
-                        row.className = 'border-b hover:bg-gray-50';
-                        row.innerHTML = `
-                                <td class="px-4 py-3 text-center text-sm text-gray-600">${rowCounter}</td>
-                                <td class="px-4 py-3">
-                                        <input type="text" value="${item?.item_name || ''}" 
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 text-sm"
-                                                placeholder="ระบุรายการพัสดุ">
-                                </td>
-                                <td class="px-4 py-3">
-                                        <input type="number" value="${item?.quantity_requested || ''}" 
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 text-center text-sm"
-                                                placeholder="1" min="1" onchange="calculateRowTotal(this)">
-                                </td>
-                                <td class="px-4 py-3">
-                                        <input type="text" value="${item?.unit || ''}" 
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 text-center text-sm"
-                                                placeholder="อัน">
-                                </td>
-                                <td class="px-4 py-3">
-                                        <input type="number" value="${item?.estimated_unit_price || ''}" 
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 text-right text-sm"
-                                                placeholder="0" min="0" onchange="calculateRowTotal(this)">
-                                </td>
-                                <td class="px-4 py-3 text-right text-sm font-medium text-gray-800 row-total">฿0.00 บาท</td>
-                                <td class="px-4 py-3 text-center">
-                                        <button onclick="deleteRow(this)" class="text-red-500 hover:text-red-700">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                                </svg>
-                                        </button>
-                                </td>
-                        `;
-                        tbody.appendChild(row);
-
-                        // Calculate initial total if item exists
-                        if (item) {
-                                const inputs = row.querySelectorAll('input');
-                                calculateRowTotal(inputs[2]); // Trigger calculation
-                        }
-                }
-
-                // Delete row
-                function deleteRow(btn) {
-                        const row = btn.closest('tr');
-                        row.remove();
-                        updateRowNumbers();
-                        calculateGrandTotal();
-                }
-
-                // Update row numbers
-                function updateRowNumbers() {
-                        const rows = document.querySelectorAll('#itemsTable tr');
-                        rows.forEach((row, index) => {
-                                row.children[0].textContent = index + 1;
-                        });
-                        rowCounter = rows.length;
-                }
-
-                // Calculate row total
-                function calculateRowTotal(input) {
-                        const row = input.closest('tr');
-                        const inputs = row.querySelectorAll('input');
-                        const quantity = parseFloat(inputs[2].value) || 0;
-                        const price = parseFloat(inputs[3].value) || 0;
-                        const total = quantity * price;
-
-                        row.querySelector('.row-total').textContent = `฿${total.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`;
-                        calculateGrandTotal();
-                }
-
-                // Calculate grand total
-                function calculateGrandTotal() {
-                        let grandTotal = 0;
-                        document.querySelectorAll('#itemsTable tr').forEach(row => {
-                                const inputs = row.querySelectorAll('input');
-                                const quantity = parseFloat(inputs[2].value) || 0;
-                                const price = parseFloat(inputs[3].value) || 0;
-                                grandTotal += quantity * price;
-                        });
-                        document.getElementById('grandTotal').textContent = `฿${grandTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`;
-                }
-
-                // Get items from table
-                function getItems() {
-                        const items = [];
-                        document.querySelectorAll('#itemsTable tr').forEach(row => {
-                                const inputs = row.querySelectorAll('input');
-                                const name = inputs[0].value.trim();
-                                if (name) {
-                                        items.push({
-                                                item_name: name,
-                                                quantity_requested: parseFloat(inputs[1].value) || 0,
-                                                unit: inputs[2].value.trim(),
-                                                estimated_unit_price: parseFloat(inputs[3].value) || 0
-                                        });
-                                }
-                        });
-                        return items;
-                }
-
-                // Save as draft
-                async function saveDraft() {
-                        await saveChanges();
-                }
-
-                // Save changes
-                async function saveChanges() {
-                        const items = getItems();
-                        if (items.length === 0) {
-                                Swal.fire('Warning', 'กรุณาเพิ่มรายการพัสดุอย่างน้อย 1 รายการ', 'warning');
-                                return;
-                        }
-
-                        const projectId = document.getElementById('project_id').value;
-                        if (!projectId) {
-                                Swal.fire('Warning', 'กรุณาเลือกโครงการ', 'warning');
-                                return;
-                        }
-
-                        const user = JSON.parse(localStorage.getItem('user') || '{}');
-                        const orderData = {
-                                project_id: projectId,
-                                requester_id: user.id,
-                                order_title: document.getElementById('order_title').value,
-                                order_description: document.getElementById('order_description').value,
-                                required_date: document.getElementById('required_date').value,
-                                vendor_name: document.getElementById('vendor_name').value,
-                                items: items,
-                                total_estimated_price: items.reduce((sum, item) => sum + (item.quantity_requested * item.estimated_unit_price), 0),
-                                status: 'Draft'
-                        };
-
-                        try {
-                                const res = await fetch(`/api/orders/${orderId}/`, {
-                                        method: 'PUT',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify(orderData)
-                                });
-
-                                const data = await res.json();
-
-                                if (res.ok) {
-                                        Swal.fire('สำเร็จ', 'บันทึกการแก้ไขเรียบร้อย', 'success')
-                                                .then(() => window.location.href = '/api/my-orders/');
-                                } else {
-                                        Swal.fire('Error', data.error, 'error');
-                                }
-                        } catch (e) {
-                                Swal.fire('Error', e.message, 'error');
-                        }
-                }
-
-                // Cancel
-                function cancel() {
-                        Swal.fire({
-                                title: 'ยกเลิกการแก้ไข?',
-                                text: 'การเปลี่ยนแปลงจะไม่ถูกบันทึก',
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonText: 'ยกเลิก',
-                                cancelButtonText: 'กลับไปแก้ไข'
-                        }).then((result) => {
-                                if (result.isConfirmed) {
-                                        window.location.href = '/api/my-orders/';
-                                }
-                        });
-                }
-        </script>
-</body>
-
-</html>
+    loadOrder();
+</script>
+{% endblock %}

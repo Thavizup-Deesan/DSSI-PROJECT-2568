@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}ตรวจรับสินค้า{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">ตรวจรับสินค้า</h1>
+        <p class="text-sm text-base-content/50">UC-08: กก.ตรวจรับ ตรวจนับจำนวน/คุณภาพ</p>
+    </div>
+</div>
+
+<!-- Pending Inspection -->
+<div class="card bg-base-200 border border-base-content/5 mb-6">
+    <div class="card-body">
+        <h2 class="card-title text-lg mb-3">รายการรอตรวจรับ</h2>
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead><tr><th>ID</th><th>ใบสั่งซื้อ</th><th>เลขที่ใบเสร็จ</th><th>วันที่รับ</th><th>การดำเนินการ</th></tr></thead>
+                <tbody id="pendingTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Inspection History -->
+<div class="card bg-base-200 border border-base-content/5">
+    <div class="card-body">
+        <h2 class="card-title text-lg mb-3">ประวัติการตรวจรับ</h2>
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead><tr><th>ใบรับ</th><th>กก.ตรวจรับ</th><th>วันที่ตรวจ</th><th>ผลการตรวจ</th><th>หมายเหตุ</th></tr></thead>
+                <tbody id="historyTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Inspection Modal -->
+<dialog class="modal" id="inspModal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">ยืนยันผลตรวจรับ</h3>
+        <input type="hidden" id="inspReceiveId">
+        <div class="form-control mt-4">
+            <label class="label"><span class="label-text">ผลการตรวจ</span></label>
+            <select class="select select-bordered" id="inspResult">
+                <option value="Pass">✅ ผ่าน (Pass)</option>
+                <option value="Reject">❌ ไม่ผ่าน (Reject)</option>
+            </select>
+        </div>
+        <div class="form-control mt-3">
+            <label class="label"><span class="label-text">หมายเหตุ</span></label>
+            <textarea class="textarea textarea-bordered" id="inspComment" rows="3"></textarea>
+        </div>
+        <div class="modal-action">
+            <button class="btn btn-ghost" onclick="document.getElementById('inspModal').close()">ยกเลิก</button>
+            <button class="btn btn-primary" onclick="submitInspection()">บันทึก</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadData() {
+        const receives = await apiFetch('/api/partial-receives/');
+        const pending = receives.filter(r => r.status === 'Pending_Inspection');
+        const ptbody = document.getElementById('pendingTable');
+        if (pending.length === 0) {
+            ptbody.innerHTML = '<tr><td colspan="5" class="text-center text-base-content/40">ไม่มีรายการรอตรวจรับ</td></tr>';
+        } else {
+            ptbody.innerHTML = pending.map(r => `
+                <tr class="hover">
+                    <td>${r.receive_id}</td>
+                    <td>${r.order_no}</td>
+                    <td>${r.receipt_no || '—'}</td>
+                    <td>${new Date(r.received_date).toLocaleDateString('th-TH')}</td>
+                    <td><button class="btn btn-primary btn-xs gap-1" onclick="openInspection(${r.receive_id})"><span class="material-icons-outlined text-sm">fact_check</span>ตรวจรับ</button></td>
+                </tr>
+            `).join('');
+        }
+
+        const inspections = await apiFetch('/api/inspections/');
+        const htbody = document.getElementById('historyTable');
+        if (inspections.length === 0) {
+            htbody.innerHTML = '<tr><td colspan="5" class="text-center text-base-content/40">ยังไม่มีประวัติ</td></tr>';
+        } else {
+            htbody.innerHTML = inspections.map(i => `
+                <tr class="hover">
+                    <td>${i.receipt_no}</td>
+                    <td>${i.committee_name}</td>
+                    <td>${new Date(i.inspection_date).toLocaleDateString('th-TH')}</td>
+                    <td>${getStatusBadge(i.result)}</td>
+                    <td>${i.comment || '—'}</td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    function openInspection(receiveId) {
+        document.getElementById('inspReceiveId').value = receiveId;
+        document.getElementById('inspResult').value = 'Pass';
+        document.getElementById('inspComment').value = '';
+        document.getElementById('inspModal').showModal();
+    }
+
+    async function submitInspection() {
+        const res = await apiFetch('/api/inspections/', {
+            method: 'POST',
+            body: JSON.stringify({
+                receive_id: document.getElementById('inspReceiveId').value,
+                result: document.getElementById('inspResult').value,
+                comment: document.getElementById('inspComment').value,
+            })
+        });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message);
+        document.getElementById('inspModal').close();
+        loadData();
+    }
+
+    loadData();
+</script>
+{% endblock %}

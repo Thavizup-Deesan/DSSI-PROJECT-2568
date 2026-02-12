@@ -118,6 +118,8 @@ else:
         }
     }
 
+# settings.py
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '129454383537-0ceqhjq06rnmv9tf1jjgoakmc8mjcqo0.apps.googleusercontent.com')
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.sqlite3',

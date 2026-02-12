@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}ผู้เข้าร่วมโครงการ{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">ระบุผู้เข้าร่วมโครงการ</h1>
+        <p class="text-sm text-base-content/50">UC-02: ระบุผู้รับผิดชอบโครงการ</p>
+    </div>
+    <a href="/projects/" class="btn btn-ghost btn-sm">← กลับ</a>
+</div>
+
+<!-- Add Participant -->
+<div class="card bg-base-200 border border-base-content/5 mb-6">
+    <div class="card-body">
+        <h2 class="card-title text-lg mb-3">เพิ่มผู้เข้าร่วม</h2>
+        <div class="flex gap-3 flex-wrap items-end">
+            <div class="form-control flex-1 min-w-[250px]">
+                <label class="label"><span class="label-text">อีเมล @ubu.ac.th</span></label>
+                <input type="email" class="input input-bordered" id="participantEmail" placeholder="example@ubu.ac.th">
+            </div>
+            <div class="form-control min-w-[180px]">
+                <label class="label"><span class="label-text">บทบาท</span></label>
+                <select class="select select-bordered" id="participantRole">
+                    <option value="Requester">ผู้ขอซื้อ (Requester)</option>
+                    <option value="Committee">กรรมการตรวจรับ (Committee)</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="addParticipant()">เพิ่ม</button>
+        </div>
+    </div>
+</div>
+
+<!-- List -->
+<div class="card bg-base-200 border border-base-content/5">
+    <div class="card-body">
+        <h2 class="card-title text-lg mb-3">รายชื่อผู้เข้าร่วม</h2>
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead><tr><th>ชื่อ</th><th>อีเมล</th><th>บทบาท</th><th>การดำเนินการ</th></tr></thead>
+                <tbody id="participantsTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const projectId = new URLSearchParams(window.location.search).get('project_id');
+
+    async function loadParticipants() {
+        const data = await apiFetch(`/api/projects/${projectId}/participants/`);
+        const tbody = document.getElementById('participantsTable');
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-base-content/40">ยังไม่มีผู้เข้าร่วม</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(p => `
+            <tr class="hover">
+                <td>${p.full_name}</td>
+                <td>${p.email}</td>
+                <td>${getStatusBadge(p.role_in_project)}</td>
+                <td><button class="btn btn-error btn-xs" onclick="removeParticipant(${p.user_id})">ลบ</button></td>
+            </tr>
+        `).join('');
+    }
+
+    async function addParticipant() {
+        const email = document.getElementById('participantEmail').value;
+        const role = document.getElementById('participantRole').value;
+        if (!email) { showToast('กรุณากรอกอีเมล', 'error'); return; }
+        const res = await apiFetch(`/api/projects/${projectId}/participants/`, {
+            method: 'POST', body: JSON.stringify({ email, role_in_project: role })
+        });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message);
+        document.getElementById('participantEmail').value = '';
+        loadParticipants();
+    }
+
+    async function removeParticipant(userId) {
+        if (!confirm('ลบผู้เข้าร่วมนี้?')) return;
+        const res = await apiFetch(`/api/projects/${projectId}/participants/${userId}/`, { method: 'DELETE' });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message); loadParticipants();
+    }
+
+    loadParticipants();
+</script>
+{% endblock %}

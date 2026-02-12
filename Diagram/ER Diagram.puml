@@ -1,114 +1,113 @@
 @startuml
-' ตั้งค่าการแสดงผล
-skinparam linetype ortho
+title ER Diagram: POTMS System
 hide circle
-skinparam packageStyle rectangle
+skinparam linetype ortho
 
-' --- Master Data Entities ---
+' --- Entities Definition ---
 
-entity "User (ผู้ใช้งาน)" as User {
+entity "User (ผู้ใช้งานระบบ)" as User {
   *user_id : INT <<PK>>
   --
   username : VARCHAR
-  role : ENUM (User, Staff, Admin)
+  password : VARCHAR
+  full_name : VARCHAR
+  role : ENUM (Officer, User, Head)
   department : VARCHAR
 }
 
 entity "Project (โครงการ)" as Project {
   *project_id : INT <<PK>>
   --
+  *created_by : INT <<FK>>
   project_name : VARCHAR
-  budget_total : DECIMAL(10,2) (งบทั้งหมด)
-  budget_reserved : DECIMAL(10,2) (งบที่ถูกจอง)
-  budget_spent : DECIMAL(10,2) (งบจ่ายจริง)
-  status : ENUM (Active, Completed, Cancelled) << เพิ่ม: สถานะโครงการ >>
-  created_at : DATETIME
+  total_budget : DECIMAL(15,2)
+  reserved_budget : DECIMAL(15,2)
+  remaining_budget : DECIMAL(15,2)
+  start_date : DATETIME
+  end_date : DATETIME
+  status : ENUM (Draft, Active, Closed)
 }
 
-' --- Project Assignment (กำหนดผู้รับผิดชอบโครงการ) ---
-
-entity "ProjectAssignment (มอบหมายโครงการ)" as ProjectAssignment {
-  *assignment_id : INT <<PK>>
+entity "Project_Participant (ผู้เข้าร่วมโครงการ)" as Participant {
+  *project_id : INT <<PK, FK>>
+  *user_id : INT <<PK, FK>>
   --
-  *project_id : INT <<FK>> (โครงการ)
-  *user_id : INT <<FK>> (User ที่รับผิดชอบ)
-  --
-  assigned_by : INT <<FK>> (Staff ที่กำหนด)
-  assigned_at : DATETIME
-  note : TEXT (หมายเหตุ)
+  role_in_project : ENUM (Requester, Committee)
 }
 
-' --- Transaction Entities ---
-
-entity "MainOrder (ใบสั่งซื้อหลัก)" as MainOrder {
+entity "Purchase_Order (ใบสั่งซื้อหลัก)" as PO {
   *order_id : INT <<PK>>
   --
   *project_id : INT <<FK>>
-  *requester_id : INT <<FK>> (User ผู้สั่ง)
-  *approver_id : INT <<FK>> (Staff ผู้อนุมัติ)
-  --
-  order_no : VARCHAR (เลขที่เอกสาร)
-  vendor_name : VARCHAR (ชื่อร้านค้า/บริษัท)
-  status : ENUM (Draft, Ordered, CorrectionNeeded, SentToProcurement, Closed)
-  total_estimated_price : DECIMAL (ราคารวมประมาณการ)
-  inspection_committee : TEXT (รายชื่อกรรมการตรวจรับ)
-  staff_note : TEXT (บันทึกสิ่งที่ต้องแก้ไขจาก Staff)
+  *requester_id : INT <<FK>>
+  *approver_id : INT <<FK, Nullable>>
+  order_no : VARCHAR
+  total_amount : DECIMAL(15,2)
+  reason : TEXT
   created_at : DATETIME
-  updated_at : DATETIME
+  status : ENUM (Draft, Reserved, Pending_Approval, Approved, Rejected, Completed)
 }
 
-entity "OrderItem (รายการสินค้า)" as OrderItem {
+entity "Order_Item (รายการวัสดุ)" as Item {
   *item_id : INT <<PK>>
   --
   *order_id : INT <<FK>>
-  --
-  item_name : VARCHAR
-  quantity_requested : INT
-  unit : VARCHAR
-  estimated_unit_price : DECIMAL
-  status : ENUM (Pending, Received, Cancelled)
+  material_name : VARCHAR
+  quantity : INT
+  unit_price : DECIMAL(10,2)
+  total_price : DECIMAL(15,2)
 }
 
-entity "SubOrder (ใบตรวจรับ/รับของ)" as SubOrder {
-  *sub_order_id : INT <<PK>>
+entity "Partial_Receive (ใบรับของ/ใบเสร็จ)" as PartialReceive {
+  *receive_id : INT <<PK>>
   --
-  *main_order_id : INT <<FK>>
-  *receiver_id : INT <<FK>>
-  --
-  sub_order_no : VARCHAR
+  *order_id : INT <<FK>>
+  *recorded_by : INT <<FK>>
+  receipt_no : VARCHAR
+  receipt_file_path : VARCHAR (PDF/JPG)
   received_date : DATETIME
-  status : ENUM (WaitingInspection, Inspected, HandedOver)
-  note : TEXT
+  status : ENUM (Pending_Inspection, Inspected)
 }
 
-entity "InspectionDetail (รายละเอียดการรับของ)" as InspectionDetail {
+entity "Inspection (ผลการตรวจรับ)" as Inspection {
   *inspection_id : INT <<PK>>
   --
-  *sub_order_id : INT <<FK>>
-  *item_id : INT <<FK>>
+  *receive_id : INT <<FK>>
+  *committee_id : INT <<FK>>
+  inspection_date : DATETIME
+  result : ENUM (Pass, Reject)
+  comment : TEXT
+}
+
+entity "Payment (การเบิกจ่าย)" as Payment {
+  *payment_id : INT <<PK>>
   --
-  qty_received : INT
-  actual_unit_price : DECIMAL
-  total_actual_price : DECIMAL
-  qr_code : VARCHAR
-  is_verified : BOOLEAN
+  *project_id : INT <<FK>>
+  *related_order_id : INT <<FK>>
+  amount_paid : DECIMAL(15,2)
+  payment_date : DATETIME
+  status : ENUM (Processing, Paid)
 }
 
 ' --- Relationships ---
 
-' User & Project Assignment (Many-to-Many ผ่าน ProjectAssignment)
-Project ||..o{ ProjectAssignment : "Has Assignees"
-User ||..o{ ProjectAssignment : "Assigned By (Staff)"
+' User relationships
+User ||..o{ Project : "creates (Officer)"
+User ||..o{ Participant : "is assigned to"
+User ||..o{ PO : "creates (User)"
+User ||..o{ Inspection : "inspects (Committee)"
 
-' Orders
-User ||..o{ MainOrder : "Creates (Requester)"
-User ||..o{ SubOrder : "Receives Items (Staff)"
-Project ||..o{ MainOrder : "Has"
+' Project relationships
+Project ||..|{ Participant : "has members"
+Project ||..o{ PO : "contains orders"
+Project ||..o{ Payment : "has payments"
 
-MainOrder ||..|{ OrderItem : "Contains"
-MainOrder ||..o{ SubOrder : "Splits into"
+' Order relationships
+PO ||..|{ Item : "has items"
+PO ||..o{ PartialReceive : "has deliveries (Partial)"
+PO ||..o{ Payment : "is paid via"
 
-SubOrder ||..|{ InspectionDetail : "Includes"
-OrderItem ||..o{ InspectionDetail : "Fulfilled by"
+' Sub-process relationships
+PartialReceive ||..|| Inspection : "has one result"
 
 @enduml

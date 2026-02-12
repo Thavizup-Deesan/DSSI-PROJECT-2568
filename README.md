@@ -9,3 +9,8 @@ https://drive.google.com/drive/folders/1YXr_xa2F102Yfu3A0DOHMSBixSPiH_e0?usp=sha
 Link เอกสาร : https://docs.google.com/document/d/1uJ94MVcdQXf0ZZ3P4fvL0MlhHWflx_OU/edit?usp=sharing&ouid=111458634810759901210&rtpof=true&sd=true
 
 Link WebSite : https://potms-5f3ykj4e6-beckham1234s-projects.vercel.app/
+
+สิ่งที่เหลือ 
+1.แก้ปัญหาข้อผิดพลาด 400: redirect_uri_mismatch ของ Google OAuth (ส่วน login ด้วย Google)
+2.ส่วนของการทดสอบระบบ ยังไม่ได้ทดสอบหา bug และยังไม่ทดสอบว่าถูกต้องและตรงตาม flow ของระบบหรือไม่
+3.ยังไม่ได้ทดสอบส่วนของการสร้างใบสั่งซื้อย่อยและการคำนวนยอดงบประมาณ

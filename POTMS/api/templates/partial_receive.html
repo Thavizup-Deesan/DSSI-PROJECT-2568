@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}ใบรับของ{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">บันทึกใบรับของ</h1>
+        <p class="text-sm text-base-content/50">UC-07: สร้างใบสั่งซื้อย่อย พร้อมแนบใบเสร็จ</p>
+    </div>
+</div>
+
+<!-- Create -->
+<div class="card bg-base-200 border border-base-content/5 mb-6">
+    <div class="card-body">
+        <h2 class="card-title text-lg mb-3">สร้างใบรับของ</h2>
+        <div class="flex gap-3 flex-wrap items-end">
+            <div class="form-control flex-1 min-w-[200px]">
+                <label class="label"><span class="label-text">เลือก Order (Approved)</span></label>
+                <select class="select select-bordered w-full" id="orderSelect"><option value="">เลือกใบสั่งซื้อ...</option></select>
+            </div>
+            <div class="form-control min-w-[180px]">
+                <label class="label"><span class="label-text">เลขที่ใบเสร็จ</span></label>
+                <input type="text" class="input input-bordered" id="receiptNo">
+            </div>
+            <div class="form-control min-w-[200px]">
+                <label class="label"><span class="label-text">ไฟล์ใบเสร็จ (path)</span></label>
+                <input type="text" class="input input-bordered" id="receiptFile" placeholder="uploads/receipt.pdf">
+            </div>
+            <button class="btn btn-primary" onclick="createReceive()">สร้าง</button>
+        </div>
+    </div>
+</div>
+
+<!-- List -->
+<div class="card bg-base-200 border border-base-content/5">
+    <div class="card-body">
+        <h2 class="card-title text-lg mb-3">รายการใบรับของ</h2>
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead><tr><th>ID</th><th>ใบสั่งซื้อ</th><th>เลขที่ใบเสร็จ</th><th>ผู้บันทึก</th><th>วันที่รับ</th><th>สถานะ</th></tr></thead>
+                <tbody id="receivesTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadOrders() {
+        const orders = await apiFetch('/api/orders/');
+        const select = document.getElementById('orderSelect');
+        orders.filter(o => o.status === 'Approved').forEach(o => {
+            select.innerHTML += `<option value="${o.order_id}">${o.order_no} — ${o.project_name}</option>`;
+        });
+    }
+
+    async function loadReceives() {
+        const data = await apiFetch('/api/partial-receives/');
+        const tbody = document.getElementById('receivesTable');
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-base-content/40">ยังไม่มีใบรับของ</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(r => `
+            <tr class="hover">
+                <td>${r.receive_id}</td>
+                <td>${r.order_no}</td>
+                <td>${r.receipt_no || '—'}</td>
+                <td>${r.recorded_by}</td>
+                <td>${new Date(r.received_date).toLocaleDateString('th-TH')}</td>
+                <td>${getStatusBadge(r.status)}</td>
+            </tr>
+        `).join('');
+    }
+
+    async function createReceive() {
+        const orderId = document.getElementById('orderSelect').value;
+        if (!orderId) { showToast('กรุณาเลือกใบสั่งซื้อ', 'error'); return; }
+        const res = await apiFetch('/api/partial-receives/', {
+            method: 'POST',
+            body: JSON.stringify({
+                order_id: orderId,
+                receipt_no: document.getElementById('receiptNo').value,
+                receipt_file_path: document.getElementById('receiptFile').value,
+            })
+        });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message); loadReceives();
+    }
+
+    loadOrders();
+    loadReceives();
+</script>
+{% endblock %}

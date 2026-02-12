@@ -1,266 +1,117 @@
-<!DOCTYPE html>
-<html lang="th">
+{% extends "base.html" %}
+{% block title %}รายละเอียดใบสั่งซื้อ{% endblock %}
 
-<head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>รายละเอียดใบสั่งซื้อ - POTMS</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap"
-                rel="stylesheet">
-        <style>
-                body {
-                        font-family: 'Prompt', sans-serif;
-                }
-        </style>
-</head>
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold">รายละเอียดใบสั่งซื้อ</h1>
+        <p class="text-sm text-base-content/50" id="orderBreadcrumb">—</p>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="window.history.back()">← กลับ</button>
+</div>
 
-<body class="bg-gray-50 min-h-screen">
+<!-- Order Info -->
+<div class="card bg-base-200 border border-base-content/5 mb-6">
+    <div class="card-body" id="orderInfo"></div>
+</div>
 
-        <!-- Header -->
-        <header class="bg-white border-b border-gray-200">
-                <div class="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
-                        <h1 class="text-base sm:text-xl font-bold text-gray-800">รายละเอียดใบสั่งซื้อ</h1>
-                        <a href="/api/my-orders/"
-                                class="text-blue-500 hover:text-blue-700 flex items-center gap-1 text-sm">
-                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                </svg>
-                                กลับ
-                        </a>
-                </div>
-        </header>
+<!-- Items -->
+<div class="card bg-base-200 border border-base-content/5 mb-6">
+    <div class="card-body">
+        <h2 class="card-title text-lg mb-3">รายการวัสดุ</h2>
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead><tr><th>#</th><th>ชื่อวัสดุ</th><th>จำนวน</th><th>หน่วย</th><th>ราคาต่อหน่วย</th><th>รวม</th></tr></thead>
+                <tbody id="itemsTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-        <!-- Main Content -->
-        <main class="max-w-6xl mx-auto px-4 py-4 sm:py-6">
+<!-- Partial Receives -->
+<div class="card bg-base-200 border border-base-content/5 mb-6 hidden" id="receivesSection">
+    <div class="card-body">
+        <h2 class="card-title text-lg mb-3">ใบรับของ</h2>
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead><tr><th>เลขที่ใบรับ</th><th>วันที่รับ</th><th>สถานะ</th></tr></thead>
+                <tbody id="receivesTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-                <!-- Loading -->
-                <div id="loading" class="text-center py-10">
-                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-                        <p class="mt-2 text-gray-500">กำลังโหลดข้อมูล...</p>
-                </div>
+<!-- Actions -->
+<div class="flex gap-3" id="actions"></div>
+{% endblock %}
 
-                <!-- Content -->
-                <div id="content" class="hidden">
-                        <!-- Header Info -->
-                        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100">
-                                <div class="flex flex-col sm:flex-row justify-between items-start gap-3">
-                                        <div>
-                                                <h2 id="orderTitle" class="text-xl sm:text-2xl font-bold text-gray-800">
-                                                </h2>
-                                                <p id="orderNo" class="text-xs sm:text-sm text-gray-500 mt-1"></p>
-                                        </div>
-                                        <span id="statusBadge"
-                                                class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold"></span>
-                                </div>
+{% block extra_js %}
+<script>
+    const orderId = new URLSearchParams(window.location.search).get('id');
 
-                                <!-- Details Grid -->
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-6">
-                                        <div>
-                                                <label class="text-sm text-gray-500">โครงการ:</label>
-                                                <p id="projectName" class="font-medium text-gray-800">-</p>
-                                        </div>
-                                        <div>
-                                                <label class="text-sm text-gray-500">วันที่ต้องการใช้งาน:</label>
-                                                <p id="requiredDate" class="font-medium text-gray-800">-</p>
-                                        </div>
-                                        <div>
-                                                <label class="text-sm text-gray-500">ร้านค้า/บริษัท:</label>
-                                                <p id="vendorName" class="font-medium text-gray-800">-</p>
-                                        </div>
-                                        <div>
-                                                <label class="text-sm text-gray-500">วันที่สร้าง:</label>
-                                                <p id="createdAt" class="font-medium text-gray-800">-</p>
-                                        </div>
-                                </div>
+    async function loadOrder() {
+        const d = await apiFetch(`/api/orders/${orderId}/`);
+        if (d.error) { showToast(d.error, 'error'); return; }
 
-                                <!-- Description -->
-                                <div class="mt-4" id="descriptionSection">
-                                        <label class="text-sm text-gray-500">รายละเอียด:</label>
-                                        <p id="orderDescription" class="text-gray-700 mt-1">-</p>
-                                </div>
-                        </div>
+        document.getElementById('orderBreadcrumb').textContent = d.order_no;
+        document.getElementById('orderInfo').innerHTML = `
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div><div class="text-xs opacity-50">เลขที่</div><div class="font-semibold">${d.order_no}</div></div>
+                <div><div class="text-xs opacity-50">โครงการ</div><div>${d.project_name}</div></div>
+                <div><div class="text-xs opacity-50">ผู้ขอซื้อ</div><div>${d.requester.full_name}</div></div>
+                <div><div class="text-xs opacity-50">จำนวนเงิน</div><div class="font-semibold text-primary">฿${parseFloat(d.total_amount).toLocaleString()}</div></div>
+                <div><div class="text-xs opacity-50">สถานะ</div><div>${getStatusBadge(d.status)}</div></div>
+                <div><div class="text-xs opacity-50">วันที่สร้าง</div><div>${new Date(d.created_at).toLocaleDateString('th-TH')}</div></div>
+            </div>
+            ${d.reason ? `<div class="mt-4"><div class="text-xs opacity-50">เหตุผล</div><div class="mt-1">${d.reason}</div></div>` : ''}
+        `;
 
-                        <!-- Items Table -->
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                                <div class="px-6 py-4 border-b border-gray-100">
-                                        <h3 class="font-semibold text-gray-800">รายการพัสดุ</h3>
-                                </div>
-                                <div class="overflow-x-auto">
-                                        <table class="min-w-full divide-y divide-gray-200">
-                                                <thead class="bg-gray-50">
-                                                        <tr>
-                                                                <th
-                                                                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                                                                        ลำดับ</th>
-                                                                <th
-                                                                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                                                                        ชื่อสินค้า</th>
-                                                                <th
-                                                                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                                                                        จำนวน</th>
-                                                                <th
-                                                                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                                                                        หน่วย</th>
-                                                                <th
-                                                                        class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">
-                                                                        ราคา/หน่วย</th>
-                                                                <th
-                                                                        class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">
-                                                                        รวม</th>
-                                                        </tr>
-                                                </thead>
-                                                <tbody id="itemsBody" class="bg-white divide-y divide-gray-100">
-                                                </tbody>
-                                        </table>
-                                </div>
+        document.getElementById('itemsTable').innerHTML = d.items.map((item, i) => `
+            <tr><td>${i+1}</td><td>${item.material_name}</td><td>${item.quantity}</td><td>${item.unit}</td><td>฿${parseFloat(item.unit_price).toLocaleString()}</td><td class="font-medium">฿${parseFloat(item.total_price).toLocaleString()}</td></tr>
+        `).join('');
 
-                                <!-- Total -->
-                                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                                        <div class="flex justify-end">
-                                                <p class="text-lg font-bold text-gray-800">
-                                                        ยอดรวมทั้งสิ้น: <span id="totalPrice"
-                                                                class="text-blue-600">฿0</span>
-                                                </p>
-                                        </div>
-                                </div>
-                        </div>
-                </div>
-        </main>
+        if (d.partial_receives && d.partial_receives.length > 0) {
+            document.getElementById('receivesSection').classList.remove('hidden');
+            document.getElementById('receivesTable').innerHTML = d.partial_receives.map(r => `
+                <tr><td>${r.receipt_no || '—'}</td><td>${new Date(r.received_date).toLocaleDateString('th-TH')}</td><td>${getStatusBadge(r.status)}</td></tr>
+            `).join('');
+        }
 
-        <script>
-                const orderId = "{{ order_id }}";
+        const actions = document.getElementById('actions');
+        if (['Draft','Rejected'].includes(d.status)) {
+            actions.innerHTML += `<a href="/orders/edit/?id=${orderId}" class="btn btn-primary gap-2"><span class="material-icons-outlined text-base">edit</span>แก้ไข</a>`;
+            actions.innerHTML += `<button class="btn btn-success gap-2" onclick="submitOrder()"><span class="material-icons-outlined text-base">send</span>ส่งใบสั่งซื้อ (ตรวจงบ)</button>`;
+        }
+        if (d.status === 'Reserved') {
+            actions.innerHTML += `<button class="btn btn-primary gap-2" onclick="exportOrder()"><span class="material-icons-outlined text-base">upload_file</span>Export & ส่งรออนุมัติ</button>`;
+        }
+        if (d.status === 'Pending_Approval') {
+            actions.innerHTML += `<button class="btn btn-success gap-2" onclick="recordApproval('approve')"><span class="material-icons-outlined text-base">check_circle</span>บันทึกอนุมัติ</button>`;
+            actions.innerHTML += `<button class="btn btn-error gap-2" onclick="recordApproval('reject')"><span class="material-icons-outlined text-base">cancel</span>ส่งกลับแก้ไข</button>`;
+        }
+    }
 
-                if (!orderId || orderId === "None") {
-                        Swal.fire('Error', 'ไม่พบเลขที่ใบสั่งซื้อ', 'error')
-                                .then(() => window.location.href = '/api/my-orders/');
-                }
+    async function submitOrder() {
+        const res = await apiFetch(`/api/orders/${orderId}/submit/`, { method: 'POST' });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message); location.reload();
+    }
 
-                async function loadOrderDetail() {
-                        try {
-                                const res = await fetch(`/api/orders/${orderId}/`);
-                                const order = await res.json();
+    async function exportOrder() {
+        const res = await apiFetch(`/api/orders/${orderId}/export/`, { method: 'POST' });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message); location.reload();
+    }
 
-                                if (!res.ok) {
-                                        throw new Error(order.error || 'ไม่สามารถโหลดข้อมูลได้');
-                                }
+    async function recordApproval(action) {
+        if (!confirm(action === 'approve' ? 'ยืนยันอนุมัติ?' : 'ส่งกลับแก้ไข?')) return;
+        const res = await apiFetch(`/api/orders/${orderId}/approve/`, {
+            method: 'POST', body: JSON.stringify({ action })
+        });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message); location.reload();
+    }
 
-                                // Update Back Button
-                                if (order.project_id) {
-                                    document.querySelector('a[href="/api/my-orders/"]').href = `/api/my-orders/?project_id=${order.project_id}`;
-                                }
-
-                                // แสดงข้อมูลหลัก
-                                document.getElementById('orderTitle').textContent = order.order_title || 'ไม่มีเรื่อง';
-                                document.getElementById('orderNo').textContent = `เลขที่: ${order.order_no || orderId.slice(-6).toUpperCase()}`;
-                                document.getElementById('requiredDate').textContent = order.required_date || '-';
-                                document.getElementById('vendorName').textContent = order.vendor_name || '-';
-                                document.getElementById('orderDescription').textContent = order.order_description || 'ไม่มี';
-
-                                // วันที่สร้าง
-                                if (order.created_at) {
-                                        const date = order.created_at._seconds
-                                                ? new Date(order.created_at._seconds * 1000)
-                                                : new Date(order.created_at);
-                                        document.getElementById('createdAt').textContent = date.toLocaleDateString('th-TH');
-                                }
-
-                                // สถานะ
-                                const statusBadge = document.getElementById('statusBadge');
-                                let statusClass = 'bg-gray-100 text-gray-600';
-                                let statusText = order.status || 'Draft';
-
-                                switch (order.status) {
-                                        case 'Draft':
-                                                statusClass = 'bg-gray-100 text-gray-700';
-                                                statusText = 'ร่าง';
-                                                break;
-                                        case 'Pending':
-                                                statusClass = 'bg-yellow-100 text-yellow-700';
-                                                statusText = 'รออนุมัติ';
-                                                break;
-                                        case 'Ordered':
-                                                statusClass = 'bg-yellow-100 text-yellow-700';
-                                                statusText = 'รออนุมัติ';
-                                                break;
-                                        case 'WaitingBossApproval':
-                                                statusClass = 'bg-purple-100 text-purple-700';
-                                                statusText = 'รอหัวหน้าเซ็นอนุมัติ';
-                                                break;
-                                        case 'Approved':
-                                                statusClass = 'bg-green-100 text-green-700';
-                                                statusText = 'หัวหน้าเซ็นอนุมัติแล้ว';
-                                                break;
-                                        case 'Rejected':
-                                                statusClass = 'bg-red-100 text-red-700';
-                                                statusText = 'ปฏิเสธ';
-                                                break;
-                                        case 'CorrectionNeeded':
-                                                statusClass = 'bg-orange-100 text-orange-700';
-                                                statusText = 'ต้องแก้ไข';
-                                                break;
-                                        case 'SentToProcurement':
-                                                statusClass = 'bg-indigo-100 text-indigo-700';
-                                                statusText = 'ส่งรายการให้พัสดุแล้ว';
-                                                break;
-                                        case 'Closed':
-                                                statusClass = 'bg-gray-200 text-gray-500';
-                                                statusText = 'ปิดแล้ว';
-                                                break;
-                                }
-                                statusBadge.className = `px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap ${statusClass}`;
-                                statusBadge.textContent = statusText;
-
-                                // แสดงรายการสินค้า
-                                const tbody = document.getElementById('itemsBody');
-                                if (order.items && order.items.length > 0) {
-                                        order.items.forEach((item, i) => {
-                                                const total = (item.quantity_requested || 0) * (item.estimated_unit_price || 0);
-                                                tbody.innerHTML += `
-                            <tr>
-                                <td class="px-6 py-4 text-sm text-gray-800">${i + 1}</td>
-                                <td class="px-6 py-4 text-sm text-gray-800">${item.item_name || '-'}</td>
-                                <td class="px-6 py-4 text-sm text-gray-600">${item.quantity_requested || 0}</td>
-                                <td class="px-6 py-4 text-sm text-gray-600">${item.unit || '-'}</td>
-                                <td class="px-6 py-4 text-sm text-right text-gray-600">฿${(item.estimated_unit_price || 0).toLocaleString()}</td>
-                                <td class="px-6 py-4 text-sm text-right font-medium text-gray-800">฿${total.toLocaleString()}</td>
-                            </tr>
-                        `;
-                                        });
-                                }
-
-                                document.getElementById('totalPrice').textContent = `฿${(order.total_estimated_price || 0).toLocaleString()}`;
-
-                                // โหลดชื่อโครงการ
-                                if (order.project_id) {
-                                        try {
-                                                const projectRes = await fetch(`/api/projects/${order.project_id}/`);
-                                                const project = await projectRes.json();
-                                                if (projectRes.ok) {
-                                                        document.getElementById('projectName').textContent = project.project_name || '-';
-                                                }
-                                        } catch (e) {
-                                                console.error('Error loading project:', e);
-                                        }
-                                }
-
-                                // แสดง content, ซ่อน loading
-                                document.getElementById('loading').classList.add('hidden');
-                                document.getElementById('content').classList.remove('hidden');
-
-                        } catch (e) {
-                                console.error('Error:', e);
-                                Swal.fire('Error', e.message, 'error')
-                                        .then(() => window.location.href = '/api/my-orders/');
-                        }
-                }
-
-
-                loadOrderDetail();
-        </script>
-</body>
-
-</html>
+    loadOrder();
+</script>
+{% endblock %}

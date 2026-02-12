@@ -1,99 +1,79 @@
 <!DOCTYPE html>
-<html lang="th">
-
+<html lang="th" data-theme="dark">
 <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>เข้าสู่ระบบ - POTMS</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POTMS — เข้าสู่ระบบ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>body { font-family: 'Noto Sans Thai', sans-serif; }</style>
 </head>
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-base-300 via-base-200 to-base-300">
 
-<body class="bg-gradient-to-r from-blue-500 to-indigo-600 min-h-screen flex items-center justify-center p-4">
+    <div class="card w-full max-w-md bg-base-200 shadow-2xl border border-base-content/10">
+        <div class="card-body items-center text-center px-10 py-12">
+            <!-- Logo -->
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-4">
+                <span class="text-3xl font-bold text-white">P</span>
+            </div>
 
-        <div class="bg-white p-5 sm:p-6 rounded-xl shadow-2xl w-full max-w-sm">
-                <h1 class="text-xl font-bold text-center text-gray-800 mb-4">ยินดีต้อนรับ</h1>
-                <p class="text-center text-gray-500 text-sm mb-6">ระบบติดตามการสั่งซื้อโครงการ</p>
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">POTMS</h1>
+            <p class="text-sm text-base-content/60 mt-1 leading-relaxed">
+                ระบบจัดการติดตามการสั่งซื้อของโครงการ<br>
+                Purchase Order Tracking Management System
+            </p>
 
-                <form onsubmit="handleLogin(event)">
-                        <div class="mb-3">
-                                <label class="block text-gray-700 text-xs font-bold mb-1">ชื่อผู้ใช้งาน</label>
-                                <input type="text" id="username" required
-                                        class="w-full px-2 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div class="mb-4">
-                                <label class="block text-gray-700 text-xs font-bold mb-1">รหัสผ่าน</label>
-                                <input type="password" id="password" required
-                                        class="w-full px-2 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
+            <div class="divider my-4"></div>
 
-                        <button type="submit"
-                                class="w-full bg-blue-600 text-white py-2 text-sm rounded-lg font-bold hover:bg-blue-700 transition duration-300">
-                                เข้าสู่ระบบ
-                        </button>
-                </form>
-                <!-- ลิงก์ไปหน้าสมัครสมาชิก -->
-                <div class="mt-4 pt-4 border-t border-gray-200 text-center">
-                        <p class="text-xs text-gray-500 mb-2">ยังไม่มีบัญชี?</p>
-                        <a href="/api/register-page/"
-                                class="inline-block w-full py-2 text-sm font-bold text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition duration-300">
-                                สมัครสมาชิกใหม่
-                        </a>
-                </div>
+            <!-- Google Sign-In Button (rendered by Google) -->
+            <div id="googleBtn" class="flex justify-center w-full"></div>
+
+            <!-- Loading state -->
+            <div id="googleLoading" class="flex items-center gap-2 text-sm text-base-content/50">
+                <span class="loading loading-spinner loading-sm"></span> กำลังโหลด Google Sign-In...
+            </div>
+
+            <!-- Error from server -->
+            {% if error %}
+            <div class="alert alert-error mt-4">
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Info -->
+            <div class="alert alert-info mt-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="text-sm">กรุณาใช้อีเมล <strong>@ubu.ac.th</strong> ในการเข้าสู่ระบบ</span>
+            </div>
+
+            <p class="text-xs text-base-content/30 mt-6">© 2026 POTMS — มหาวิทยาลัยอุบลราชธานี</p>
         </div>
+    </div>
 
-        <script>
-                async function handleLogin(event) {
-                        event.preventDefault(); // ป้องกันหน้าเว็บรีเฟรช
+    <script>
+        const GOOGLE_CLIENT_ID = '{{ google_client_id }}';
 
-                        const username = document.getElementById('username').value;
-                        const password = document.getElementById('password').value;
-
-                        try {
-                                // 1. ส่งข้อมูลไปที่ API Login
-                                const response = await fetch('/api/login/', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ username, password })
-                                });
-
-                                const data = await response.json();
-
-                                if (response.ok) {
-                                        // 2. ถ้าล็อกอินผ่าน: บันทึก JWT tokens และข้อมูลผู้ใช้ลง LocalStorage
-                                        localStorage.setItem('access_token', data.access);
-                                        localStorage.setItem('refresh_token', data.refresh);
-                                        localStorage.setItem('user', JSON.stringify(data.user));
-
-                                        // 3. แจ้งเตือนและย้ายไปหน้า Dashboard ตาม Role
-                                        Swal.fire({
-                                                icon: 'success',
-                                                title: 'สำเร็จ',
-                                                text: 'กำลังเข้าสู่ระบบ...',
-                                                timer: 1500,
-                                                showConfirmButton: false
-                                        }).then(() => {
-                                                // Redirect ตาม Role
-                                                const role = data.user.role;
-                                                if (role === 'Staff' || role === 'Admin') {
-                                                        window.location.href = '/api/staff-dashboard/';
-                                                } else if (role === 'User') {
-                                                        window.location.href = '/api/user-dashboard/';
-                                                } else {
-                                                        window.location.href = '/api/user-dashboard/';
-                                                }
-                                        });
-
-                                } else {
-                                        // 4. ถ้าไม่ผ่าน: แจ้งเตือน
-                                        Swal.fire('ข้อผิดพลาด', data.error || 'เข้าสู่ระบบไม่สำเร็จ', 'error');
-                                }
-                        } catch (error) {
-                                console.error(error);
-                                Swal.fire('Error', 'ไม่สามารถเชื่อมต่อ Server ได้', 'error');
-                        }
+        function onGoogleLibraryLoad() {
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                ux_mode: 'redirect',
+                login_uri: window.location.origin + '/api/auth/google-callback/',
+            });
+            google.accounts.id.renderButton(
+                document.getElementById('googleBtn'),
+                {
+                    theme: 'filled_black',
+                    size: 'large',
+                    width: 320,
+                    text: 'signin_with',
+                    shape: 'rectangular',
+                    logo_alignment: 'left',
                 }
-        </script>
+            );
+            document.getElementById('googleLoading').classList.add('hidden');
+        }
+    </script>
+    <script src="https://accounts.google.com/gsi/client" onload="onGoogleLibraryLoad()" async defer></script>
 </body>
-
 </html>
