@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 
 
@@ -9,16 +10,12 @@ from django.db import models
 class User(models.Model):
     """ผู้ใช้งานระบบ — สร้างอัตโนมัติเมื่อ login ด้วย Google (@ubu.ac.th)"""
 
-    ROLE_CHOICES = [
-        ('Officer', 'เจ้าหน้าที่พัสดุ'),
-        ('User', 'ผู้เข้าร่วมโครงการ'),
-        ('Head', 'หัวหน้าภาค'),
-    ]
-
     user_id = models.AutoField(primary_key=True)
     email = models.EmailField(max_length=255, unique=True)  # Google email (@ubu.ac.th)
     full_name = models.CharField(max_length=255, blank=True, default='')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='User')
+    is_admin = models.BooleanField(default=False, verbose_name='ผู้ดูแลระบบ')
+    is_officer = models.BooleanField(default=False, verbose_name='เจ้าหน้าที่พัสดุ')
+    is_head = models.BooleanField(default=False, verbose_name='หัวหน้าภาค')
     department = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -50,15 +47,15 @@ class Project(models.Model):
     )
     project_name = models.CharField(max_length=255, verbose_name='ชื่อโครงการ')
     total_budget = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0.00,
+        max_digits=15, decimal_places=2, default=Decimal('0.00'),
         verbose_name='งบประมาณทั้งหมด'
     )
     reserved_budget = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0.00,
+        max_digits=15, decimal_places=2, default=Decimal('0.00'),
         verbose_name='งบที่ถูกกัน'
     )
     remaining_budget = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0.00,
+        max_digits=15, decimal_places=2, default=Decimal('0.00'),
         verbose_name='งบคงเหลือ'
     )
     start_date = models.DateField(blank=True, null=True, verbose_name='วันเริ่มต้น')
@@ -149,7 +146,7 @@ class PurchaseOrder(models.Model):
     )
     order_no = models.CharField(max_length=50, verbose_name='เลขที่เอกสาร')
     total_amount = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0.00,
+        max_digits=15, decimal_places=2, default=Decimal('0.00'),
         verbose_name='จำนวนเงินรวม'
     )
     reason = models.TextField(blank=True, null=True, verbose_name='เหตุผลในการจัดซื้อ')
@@ -182,11 +179,11 @@ class OrderItem(models.Model):
     quantity = models.IntegerField(default=1, verbose_name='จำนวน')
     unit = models.CharField(max_length=50, default='ชิ้น', verbose_name='หน่วย')
     unit_price = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0.00,
+        max_digits=10, decimal_places=2, default=Decimal('0.00'),
         verbose_name='ราคาต่อหน่วย'
     )
     total_price = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0.00,
+        max_digits=15, decimal_places=2, default=Decimal('0.00'),
         verbose_name='ราคารวม'
     )
 
@@ -308,7 +305,7 @@ class Payment(models.Model):
         verbose_name='ใบสั่งซื้อที่เกี่ยวข้อง'
     )
     amount_paid = models.DecimalField(
-        max_digits=15, decimal_places=2, default=0.00,
+        max_digits=15, decimal_places=2, default=Decimal('0.00'),
         verbose_name='จำนวนเงินที่เบิก'
     )
     payment_date = models.DateTimeField(auto_now_add=True, verbose_name='วันที่เบิกจ่าย')

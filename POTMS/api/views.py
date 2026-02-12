@@ -4,9 +4,6 @@ from decimal import Decimal
 from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -33,14 +30,14 @@ def get_current_user(request):
         return None
 
 
-def require_role(roles):
-    """Decorator: ตรวจสอบว่า user มี role ที่กำหนด"""
+def require_flags(*flags):
+    """Decorator: ตรวจสอบว่า user มี flag ที่กำหนด (is_admin, is_officer, is_head)"""
     def decorator(view_func):
         def wrapper(request, *args, **kwargs):
             user = get_current_user(request)
             if not user:
                 return JsonResponse({'error': 'กรุณาเข้าสู่ระบบ'}, status=401)
-            if user.role not in roles:
+            if not any(getattr(user, f, False) for f in flags):
                 return JsonResponse({'error': 'ไม่มีสิทธิ์เข้าถึง'}, status=403)
             request.current_user = user
             return view_func(request, *args, **kwargs)
@@ -58,11 +55,14 @@ def homepage(request):
 
 
 def login_page(request):
-    """หน้า Login ด้วย Google"""
-    from django.conf import settings
-    return render(request, 'login.html', {
-        'google_client_id': settings.GOOGLE_CLIENT_ID,
-    })
+    """หน้า Login ด้วย Google OAuth 2.0 (allauth)"""
+    if request.user.is_authenticated:
+        api_user = get_current_user(request)
+        if api_user:
+            if api_user.is_officer:
+                return redirect('officer_dashboard')
+            return redirect('user_dashboard')
+    return render(request, 'login.html')
 
 
 def officer_dashboard_page(request):
@@ -140,175 +140,55 @@ def user_management_page(request):
 # Activity: เข้าสู่ระบบด้วย Google
 # =================================================================
 
-class GoogleLoginAPIView(APIView):
+def allauth_post_login_view(request):
     """
-    POST /api/auth/google/
-    รับ id_token จาก Google → ตรวจ @ubu.ac.th → auto-create User → login
+    Bridge view: หลัง allauth login สำเร็จ → sync api.models.User → set session → redirect
+    allauth จะ redirect มาที่นี่หลัง Google OAuth เสร็จ (LOGIN_REDIRECT_URL)
     """
-
-    def post(self, request):
-        id_token_str = request.data.get('id_token', '')
-
-        if not id_token_str:
-            return Response(
-                {'error': 'กรุณาส่ง id_token'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            from google.oauth2 import id_token
-            from google.auth.transport import requests as google_requests
-            from django.conf import settings
-
-            # Verify id_token with Google
-            idinfo = id_token.verify_oauth2_token(
-                id_token_str,
-                google_requests.Request(),
-                audience=settings.GOOGLE_CLIENT_ID
-            )
-
-            email = idinfo.get('email', '')
-            full_name = idinfo.get('name', '')
-
-            # ตรวจว่า email ลงท้ายด้วย @ubu.ac.th
-            if not email.endswith('@ubu.ac.th'):
-                return Response(
-                    {'error': 'กรุณาใช้อีเมล @ubu.ac.th เท่านั้น'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            # Auto-create User ถ้ายังไม่มีใน DB
-            user, created = User.objects.get_or_create(
-                email=email,
-                defaults={
-                    'full_name': full_name,
-                    'role': 'User',
-                }
-            )
-
-            # อัปเดต full_name ถ้ามีการเปลี่ยนใน Google
-            if not created and user.full_name != full_name:
-                user.full_name = full_name
-                user.save()
-
-            # บันทึกลง session
-            request.session['user_id'] = user.user_id
-            request.session['user_email'] = user.email
-            request.session['user_role'] = user.role
-            request.session['user_full_name'] = user.full_name
-
-            return Response({
-                'message': 'เข้าสู่ระบบสำเร็จ',
-                'user': {
-                    'user_id': user.user_id,
-                    'email': user.email,
-                    'full_name': user.full_name,
-                    'role': user.role,
-                    'department': user.department,
-                },
-                'redirect': '/officer/dashboard/' if user.role == 'Officer' else '/user/dashboard/'
-            })
-
-        except ValueError as e:
-            return Response(
-                {'error': f'Token ไม่ถูกต้อง: {str(e)}'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        except Exception as e:
-            return Response(
-                {'error': f'เกิดข้อผิดพลาด: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-
-# =================================================================
-# Google OAuth — Redirect Callback (form POST from Google)
-# =================================================================
-
-@csrf_exempt
-def google_callback_view(request):
-    """
-    POST /api/auth/google-callback/
-    Google จะ redirect กลับมาพร้อม POST form data: credential, g_csrf_token
-    """
-    if request.method != 'POST':
+    if not request.user.is_authenticated:
         return redirect('login_page')
 
-    credential = request.POST.get('credential', '')
-    if not credential:
-        from django.conf import settings
-        return render(request, 'login.html', {
-            'google_client_id': settings.GOOGLE_CLIENT_ID,
-            'error': 'ไม่ได้รับ credential จาก Google',
-        })
+    django_user = request.user
 
+    # ดึงชื่อจาก social account
+    full_name = f"{django_user.first_name} {django_user.last_name}".strip()
     try:
-        from google.oauth2 import id_token
-        from google.auth.transport import requests as google_requests
-        from django.conf import settings
+        social_account = django_user.socialaccount_set.filter(provider='google').first()
+        if social_account:
+            full_name = social_account.extra_data.get('name', full_name)
+    except Exception:
+        pass
 
-        # Verify id_token with Google
-        idinfo = id_token.verify_oauth2_token(
-            credential,
-            google_requests.Request(),
-            audience=settings.GOOGLE_CLIENT_ID
-        )
+    # Sync ไปยัง api.models.User
+    api_user, created = User.objects.get_or_create(
+        email=django_user.email,
+        defaults={
+            'full_name': full_name,
+        }
+    )
 
-        email = idinfo.get('email', '')
-        full_name = idinfo.get('name', '')
+    if not created and api_user.full_name != full_name and full_name:
+        api_user.full_name = full_name
+        api_user.save(update_fields=['full_name'])
 
-        # ตรวจว่า email ลงท้ายด้วย @ubu.ac.th
-        if not email.endswith('@ubu.ac.th'):
-            return render(request, 'login.html', {
-                'google_client_id': settings.GOOGLE_CLIENT_ID,
-                'error': 'กรุณาใช้อีเมล @ubu.ac.th เท่านั้น',
-            })
+    # Set session variables
+    request.session['user_id'] = api_user.user_id
+    request.session['user_email'] = api_user.email
+    request.session['user_full_name'] = api_user.full_name
 
-        # Auto-create User ถ้ายังไม่มีใน DB
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                'full_name': full_name,
-                'role': 'User',
-            }
-        )
-
-        # อัปเดต full_name ถ้ามีการเปลี่ยนใน Google
-        if not created and user.full_name != full_name:
-            user.full_name = full_name
-            user.save()
-
-        # บันทึกลง session
-        request.session['user_id'] = user.user_id
-        request.session['user_email'] = user.email
-        request.session['user_role'] = user.role
-        request.session['user_full_name'] = user.full_name
-
-        # Redirect ไป dashboard ตาม role
-        if user.role == 'Officer':
-            return redirect('officer_dashboard')
-        else:
-            return redirect('user_dashboard')
-
-    except ValueError as e:
-        from django.conf import settings
-        return render(request, 'login.html', {
-            'google_client_id': settings.GOOGLE_CLIENT_ID,
-            'error': f'Token ไม่ถูกต้อง: {str(e)}',
-        })
-    except Exception as e:
-        from django.conf import settings
-        return render(request, 'login.html', {
-            'google_client_id': settings.GOOGLE_CLIENT_ID,
-            'error': f'เกิดข้อผิดพลาด: {str(e)}',
-        })
+    # Redirect ตาม flags
+    if api_user.is_officer:
+        return redirect('officer_dashboard')
+    else:
+        return redirect('user_dashboard')
 
 
 class LogoutAPIView(APIView):
     """POST /api/auth/logout/ — ออกจากระบบ"""
 
     def post(self, request):
-        request.session.flush()
+        from django.contrib.auth import logout as auth_logout
+        auth_logout(request)
         return Response({'message': 'ออกจากระบบสำเร็จ'})
 
 
@@ -326,7 +206,9 @@ class CurrentUserAPIView(APIView):
             'user_id': user.user_id,
             'email': user.email,
             'full_name': user.full_name,
-            'role': user.role,
+            'is_admin': user.is_admin,
+            'is_officer': user.is_officer,
+            'is_head': user.is_head,
             'department': user.department,
         })
 
@@ -348,7 +230,7 @@ class ProjectAPIView(APIView):
         if not user:
             return Response({'error': 'กรุณาเข้าสู่ระบบ'}, status=401)
 
-        if user.role == 'Officer':
+        if user.is_officer:
             # Officer เห็นทุกโครงการ
             projects = Project.objects.all().order_by('-created_at')
         else:
@@ -376,7 +258,7 @@ class ProjectAPIView(APIView):
 
     def post(self, request):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         data = request.data
@@ -413,7 +295,7 @@ class ProjectDetailAPIView(APIView):
             return Response({'error': 'ไม่พบโครงการ'}, status=404)
 
         # Check access: Officer เห็นทุกโครงการ, User ต้องเป็น Participant
-        if user.role != 'Officer':
+        if not user.is_officer:
             if not ProjectParticipant.objects.filter(
                 project=project, user=user
             ).exists():
@@ -443,7 +325,7 @@ class ProjectDetailAPIView(APIView):
 
     def put(self, request, project_id):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         try:
@@ -466,7 +348,7 @@ class ProjectDetailAPIView(APIView):
 
     def delete(self, request, project_id):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         try:
@@ -490,7 +372,7 @@ class ProjectStartAPIView(APIView):
 
     def post(self, request, project_id):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         try:
@@ -546,7 +428,7 @@ class ProjectParticipantAPIView(APIView):
 
     def post(self, request, project_id):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         data = request.data
@@ -584,7 +466,7 @@ class ParticipantDeleteAPIView(APIView):
 
     def delete(self, request, project_id, user_id):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         try:
@@ -617,7 +499,7 @@ class PurchaseOrderAPIView(APIView):
 
         project_id = request.query_params.get('project_id')
 
-        if user.role == 'Officer':
+        if user.is_officer:
             orders = PurchaseOrder.objects.all()
         else:
             # User เห็นเฉพาะ order ของตัวเอง
@@ -652,7 +534,7 @@ class PurchaseOrderAPIView(APIView):
         items = data.get('items', [])
 
         # ตรวจว่า user เป็น Participant ของโครงการ
-        if user.role != 'Officer':
+        if not user.is_officer:
             if not ProjectParticipant.objects.filter(
                 project_id=project_id, user=user
             ).exists():
@@ -858,7 +740,7 @@ class OrderExportAPIView(APIView):
 
     def post(self, request, order_id):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         try:
@@ -888,7 +770,7 @@ class OrderApprovalRecordAPIView(APIView):
 
     def post(self, request, order_id):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         try:
@@ -967,7 +849,7 @@ class PartialReceiveAPIView(APIView):
 
     def post(self, request):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         data = request.data
@@ -1132,7 +1014,7 @@ class PaymentAPIView(APIView):
 
     def post(self, request):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         data = request.data
@@ -1183,7 +1065,7 @@ class ProjectCloseAPIView(APIView):
 
     def post(self, request, project_id):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         try:
@@ -1228,7 +1110,7 @@ class UserListAPIView(APIView):
 
     def get(self, request):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         users = User.objects.all().order_by('full_name')
@@ -1236,7 +1118,9 @@ class UserListAPIView(APIView):
             'user_id': u.user_id,
             'email': u.email,
             'full_name': u.full_name,
-            'role': u.role,
+            'is_admin': u.is_admin,
+            'is_officer': u.is_officer,
+            'is_head': u.is_head,
             'department': u.department,
         } for u in users]
 
@@ -1250,7 +1134,7 @@ class UserDetailAPIView(APIView):
 
     def put(self, request, user_id):
         user = get_current_user(request)
-        if not user or user.role != 'Officer':
+        if not user or not user.is_officer:
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         try:
@@ -1259,8 +1143,10 @@ class UserDetailAPIView(APIView):
             return Response({'error': 'ไม่พบผู้ใช้'}, status=404)
 
         data = request.data
-        if 'role' in data:
-            target_user.role = data['role']
+        if 'is_officer' in data:
+            target_user.is_officer = data['is_officer']
+        if 'is_head' in data:
+            target_user.is_head = data['is_head']
         if 'department' in data:
             target_user.department = data['department']
         if 'full_name' in data:
@@ -1268,6 +1154,114 @@ class UserDetailAPIView(APIView):
 
         target_user.save()
         return Response({'message': 'แก้ไขข้อมูลผู้ใช้สำเร็จ'})
+
+
+# =================================================================
+# Admin Management APIs (Officer only)
+# =================================================================
+
+class AdminListAPIView(APIView):
+    """
+    GET  /api/admins/  — รายชื่อ admin (Officer) ทั้งหมด
+    POST /api/admins/  — เพิ่ม admin ใหม่ด้วย email @ubu.ac.th
+    """
+
+    def get(self, request):
+        user = get_current_user(request)
+        if not user or not user.is_admin:
+            return Response({'error': 'เฉพาะ admin เท่านั้น'}, status=403)
+
+        admins = User.objects.filter(is_admin=True).order_by('full_name')
+        data = [{
+            'user_id': u.user_id,
+            'email': u.email,
+            'full_name': u.full_name,
+            'department': u.department,
+            'is_admin': u.is_admin,
+            'created_at': u.created_at.isoformat(),
+        } for u in admins]
+
+        return Response(data)
+
+    def post(self, request):
+        user = get_current_user(request)
+        if not user or not user.is_admin:
+            return Response({'error': 'เฉพาะ admin เท่านั้น'}, status=403)
+
+        email = request.data.get('email', '').strip().lower()
+
+        if not email:
+            return Response({'error': 'กรุณาระบุอีเมล'}, status=400)
+
+        if not email.endswith('@ubu.ac.th'):
+            return Response(
+                {'error': 'อนุญาตเฉพาะอีเมล @ubu.ac.th เท่านั้น'},
+                status=400
+            )
+
+        # ถ้ามี user อยู่แล้ว → ตั้งเป็น admin
+        try:
+            target_user = User.objects.get(email=email)
+            if target_user.is_admin:
+                return Response(
+                    {'error': f'{email} เป็น admin อยู่แล้ว'},
+                    status=400
+                )
+            target_user.is_admin = True
+            target_user.save(update_fields=['is_admin'])
+            return Response({
+                'message': f'เปลี่ยน {target_user.full_name} เป็น admin สำเร็จ',
+                'user_id': target_user.user_id,
+            })
+        except User.DoesNotExist:
+            pass
+
+        # ถ้ายังไม่มี user → สร้างใหม่เป็น admin
+        new_user = User.objects.create(
+            email=email,
+            full_name=request.data.get('full_name', '').strip() or email.split('@')[0].replace('.', ' ').title(),
+            is_admin=True,
+        )
+
+        return Response({
+            'message': f'เพิ่ม admin {email} สำเร็จ',
+            'user_id': new_user.user_id,
+        }, status=201)
+
+
+class AdminRemoveAPIView(APIView):
+    """DELETE /api/admins/<user_id>/ — ถอด admin (เปลี่ยนเป็น User)"""
+
+    def delete(self, request, user_id):
+        user = get_current_user(request)
+        if not user or not user.is_admin:
+            return Response({'error': 'เฉพาะ admin เท่านั้น'}, status=403)
+
+        if user.user_id == user_id:
+            return Response(
+                {'error': 'ไม่สามารถถอด admin ตัวเองได้'},
+                status=400
+            )
+
+        try:
+            target_user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'ไม่พบผู้ใช้'}, status=404)
+
+        if not target_user.is_admin:
+            return Response({'error': 'ผู้ใช้นี้ไม่ใช่ admin'}, status=400)
+
+        target_user.is_admin = False
+        target_user.save(update_fields=['is_admin'])
+
+        return Response({
+            'message': f'ถอด {target_user.full_name} ออกจาก admin สำเร็จ'
+        })
+
+
+def admin_management_page(request):
+    """หน้าจัดการ Admin (Officer only)"""
+    return render(request, 'admin_management.html')
 
 
 # =================================================================
@@ -1282,7 +1276,7 @@ class StatsAPIView(APIView):
         if not user:
             return Response({'error': 'กรุณาเข้าสู่ระบบ'}, status=401)
 
-        if user.role == 'Officer':
+        if user.is_officer or user.is_admin:
             data = {
                 'total_projects': Project.objects.count(),
                 'active_projects': Project.objects.filter(status='Active').count(),

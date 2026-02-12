@@ -15,5 +15,8 @@ urlpatterns = [
     # API routes (prefix: /api/)
     path('api/', include('api.urls')),
 
+    # django-allauth (Google OAuth 2.0)
+    path('accounts/', include('allauth.urls')),
+
     # Page routes (templates)
 ] + page_urlpatterns

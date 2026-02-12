@@ -1,0 +1,424 @@
+@startuml POTMS Class Diagram
+!theme plain
+skinparam classAttributeIconSize 0
+hide circle
+skinparam classFontSize 13
+skinparam classHeaderBackgroundColor #E8EAF6
+skinparam packageBackgroundColor #FAFAFA
+skinparam packageBorderColor #BDBDBD
+skinparam arrowColor #546E7A
+skinparam linetype ortho
+
+title POTMS — Purchase Order Tracking Management System\nClass Diagram (Class-Based Views)
+
+' =====================================================================
+' Models (Django ORM)
+' =====================================================================
+package "api.models" <<Database>> #F3E5F5 {
+
+    class User {
+        + user_id : AutoField <<PK>>
+        + email : EmailField <<unique>>
+        + full_name : CharField
+        + is_admin : BooleanField
+        + is_officer : BooleanField
+        + is_head : BooleanField
+        + department : CharField
+        + created_at : DateTimeField
+        --
+        + __str__() : str
+    }
+
+    class Project {
+        + project_id : AutoField <<PK>>
+        + project_name : CharField
+        + total_budget : DecimalField
+        + reserved_budget : DecimalField
+        + remaining_budget : DecimalField
+        + start_date : DateField
+        + end_date : DateField
+        + status : CharField {Draft|Active|Closed}
+        + created_at : DateTimeField
+        --
+        + save() : void
+        + __str__() : str
+    }
+
+    class ProjectParticipant {
+        + id : BigAutoField <<PK>>
+        + role_in_project : CharField {Requester|Committee}
+        --
+        + __str__() : str
+    }
+
+    class PurchaseOrder {
+        + order_id : AutoField <<PK>>
+        + order_no : CharField
+        + total_amount : DecimalField
+        + reason : TextField
+        + status : CharField {Draft|Reserved|\n  Pending_Approval|Approved|\n  Rejected|Completed}
+        + created_at : DateTimeField
+        + updated_at : DateTimeField
+        --
+        + __str__() : str
+    }
+
+    class OrderItem {
+        + item_id : AutoField <<PK>>
+        + material_name : CharField
+        + quantity : IntegerField
+        + unit : CharField
+        + unit_price : DecimalField
+        + total_price : DecimalField
+        --
+        + save() : void
+        + __str__() : str
+    }
+
+    class PartialReceive {
+        + receive_id : AutoField <<PK>>
+        + receipt_no : CharField
+        + receipt_file_path : CharField
+        + received_date : DateTimeField
+        + status : CharField {Pending_Inspection|\n  Inspected}
+        --
+        + __str__() : str
+    }
+
+    class Inspection {
+        + inspection_id : AutoField <<PK>>
+        + inspection_date : DateTimeField
+        + result : CharField {Pass|Reject}
+        + comment : TextField
+        --
+        + __str__() : str
+    }
+
+    class Payment {
+        + payment_id : AutoField <<PK>>
+        + amount_paid : DecimalField
+        + payment_date : DateTimeField
+        + status : CharField {Processing|Paid}
+        --
+        + __str__() : str
+    }
+}
+
+' =====================================================================
+' Model Relationships
+' =====================================================================
+Project "1" *-- "0..*" PurchaseOrder : orders >
+Project "1" *-- "0..*" ProjectParticipant : participants >
+Project "1" *-- "0..*" Payment : payments >
+Project "1" -- "1" User : created_by >
+
+ProjectParticipant "0..*" -- "1" User : user >
+
+PurchaseOrder "1" *-- "0..*" OrderItem : items >
+PurchaseOrder "1" *-- "0..*" PartialReceive : partial_receives >
+PurchaseOrder "0..*" -- "1" User : requester >
+PurchaseOrder "0..*" -- "0..1" User : approver >
+PurchaseOrder "1" -- "0..*" Payment : payments >
+
+PartialReceive "1" -- "0..1" Inspection : inspection >
+PartialReceive "0..*" -- "1" User : recorded_by >
+
+Inspection "0..*" -- "1" User : committee >
+
+' =====================================================================
+' Django REST Framework Base
+' =====================================================================
+package "rest_framework" <<Framework>> #E3F2FD {
+    abstract class APIView {
+        + request : Request
+        + kwargs : dict
+        --
+        + get(request, ...) : Response
+        + post(request, ...) : Response
+        + put(request, ...) : Response
+        + delete(request, ...) : Response
+        + dispatch(request, ...) : Response
+    }
+}
+
+' =====================================================================
+' Auth Views
+' =====================================================================
+package "api.views — Auth" <<Rectangle>> #E8F5E9 {
+
+    class LogoutAPIView {
+        --
+        + post(request) : Response
+    }
+
+    class CurrentUserAPIView {
+        --
+        + get(request) : Response
+    }
+}
+
+LogoutAPIView --|> APIView
+CurrentUserAPIView --|> APIView
+
+' =====================================================================
+' Project Views
+' =====================================================================
+package "api.views — Project" <<Rectangle>> #FFF3E0 {
+
+    class ProjectAPIView {
+        --
+        + get(request) : Response
+        + post(request) : Response
+    }
+
+    class ProjectDetailAPIView {
+        --
+        + get(request, project_id) : Response
+        + put(request, project_id) : Response
+        + delete(request, project_id) : Response
+    }
+
+    class ProjectStartAPIView {
+        --
+        + post(request, project_id) : Response
+    }
+
+    class ProjectCloseAPIView {
+        --
+        + post(request, project_id) : Response
+    }
+}
+
+ProjectAPIView --|> APIView
+ProjectDetailAPIView --|> APIView
+ProjectStartAPIView --|> APIView
+ProjectCloseAPIView --|> APIView
+
+' =====================================================================
+' Participant Views
+' =====================================================================
+package "api.views — Participant" <<Rectangle>> #FFF3E0 {
+
+    class ProjectParticipantAPIView {
+        --
+        + get(request, project_id) : Response
+        + post(request, project_id) : Response
+    }
+
+    class ParticipantDeleteAPIView {
+        --
+        + delete(request, project_id, user_id) : Response
+    }
+}
+
+ProjectParticipantAPIView --|> APIView
+ParticipantDeleteAPIView --|> APIView
+
+' =====================================================================
+' Purchase Order Views
+' =====================================================================
+package "api.views — PurchaseOrder" <<Rectangle>> #FFFDE7 {
+
+    class PurchaseOrderAPIView {
+        --
+        + get(request) : Response
+        + post(request) : Response
+    }
+
+    class PurchaseOrderDetailAPIView {
+        --
+        + get(request, order_id) : Response
+        + put(request, order_id) : Response
+    }
+
+    class OrderSubmitAPIView {
+        --
+        + post(request, order_id) : Response
+    }
+
+    class OrderExportAPIView {
+        --
+        + post(request, order_id) : Response
+    }
+
+    class OrderApprovalRecordAPIView {
+        --
+        + post(request, order_id) : Response
+    }
+}
+
+PurchaseOrderAPIView --|> APIView
+PurchaseOrderDetailAPIView --|> APIView
+OrderSubmitAPIView --|> APIView
+OrderExportAPIView --|> APIView
+OrderApprovalRecordAPIView --|> APIView
+
+' =====================================================================
+' Receive & Inspection Views
+' =====================================================================
+package "api.views — Receive & Inspection" <<Rectangle>> #E0F7FA {
+
+    class PartialReceiveAPIView {
+        --
+        + get(request) : Response
+        + post(request) : Response
+    }
+
+    class InspectionAPIView {
+        --
+        + get(request) : Response
+        + post(request) : Response
+    }
+}
+
+PartialReceiveAPIView --|> APIView
+InspectionAPIView --|> APIView
+
+' =====================================================================
+' Payment & Stats Views
+' =====================================================================
+package "api.views — Payment & Stats" <<Rectangle>> #FCE4EC {
+
+    class PaymentAPIView {
+        --
+        + get(request) : Response
+        + post(request) : Response
+    }
+
+    class StatsAPIView {
+        --
+        + get(request) : Response
+    }
+}
+
+PaymentAPIView --|> APIView
+StatsAPIView --|> APIView
+
+' =====================================================================
+' Admin & User Management Views
+' =====================================================================
+package "api.views — Admin & User Mgmt" <<Rectangle>> #F3E5F5 {
+
+    class AdminListAPIView {
+        --
+        + get(request) : Response
+        + post(request) : Response
+    }
+
+    class AdminRemoveAPIView {
+        --
+        + delete(request, user_id) : Response
+    }
+
+    class UserListAPIView {
+        --
+        + get(request) : Response
+    }
+
+    class UserDetailAPIView {
+        --
+        + put(request, user_id) : Response
+    }
+}
+
+AdminListAPIView --|> APIView
+AdminRemoveAPIView --|> APIView
+UserListAPIView --|> APIView
+UserDetailAPIView --|> APIView
+
+' =====================================================================
+' Allauth Adapters
+' =====================================================================
+package "allauth (adapters)" <<Framework>> #E3F2FD {
+
+    abstract class DefaultAccountAdapter {
+        --
+        + is_open_for_signup(request) : bool
+    }
+
+    abstract class DefaultSocialAccountAdapter {
+        --
+        + is_open_for_signup(request, sociallogin) : bool
+        + pre_social_login(request, sociallogin) : void
+        + save_user(request, sociallogin, form) : User
+    }
+}
+
+package "api.allauth_adapter" <<Rectangle>> #E8F5E9 {
+
+    class PotmsAccountAdapter {
+        --
+        + is_open_for_signup(request) : bool
+    }
+
+    class PotmsSocialAccountAdapter {
+        --
+        + is_open_for_signup(request, sociallogin) : bool
+        + pre_social_login(request, sociallogin) : void
+        + save_user(request, sociallogin, form) : User
+        - _sync_api_user(sociallogin) : ApiUser
+    }
+}
+
+PotmsAccountAdapter --|> DefaultAccountAdapter
+PotmsSocialAccountAdapter --|> DefaultSocialAccountAdapter
+
+' =====================================================================
+' Helper Functions (module-level)
+' =====================================================================
+package "api.views — Helpers & Page Views" <<Rectangle>> #ECEFF1 {
+
+    class "<<functions>>" as HelperFunctions {
+        + get_current_user(request) : User | None
+        + require_role(roles) : decorator
+        ..Page Views (render template)..
+        + homepage(request)
+        + login_page(request)
+        + allauth_post_login_view(request)
+        + officer_dashboard_page(request)
+        + user_dashboard_page(request)
+        + project_list_page(request)
+        + participant_setup_page(request)
+        + create_order_page(request)
+        + edit_order_page(request)
+        + my_orders_page(request)
+        + order_detail_page(request)
+        + officer_orders_page(request)
+        + partial_receive_page(request)
+        + inspection_page(request)
+        + payment_page(request)
+        + project_closure_page(request)
+        + user_management_page(request)
+        + admin_management_page(request)
+    }
+}
+
+' =====================================================================
+' Usage Dependencies (Views → Models)
+' =====================================================================
+ProjectAPIView ..> Project : <<uses>>
+ProjectAPIView ..> ProjectParticipant : <<uses>>
+ProjectDetailAPIView ..> Project : <<uses>>
+ProjectStartAPIView ..> Project : <<uses>>
+ProjectCloseAPIView ..> Project : <<uses>>
+ProjectParticipantAPIView ..> ProjectParticipant : <<uses>>
+ParticipantDeleteAPIView ..> ProjectParticipant : <<uses>>
+PurchaseOrderAPIView ..> PurchaseOrder : <<uses>>
+PurchaseOrderAPIView ..> OrderItem : <<uses>>
+PurchaseOrderDetailAPIView ..> PurchaseOrder : <<uses>>
+OrderSubmitAPIView ..> PurchaseOrder : <<uses>>
+OrderExportAPIView ..> PurchaseOrder : <<uses>>
+OrderApprovalRecordAPIView ..> PurchaseOrder : <<uses>>
+PartialReceiveAPIView ..> PartialReceive : <<uses>>
+InspectionAPIView ..> Inspection : <<uses>>
+PaymentAPIView ..> Payment : <<uses>>
+AdminListAPIView ..> User : <<uses>>
+AdminRemoveAPIView ..> User : <<uses>>
+UserListAPIView ..> User : <<uses>>
+UserDetailAPIView ..> User : <<uses>>
+StatsAPIView ..> Project : <<uses>>
+StatsAPIView ..> PurchaseOrder : <<uses>>
+
+PotmsSocialAccountAdapter ..> User : <<syncs>>
+
+@enduml

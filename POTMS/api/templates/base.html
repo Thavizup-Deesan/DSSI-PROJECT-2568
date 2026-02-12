@@ -136,7 +136,12 @@
 
             document.getElementById('userName').textContent = data.full_name;
             document.getElementById('userEmail').textContent = data.email;
-            document.getElementById('userRoleBadge').textContent = data.role;
+            const roleBadge = document.getElementById('userRoleBadge');
+            const roles = [];
+            if (data.is_admin) roles.push('Admin');
+            if (data.is_officer) roles.push('Officer');
+            if (data.is_head) roles.push('Head');
+            roleBadge.textContent = roles.length ? roles.join(', ') : 'User';
             document.getElementById('userAvatar').textContent = (data.full_name || '?')[0].toUpperCase();
 
             const nav = document.getElementById('sidebarNav');
@@ -148,8 +153,10 @@
             const section = (title, items) =>
                 `<div class="mb-4"><div class="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider opacity-40">${title}</div>${items}</div>`;
 
-            if (data.role === 'Officer') {
-                nav.innerHTML =
+            let navHtml = '';
+
+            if (data.is_officer) {
+                navHtml +=
                     section('ภาพรวม', link('/officer/dashboard/', 'dashboard', 'Dashboard')) +
                     section('จัดการโครงการ',
                         link('/projects/', 'folder', 'โครงการ') +
@@ -160,12 +167,18 @@
                         link('/inspections/', 'fact_check', 'ตรวจรับ')) +
                     section('การเงิน', link('/payments/', 'payments', 'เบิกจ่าย'));
             } else {
-                nav.innerHTML =
+                navHtml +=
                     section('ภาพรวม', link('/user/dashboard/', 'dashboard', 'Dashboard')) +
                     section('ใบสั่งซื้อ',
                         link('/orders/my/', 'receipt_long', 'ใบสั่งซื้อของฉัน') +
                         link('/orders/create/', 'add_circle', 'สร้างใบสั่งซื้อ'));
             }
+
+            if (data.is_admin) {
+                navHtml += section('ผู้ดูแลระบบ', link('/officer/admins/', 'admin_panel_settings', 'จัดการ Admin'));
+            }
+
+            nav.innerHTML = navHtml;
             return data;
         }
 

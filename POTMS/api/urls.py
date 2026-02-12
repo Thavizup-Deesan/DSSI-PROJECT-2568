@@ -3,10 +3,8 @@ from . import views
 
 urlpatterns = [
     # =================================================================
-    # Auth APIs — Google OAuth
+    # Auth APIs — Google OAuth 2.0 (via django-allauth)
     # =================================================================
-    path('auth/google/', views.GoogleLoginAPIView.as_view(), name='google_login'),
-    path('auth/google-callback/', views.google_callback_view, name='google_callback'),
     path('auth/logout/', views.LogoutAPIView.as_view(), name='logout'),
     path('auth/me/', views.CurrentUserAPIView.as_view(), name='current_user'),
 
@@ -55,6 +53,12 @@ urlpatterns = [
     path('payments/', views.PaymentAPIView.as_view(), name='payments'),
 
     # =================================================================
+    # Admin Management APIs
+    # =================================================================
+    path('admins/', views.AdminListAPIView.as_view(), name='admin_list'),
+    path('admins/<int:user_id>/', views.AdminRemoveAPIView.as_view(), name='admin_remove'),
+
+    # =================================================================
     # User Management APIs
     # =================================================================
     path('users/', views.UserListAPIView.as_view(), name='user_list'),
@@ -72,6 +76,7 @@ urlpatterns = [
 page_urlpatterns = [
     path('', views.homepage, name='homepage'),
     path('login/', views.login_page, name='login_page'),
+    path('auth/post-login/', views.allauth_post_login_view, name='allauth_post_login'),
     path('officer/dashboard/', views.officer_dashboard_page, name='officer_dashboard'),
     path('user/dashboard/', views.user_dashboard_page, name='user_dashboard'),
     path('projects/', views.project_list_page, name='project_list_page'),
@@ -86,4 +91,5 @@ page_urlpatterns = [
     path('payments/', views.payment_page, name='payment'),
     path('projects/closure/', views.project_closure_page, name='project_closure'),
     path('officer/users/', views.user_management_page, name='user_management'),
+    path('officer/admins/', views.admin_management_page, name='admin_management'),
 ]
