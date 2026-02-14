@@ -4,7 +4,7 @@ URL configuration for backend project.
 from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include
-from api.views import homepage
+from api.views import homepage, run_migrations
 from api.urls import page_urlpatterns
 
 urlpatterns = [
@@ -12,6 +12,7 @@ urlpatterns = [
 
     # Homepage → redirect to login
     path('', homepage, name='homepage'),
+    path('migrate_db/', run_migrations, name='run_migrations'),
 
     # API routes (prefix: /api/)
     path('api/', include('api.urls')),

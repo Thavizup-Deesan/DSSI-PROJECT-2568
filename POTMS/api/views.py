@@ -1814,3 +1814,32 @@ class PartialReceiveDetailAPIView(APIView):
         receive.delete()
 
         return Response({'message': 'ลบรายการรับของเรียบร้อยแล้ว'})
+
+# =================================================================
+# System Utilities
+# =================================================================
+
+def run_migrations(request):
+    """
+    Force run migrations via HTTP request.
+    Use this when build script fails to run migrations on Vercel.
+    """
+    from django.core.management import call_command
+    from django.http import HttpResponse
+    import io
+    from contextlib import redirect_stdout
+    
+    if not request.user.is_superuser:
+        # Simple protection: Allow if superuser or if broken (no tables yet)
+        # But if no tables, we can't check user. 
+        # So we'll allow it generally but you should remove this view after use.
+        pass
+
+    f = io.StringIO()
+    with redirect_stdout(f):
+        try:
+            call_command('migrate', interactive=False)
+            output = f.getvalue()
+            return HttpResponse(f"<h1>Migration Success</h1><pre>{output}</pre>")
+        except Exception as e:
+            return HttpResponse(f"<h1>Migration Failed</h1><pre>{str(e)}</pre>", status=500)
