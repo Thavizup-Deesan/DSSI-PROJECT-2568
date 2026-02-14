@@ -142,4 +142,4 @@ Draft → Submit (กันวงเงิน) → Reserved → Export (ส่�
 
 - **Figma Mockup:** https://www.figma.com/design/MwMGYaHzdhh0T5nqtXiR4L/Untitled?node-id=24-544&t=U4nE53EGEkVuW28w-1
 - **Google Drive:** https://drive.google.com/drive/folders/1YXr_xa2F102Yfu3A0DOHMSBixSPiH_e0?usp=sharing
-- **เอกสาร:** https://docs.google.com/document/d/1uJ94MVcdQXf0ZZ3P4fvL0MlhHWflx_OU/edit?usp=sharing&ouid=111458634810759901210&rtpof=true&sd=true
+- **เอกสาร:** https://docs.google.com/document/d/1ohBHaTWRGV8d1iO_BuTXY5fG235RB8ZLqQvtKmq8N20/edit?usp=sharing
