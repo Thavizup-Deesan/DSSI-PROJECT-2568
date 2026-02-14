@@ -1893,4 +1893,4 @@ def run_migrations(request):
         return HttpResponse(f"<h1>Migration & Setup Success</h1><pre>{output}</pre>")
     except Exception:
         error_msg = traceback.format_exc()
-        return HttpResponse(f"<h1>Migration Failed</h1><pre>{error_msg}</pre><hr><pre>{f.getvalue()}</pre>", status=500)
+        return HttpResponse(f"<h1>Migration Failed</h1><pre>{error_msg}</pre><hr><pre>{f.getvalue()}</pre>", status=200)
