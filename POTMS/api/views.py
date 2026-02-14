@@ -1826,20 +1826,53 @@ def run_migrations(request):
     """
     from django.core.management import call_command
     from django.http import HttpResponse
+    from django.contrib.sites.models import Site
+    from allauth.socialaccount.models import SocialApp
     import io
-    from contextlib import redirect_stdout
+    import traceback
+    from contextlib import redirect_stdout, redirect_stderr
+    import os
     
     if not request.user.is_superuser:
-        # Simple protection: Allow if superuser or if broken (no tables yet)
-        # But if no tables, we can't check user. 
-        # So we'll allow it generally but you should remove this view after use.
         pass
 
     f = io.StringIO()
-    with redirect_stdout(f):
-        try:
+    try:
+        with redirect_stdout(f), redirect_stderr(f):
+            # 1. Run Migrations
+            print("--- Running Migrations ---")
             call_command('migrate', interactive=False)
-            output = f.getvalue()
-            return HttpResponse(f"<h1>Migration Success</h1><pre>{output}</pre>")
-        except Exception as e:
-            return HttpResponse(f"<h1>Migration Failed</h1><pre>{str(e)}</pre>", status=500)
+            
+            # 2. Fix Site ID = 1
+            print("\n--- Fix Site Configuration ---")
+            current_domain = request.get_host()
+            site, created = Site.objects.update_or_create(
+                id=1,
+                defaults={
+                    'domain': current_domain,
+                    'name': 'POTMS Production'
+                }
+            )
+            print(f"Site ID=1 configured: {site.domain}")
+
+            # 3. Setup Google SocialApp (Optional but helpful)
+            google_client_id = os.environ.get('GOOGLE_CLIENT_ID')
+            google_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
+            if google_client_id and google_client_secret:
+                print("\n--- Setup Google SocialApp ---")
+                app, app_created = SocialApp.objects.update_or_create(
+                    provider='google',
+                    defaults={
+                        'name': 'Google OAuth',
+                        'client_id': google_client_id,
+                        'secret': google_client_secret,
+                    }
+                )
+                app.sites.add(site)
+                print(f"Google SocialApp configured for {site.domain}")
+
+        output = f.getvalue()
+        return HttpResponse(f"<h1>Migration & Setup Success</h1><pre>{output}</pre>")
+    except Exception:
+        error_msg = traceback.format_exc()
+        return HttpResponse(f"<h1>Migration Failed</h1><pre>{error_msg}</pre><hr><pre>{f.getvalue()}</pre>", status=500)
