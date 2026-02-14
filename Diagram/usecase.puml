@@ -1,5 +1,5 @@
 @startuml
-title Use Case Diagram: ระบบจัดซื้อวัสดุภาครัฐ (Offline Approval Flow)
+title Use Case Diagram: ระบบจัดการติดตามการสั่งซื้อของโครงการ (POTMS)
 left to right direction
 skinparam packageStyle rectangle
 
@@ -7,77 +7,83 @@ skinparam packageStyle rectangle
 actor "เจ้าหน้าที่พัสดุ\n(Officer)" as Officer
 actor "ผู้เข้าร่วมโครงการ\n(User)" as User
 actor "กรรมการตรวจรับ\n(Inspection Committee)" as Committee
-actor "ระบบอัตโนมัติ\n(System)" as System <<Secondary>>
 
-rectangle "ระบบจัดซื้อวัสดุภาครัฐ (System Boundary)" {
+rectangle "ระบบจัดการติดตามการสั่งซื้อของโครงการ (System Boundary)" {
 
-    ' --- Group 1: Project Setup ---
-    usecase "UC-01: นำเข้าและตั้งค่าโครงการ\n(Import & Setup Project)" as UC01
-    usecase "UC-02: ระบุผู้รับผิดชอบโครงการ\n(Assign Participants)" as UC02
-    usecase "UC-03: เริ่มโครงการ\n(Start Project)" as UC03
+    ' --- Group 1: Authentication ---
+    usecase "UC-01: เข้าสู่ระบบ\n(Login)" as UC01
 
-    ' --- Group 2: Ordering ---
-    usecase "UC-04: สร้างใบสั่งซื้อ\n(Create Order)" as UC04
-    usecase "UC-04a: แก้ไขใบสั่งซื้อ\n(Edit Order)" as UC05
-    usecase "UC-05: ตรวจสอบวงเงินคงเหลือ\n(Check Budget)" as UC06
+    ' --- Group 2: Project Setup ---
+    usecase "UC-02: นำเข้าและตั้งค่าโครงการ\n(Import & Setup Project)" as UC02
+    usecase "UC-03: ระบุผู้รับผิดชอบโครงการ\n(Assign Participants)" as UC03
+    usecase "UC-04: เริ่มโครงการ\n(Start Project)" as UC04
+
+    ' --- Group 3: Ordering ---
+    usecase "UC-05: สร้างใบสั่งซื้อ\n(Create Order)" as UC05
+    usecase "UC-06: ตรวจสอบวงเงินคงเหลือ\n(Check Budget)" as UC06
+    usecase "UC-07: แก้ไขใบสั่งซื้อ\n(Edit Order)" as UC07
     
-    ' --- Group 3: Export for Offline Process ---
-    usecase "UC-06: กันวงเงินและ Export ข้อมูล\n(Reserve & Export Data)" as UC07
+    ' --- Group 4: Export for Offline Process ---
+    usecase "UC-08: กันวงเงินและ Export ข้อมูล\n(Reserve & Export Data)" as UC08
     
-    note bottom of UC07
+    note bottom of UC08
         <b>Offline Process:</b>
         นำเอกสารไปให้หัวหน้าภาคเซ็นอนุมัติ
-        - ถ้าอนุมัติ -> ไปขั้นตอน UC-08
-        - ถ้าแก้ไข -> แจ้ง User ทำ UC-04a
+        - ถ้าอนุมัติ -> ไปขั้นตอน UC-09
+        - ถ้าแก้ไข -> แจ้ง User ทำ UC-07
     end note
 
-    ' --- Group 4: Fulfillment ---
-    usecase "UC-08: สร้างใบสั่งซื้อย่อยและแนบใบเสร็จ\n(Create Sub-Order & Upload Receipt)" as UC09
+    ' --- Group 5: Fulfillment ---
+    usecase "UC-09: สร้างใบสั่งซื้อย่อยและแนบใบเสร็จ\n(Create Sub-Order & Upload Receipt)" as UC09
     usecase "UC-10: ตรวจรับพัสดุ\n(Inspect Goods)" as UC10
-    usecase "UC-10a: ยืนยัน/ปฏิเสธ การตรวจรับ\n(Confirm/Reject Inspection)" as UC11
+    usecase "UC-11: ยืนยัน/ปฏิเสธ การตรวจรับ\n(Confirm/Reject Inspection)" as UC11
 
-    ' --- Group 5: Closing ---
-    usecase "UC-11: คำนวณยอดและตั้งเบิกจ่าย\n(Process Payment)" as UC12
-    usecase "UC-12: สรุปและปิดโครงการ\n(Close Project)" as UC13
+    ' --- Group 6: Closing ---
+    usecase "UC-12: คำนวณยอดและตั้งเบิกจ่าย\n(Process Payment)" as UC12
+    usecase "UC-13: สรุปและปิดโครงการ\n(Close Project)" as UC13
 
     ' --- Relationships ---
 
-    ' Officer Actions
+    ' Authentication
     Officer -- UC01
+    User -- UC01
+    Committee -- UC01
+
+    ' Officer Actions
     Officer -- UC02
     Officer -- UC03
-    Officer -- UC07
+    Officer -- UC04
+    Officer -- UC08
     Officer -- UC09
     Officer -- UC12
     Officer -- UC13
 
     ' User Actions
-    User -- UC04
     User -- UC05
+    User -- UC07
 
     ' Committee Actions
     Committee -- UC10
 
-    ' System Actions
-    UC06 -- System : Auto Check
-    UC12 -- System : Auto Calculate
-
-    ' --- Logic & Dependencies ---
+    ' --- Logic & Dependencies (Internal System Processes) ---
     
     ' Ordering Logic
-    UC04 ..> UC06 : <<include>>
-    UC05 .> UC04 : <<extend>> 
-    note on link
-        กรณีงบไม่พอ หรือ
-        หัวหน้าแจ้งแก้ไข (Offline)
-    end note
+    ' UC-05 (Create) เรียก UC-06 (Check Budget) เสมอ
+    UC05 ..> UC06 : <<include>>
+    
+    ' UC-07 (Edit) เป็นทางเลือกของ UC-05
+    UC07 .> UC05 : <<extend>> 
 
     ' Inspection Logic
+    ' UC-10 (Inspect) ต้องรอ UC-09 (Create Sub-Order) ก่อน
     UC09 ..> UC10 : prerequisite
+    
+    ' UC-11 (Confirm) เป็นผลต่อเนื่องจาก UC-10
     UC11 .> UC10 : <<extend>>
     
     ' Payment Logic
-    UC12 .> UC11 : <<include>>
+    ' UC-11 (Confirm) เรียก UC-12 (Calculate & Process) เสมอ
+    UC11 ..> UC12 : <<include>>
 }
 
 @enduml

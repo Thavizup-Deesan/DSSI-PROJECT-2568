@@ -30,14 +30,15 @@ repeat
     :ส่งใบสั่งซื้อให้งานพัสดุ;
     repeat
         :สร้างใบสั่งซื้อย่อย พร้อมแนบใบเสร็จ(.pdf/.jpg);
-        |Inspection Committee (กก.ตรวจรับ)|
-        :ตรวจนับจำนวน/คุณภาพ จากรายการใบเสร็จ;
-        if (ถูกต้องครบถ้วน?) then (ไม่ถูกต้อง)
+        |Committee (คณะกรรมการตรวจรับ)|
+        :ตรวจสอบความละเอียดสินค้า (Inspect Items);
+        |Officer (เจ้าหน้าที่พัสดุ)|
+        if (ผลการตรวจรับ? (Inspection Result)) then (ถูกต้อง (Pass))
+            :กดยืนยันการตรวจรับ (Confirm Inspection);
+        else (ไม่ถูกต้อง (Reject))
             :ปฏิเสธรับของ (Reject Goods);
             :แจ้งผู้ขายแก้ไข;
             stop
-        else (ถูกต้อง)
-            :ยืนยันการตรวจรับ (Confirm Inspection);
         endif
     repeat while (รายการสั่งซื้อครบถ้วนหรือไม่) is (ยังไม่ครบ)
 

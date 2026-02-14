@@ -11,7 +11,7 @@ entity "User (ผู้ใช้งานระบบ)" as User {
   username : VARCHAR
   password : VARCHAR
   full_name : VARCHAR
-  role : ENUM (Officer, User, Head)
+  role : ENUM (Officer, User, Committee)
   department : VARCHAR
 }
 
@@ -20,6 +20,7 @@ entity "Project (โครงการ)" as Project {
   --
   *created_by : INT <<FK>>
   project_name : VARCHAR
+  ubufmis_code : VARCHAR
   total_budget : DECIMAL(15,2)
   reserved_budget : DECIMAL(15,2)
   remaining_budget : DECIMAL(15,2)

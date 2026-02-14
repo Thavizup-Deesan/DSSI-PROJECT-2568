@@ -1,5 +1,5 @@
 @startuml POTMS Class Diagram
-!theme plain
+
 skinparam classAttributeIconSize 0
 hide circle
 skinparam classFontSize 13
