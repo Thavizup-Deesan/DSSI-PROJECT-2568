@@ -57,7 +57,7 @@
         document.getElementById('activeProjects').textContent = stats.active_projects || 0;
         document.getElementById('totalOrders').textContent = stats.total_orders || 0;
         document.getElementById('pendingOrders').textContent = stats.pending_approval || 0;
-        document.getElementById('totalPayments').textContent = stats.total_payments || 0;
+        document.getElementById('totalPayments').textContent = '฿' + parseFloat(stats.total_payments || 0).toLocaleString();
 
         const orders = await apiFetch('/api/orders/');
         const tbody = document.getElementById('ordersTable');
@@ -77,5 +77,8 @@
         `).join('');
     }
     loadDashboard();
+
+    // Auto-refresh every 15 seconds
+    setInterval(loadDashboard, 15000);
 </script>
 {% endblock %}

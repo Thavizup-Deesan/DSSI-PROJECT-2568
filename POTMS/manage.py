@@ -2,6 +2,14 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+# import dotenv
+
+# Load environment variables from .env file
+try:
+    import dotenv
+    dotenv.load_dotenv()
+except ImportError:
+    pass
 
 
 def main():

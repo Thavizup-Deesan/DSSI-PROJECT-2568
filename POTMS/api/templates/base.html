@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" data-theme="dark">
+<html lang="th" data-theme="cupcake">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -98,6 +98,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken'),
                 },
+                cache: 'no-store', // Prevent browser caching of API responses
             };
             const res = await fetch(url, { ...defaults, ...options });
             return res.json();
@@ -122,7 +123,7 @@
                 'Inspected': 'badge-info', 'Pass': 'badge-success', 'Reject': 'badge-error',
                 'Officer': 'badge-primary', 'User': 'badge-info', 'Head': 'badge-secondary',
             };
-            return `<span class="badge ${map[status] || 'badge-ghost'} badge-sm">${status}</span>`;
+            return `<span class="badge ${map[status] || 'badge-ghost'} badge-sm">${status.replace(/_/g, ' ')}</span>`;
         }
 
         async function logout() {
@@ -141,6 +142,12 @@
             if (data.is_admin) roles.push('Admin');
             if (data.is_officer) roles.push('Officer');
             if (data.is_head) roles.push('Head');
+            
+            // Check implicit role from API if flags are all false
+            if (roles.length === 0 && data.role === 'Committee') {
+                roles.push('Committee');
+            }
+            
             roleBadge.textContent = roles.length ? roles.join(', ') : 'User';
             document.getElementById('userAvatar').textContent = (data.full_name || '?')[0].toUpperCase();
 
@@ -155,7 +162,9 @@
 
             let navHtml = '';
 
-            if (data.is_officer) {
+            if (data.is_admin) {
+                navHtml += section('ผู้ดูแลระบบ', link('/officer/admins/', 'admin_panel_settings', 'จัดการ Admin'));
+            } else if (data.is_officer) {
                 navHtml +=
                     section('ภาพรวม', link('/officer/dashboard/', 'dashboard', 'Dashboard')) +
                     section('จัดการโครงการ',
@@ -166,16 +175,17 @@
                         link('/partial-receives/', 'inventory_2', 'ใบรับของ') +
                         link('/inspections/', 'fact_check', 'ตรวจรับ')) +
                     section('การเงิน', link('/payments/', 'payments', 'เบิกจ่าย'));
+            } else if (data.role === 'Committee') {
+                navHtml +=
+                    section('ภาพรวม', link('/inspections/', 'dashboard', 'Dashboard (ตรวจรับ)')) +
+                    section('การทำงาน',
+                        link('/inspections/', 'fact_check', 'ตรวจรับสินค้า'));
             } else {
                 navHtml +=
                     section('ภาพรวม', link('/user/dashboard/', 'dashboard', 'Dashboard')) +
                     section('ใบสั่งซื้อ',
                         link('/orders/my/', 'receipt_long', 'ใบสั่งซื้อของฉัน') +
                         link('/orders/create/', 'add_circle', 'สร้างใบสั่งซื้อ'));
-            }
-
-            if (data.is_admin) {
-                navHtml += section('ผู้ดูแลระบบ', link('/officer/admins/', 'admin_panel_settings', 'จัดการ Admin'));
             }
 
             nav.innerHTML = navHtml;

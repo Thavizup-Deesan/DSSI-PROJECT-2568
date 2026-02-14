@@ -46,7 +46,7 @@ def setup_google_social_app(apps, schema_editor):
     )
 
     # สร้าง Google SocialApp
-    social_app, created = SocialApp.objects.get_or_create(
+    social_app, _ = SocialApp.objects.update_or_create(
         provider='google',
         defaults={
             'name': 'Google',

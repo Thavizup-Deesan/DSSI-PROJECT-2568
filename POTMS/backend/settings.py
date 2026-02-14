@@ -13,7 +13,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
-import dj_database_url
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # ✅ FIX V15: Use environment variable instead of hardcoding
 SECRET_KEY = os.environ.get(
@@ -41,8 +44,7 @@ if not os.environ.get('DJANGO_SECRET_KEY') and not DEBUG:
     )
 
 
-ALLOWED_HOSTS = ['.vercel.app', '127.0.0.1', 'localhost']
-
+# Duplicate removed - see line 191 for the actual ALLOWED_HOSTS
 
 # Application definition
 
@@ -103,30 +105,24 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 #        'ENGINE': 'django.db.backends.mysql',
 
 
-# สำหรับ Vercel/Docker: ใช้ SQLite (dummy) เพราะข้อมูลจริงอยู่ใน Firebase Firestore
+# Database settings
+# Strictly use PostgreSQL as requested by user
 import os
-if os.environ.get('VERCEL') or os.environ.get('DOCKER'):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': '/tmp/db.sqlite3',
-        }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST'),
+        'PORT': os.environ.get('DB_PORT'),
     }
-else:
-    # สำหรับ Local Development: ใช้ PostgreSQL
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'potms_db',
-            'USER': 'postgres',
-            'PASSWORD': 'potms1234',  # เปลี่ยนเป็น password ของ PostgreSQL ของคุณ
-            'HOST': 'localhost',
-            'PORT': '5432',
-        }
-    }
+}
 
 # settings.py
-GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '129454383537-0ceqhjq06rnmv9tf1jjgoakmc8mjcqo0.apps.googleusercontent.com')
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.sqlite3',
@@ -135,20 +131,23 @@ GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '129454383537-0ceqhjq06rnm
 # }
 
 # การตั้งค่าสำหรับ Vercel (ถ้ามี DATABASE_URL ให้ใช้ MySQL/Postgres)
-# if 'POSTGRES_URL' in os.environ:
-#     DATABASES['default'] = dj_database_url.config(
-#         default=os.environ.get('POSTGRES_URL'),
-#         conn_max_age=0,
-#         conn_health_checks=True,
-#     )
+if 'DATABASE_URL' in os.environ:
+    DATABASES['default'] = dj_database_url.config(
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=0,
+        conn_health_checks=True,
+    )
+elif 'POSTGRES_URL' in os.environ:
+    DATABASES['default'] = dj_database_url.config(
+        default=os.environ.get('POSTGRES_URL'),
+        conn_max_age=0,
+        conn_health_checks=True,
+    )
 
-ALLOWED_HOSTS = ['127.0.0.1',
-    'localhost',
-    '*.ngrok-free.app',
-    'hypnosporic-unconvictive-stephania.ngrok-free.app',
-
+# ALLOWED_HOSTS moved to line 191 for clarity
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.vercel.app'
 ]
-CSRF_TRUSTED_ORIGINS = ['https://hypnosporic-unconvictive-stephania.ngrok-free.app']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -187,6 +186,10 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Media files (Uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 ALLOWED_HOSTS = ['*']
 
@@ -292,6 +295,13 @@ if os.environ.get('VERCEL'):
 else:
     # Local development - no SSL redirect
     SECURE_SSL_REDIRECT = False
+
+# =================================================================
+# Proxy Configuration (Ngrok/Vercel)
+# =================================================================
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 
 # =================================================================
 # django-allauth Configuration (Google OAuth 2.0)

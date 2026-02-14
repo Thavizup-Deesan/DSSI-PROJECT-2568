@@ -1,3 +1,4 @@
+.env*
 .vercel
 
 # Firebase Key - IMPORTANT: ห้าม push ขึ้น GitHub

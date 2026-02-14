@@ -13,14 +13,10 @@ services:
       dockerfile: Dockerfile
     container_name: potms-dev
     restart: unless-stopped
+    env_file:
+      - .env.dev
     environment:
-      - DJANGO_SECRET_KEY=dev-secret-key-not-for-production
-      - DEBUG=True
-      - DOCKER=1
-      - ALLOWED_HOSTS=localhost,127.0.0.1
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/firebase-key.json
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
-      - PORT=8000
     volumes:
       - .:/app
       - ./credentials:/app/credentials:ro
@@ -36,3 +32,4 @@ services:
     container_name: potms-redis-dev
     ports:
       - "6379:6379"
+

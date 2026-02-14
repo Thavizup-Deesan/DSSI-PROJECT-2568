@@ -2,121 +2,174 @@
 {% block title %}ตรวจรับสินค้า{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">ตรวจรับสินค้า</h1>
-        <p class="text-sm text-base-content/50">UC-08: กก.ตรวจรับ ตรวจนับจำนวน/คุณภาพ</p>
+<div class="max-w-6xl mx-auto">
+    <!-- Breadcrumbs -->
+    <div class="text-sm breadcrumbs mb-6">
+        <ul>
+            <li><a class="font-bold" onclick="showSection('projectSelection')"><span class="material-icons-outlined text-sm mr-1">home</span>หน้าหลัก (โครงการ)</a></li>
+            <li class="hidden" id="breadcrumbDivider"><span class="mx-2">/</span></li>
+            <li class="hidden" id="breadcrumbProject" class="opacity-70"></li>
+        </ul>
     </div>
-</div>
 
-<!-- Pending Inspection -->
-<div class="card bg-base-200 border border-base-content/5 mb-6">
-    <div class="card-body">
-        <h2 class="card-title text-lg mb-3">รายการรอตรวจรับ</h2>
-        <div class="overflow-x-auto">
-            <table class="table table-zebra">
-                <thead><tr><th>ID</th><th>ใบสั่งซื้อ</th><th>เลขที่ใบเสร็จ</th><th>วันที่รับ</th><th>การดำเนินการ</th></tr></thead>
-                <tbody id="pendingTable"></tbody>
+    <!-- 1. Project Selection View -->
+    <div id="projectSelection" class="animate-fade-in">
+        <div class="flex items-center gap-2 mb-6">
+            <span class="material-icons-outlined text-primary text-3xl">topic</span>
+            <div>
+                <h1 class="text-2xl font-bold">เลือกโครงการ</h1>
+                <p class="text-sm opacity-60">เลือกโครงการเพื่อดูรายการใบสั่งซื้อที่ต้องตรวจรับ</p>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="projectGrid">
+            <!-- JS will populate projects here -->
+            <div class="skeleton h-32 w-full"></div>
+            <div class="skeleton h-32 w-full"></div>
+            <div class="skeleton h-32 w-full"></div>
+        </div>
+    </div>
+
+    <!-- 2. Order Selection View -->
+    <div id="orderSelection" class="hidden animate-fade-in">
+        <div class="flex items-center gap-2 mb-6">
+            <span class="material-icons-outlined text-secondary text-3xl">receipt_long</span>
+            <div>
+                <h1 class="text-2xl font-bold">รายการใบสั่งซื้อ</h1>
+                <p class="text-sm opacity-60">คลิกที่รายการเพื่อดูรายละเอียดและประวัติการรับของ</p>
+            </div>
+        </div>
+
+        <div class="overflow-hidden rounded-xl border border-base-content/5 shadow-sm bg-base-100">
+            <table class="table table-zebra w-full">
+                <thead class="bg-base-200">
+                    <tr>
+                        <th>เลขที่ใบสั่งซื้อ</th>
+                        <th>วันที่สร้าง</th>
+                        <th>ผู้ขอซื้อ</th>
+                        <th>ยอดรวม</th>
+                        <th>สถานะ</th>
+                        <th>การตรวจรับ</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="orderTableBody">
+                    <!-- JS will populate orders here -->
+                </tbody>
             </table>
         </div>
     </div>
 </div>
-
-<!-- Inspection History -->
-<div class="card bg-base-200 border border-base-content/5">
-    <div class="card-body">
-        <h2 class="card-title text-lg mb-3">ประวัติการตรวจรับ</h2>
-        <div class="overflow-x-auto">
-            <table class="table table-zebra">
-                <thead><tr><th>ใบรับ</th><th>กก.ตรวจรับ</th><th>วันที่ตรวจ</th><th>ผลการตรวจ</th><th>หมายเหตุ</th></tr></thead>
-                <tbody id="historyTable"></tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Inspection Modal -->
-<dialog class="modal" id="inspModal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg">ยืนยันผลตรวจรับ</h3>
-        <input type="hidden" id="inspReceiveId">
-        <div class="form-control mt-4">
-            <label class="label"><span class="label-text">ผลการตรวจ</span></label>
-            <select class="select select-bordered" id="inspResult">
-                <option value="Pass">✅ ผ่าน (Pass)</option>
-                <option value="Reject">❌ ไม่ผ่าน (Reject)</option>
-            </select>
-        </div>
-        <div class="form-control mt-3">
-            <label class="label"><span class="label-text">หมายเหตุ</span></label>
-            <textarea class="textarea textarea-bordered" id="inspComment" rows="3"></textarea>
-        </div>
-        <div class="modal-action">
-            <button class="btn btn-ghost" onclick="document.getElementById('inspModal').close()">ยกเลิก</button>
-            <button class="btn btn-primary" onclick="submitInspection()">บันทึก</button>
-        </div>
-    </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    let allOrders = [];
+    let projects = {};
+
     async function loadData() {
-        const receives = await apiFetch('/api/partial-receives/');
-        const pending = receives.filter(r => r.status === 'Pending_Inspection');
-        const ptbody = document.getElementById('pendingTable');
-        if (pending.length === 0) {
-            ptbody.innerHTML = '<tr><td colspan="5" class="text-center text-base-content/40">ไม่มีรายการรอตรวจรับ</td></tr>';
-        } else {
-            ptbody.innerHTML = pending.map(r => `
-                <tr class="hover">
-                    <td>${r.receive_id}</td>
-                    <td>${r.order_no}</td>
-                    <td>${r.receipt_no || '—'}</td>
-                    <td>${new Date(r.received_date).toLocaleDateString('th-TH')}</td>
-                    <td><button class="btn btn-primary btn-xs gap-1" onclick="openInspection(${r.receive_id})"><span class="material-icons-outlined text-sm">fact_check</span>ตรวจรับ</button></td>
-                </tr>
-            `).join('');
-        }
-
-        const inspections = await apiFetch('/api/inspections/');
-        const htbody = document.getElementById('historyTable');
-        if (inspections.length === 0) {
-            htbody.innerHTML = '<tr><td colspan="5" class="text-center text-base-content/40">ยังไม่มีประวัติ</td></tr>';
-        } else {
-            htbody.innerHTML = inspections.map(i => `
-                <tr class="hover">
-                    <td>${i.receipt_no}</td>
-                    <td>${i.committee_name}</td>
-                    <td>${new Date(i.inspection_date).toLocaleDateString('th-TH')}</td>
-                    <td>${getStatusBadge(i.result)}</td>
-                    <td>${i.comment || '—'}</td>
-                </tr>
-            `).join('');
-        }
+        // Fetch all orders related to the user (Committee/Requester/Officer)
+        const d = await apiFetch('/api/orders/');
+        if (d.error) { showToast(d.error, 'error'); return; }
+        
+        allOrders = d;
+        groupByProject(d);
+        renderProjects();
     }
 
-    function openInspection(receiveId) {
-        document.getElementById('inspReceiveId').value = receiveId;
-        document.getElementById('inspResult').value = 'Pass';
-        document.getElementById('inspComment').value = '';
-        document.getElementById('inspModal').showModal();
-    }
-
-    async function submitInspection() {
-        const res = await apiFetch('/api/inspections/', {
-            method: 'POST',
-            body: JSON.stringify({
-                receive_id: document.getElementById('inspReceiveId').value,
-                result: document.getElementById('inspResult').value,
-                comment: document.getElementById('inspComment').value,
-            })
+    function groupByProject(orders) {
+        projects = {};
+        orders.forEach(o => {
+            if (!projects[o.project_id]) {
+                projects[o.project_id] = {
+                    id: o.project_id,
+                    name: o.project_name,
+                    orders: [],
+                    pendingCount: 0
+                };
+            }
+            projects[o.project_id].orders.push(o);
+            
+            // Calculate pending inspections in this order
+            if (o.partial_receives) {
+                const pending = o.partial_receives.filter(r => r.status === 'Pending_Inspection').length;
+                projects[o.project_id].pendingCount += pending;
+            }
         });
-        if (res.error) { showToast(res.error, 'error'); return; }
-        showToast(res.message);
-        document.getElementById('inspModal').close();
-        loadData();
+    }
+
+    function renderProjects() {
+        const grid = document.getElementById('projectGrid');
+        const list = Object.values(projects);
+
+        if (list.length === 0) {
+            grid.innerHTML = '<div class="col-span-full text-center opacity-50 p-10">ไม่พบรายการโครงการ</div>';
+            return;
+        }
+
+        grid.innerHTML = list.map(p => `
+            <div class="card bg-base-100 shadow-sm hover:shadow-md cursor-pointer transition-all border border-base-content/5" onclick="viewProject(${p.id})">
+                <div class="card-body">
+                    <h3 class="font-bold text-lg text-primary mb-2">${p.name}</h3>
+                    <div class="flex justify-between items-end">
+                        <div class="text-sm opacity-60">${p.orders.length} ใบสั่งซื้อ</div>
+                        ${p.pendingCount > 0 
+                            ? `<div class="badge badge-warning gap-1 animate-pulse"><span class="font-bold">${p.pendingCount}</span> รอตรวจ</div>` 
+                            : '<div class="badge badge-ghost text-xs">ครบถ้วน</div>'}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        showSection('projectSelection');
+    }
+
+    function viewProject(projectId) {
+        const p = projects[projectId];
+        if (!p) return;
+
+        // Update Breadcrumb
+        document.getElementById('breadcrumbProject').textContent = p.name;
+        document.getElementById('breadcrumbProject').classList.remove('hidden');
+        document.getElementById('breadcrumbDivider').classList.remove('hidden');
+
+        // Render Orders
+        const tbody = document.getElementById('orderTableBody');
+        tbody.innerHTML = p.orders.map(o => {
+            let pending = 0;
+            if (o.partial_receives) {
+                pending = o.partial_receives.filter(r => r.status === 'Pending_Inspection').length;
+            }
+            
+            return `
+                <tr class="hover cursor-pointer" onclick="window.location.href='/orders/detail/?id=${o.order_id}'">
+                    <td class="font-bold text-primary">${o.order_no}</td>
+                    <td>${new Date(o.created_at).toLocaleDateString('th-TH')}</td>
+                    <td>${o.requester_name}</td>
+                    <td>฿${parseFloat(o.total_amount).toLocaleString()}</td>
+                    <td>${getStatusBadge(o.status)}</td>
+                    <td>
+                        ${pending > 0 
+                            ? `<span class="badge badge-warning badge-sm">รอตรวจ ${pending} รายการ</span>` 
+                            : '<span class="text-success text-xs"><span class="material-icons-outlined text-sm align-bottom">check_circle</span> เรียบร้อย</span>'}
+                    </td>
+                    <td class="text-right"><span class="material-icons-outlined text-base opacity-40">chevron_right</span></td>
+                </tr>
+            `;
+        }).join('');
+
+        showSection('orderSelection');
+    }
+
+    function showSection(id) {
+        document.getElementById('projectSelection').classList.add('hidden');
+        document.getElementById('orderSelection').classList.add('hidden');
+        document.getElementById(id).classList.remove('hidden');
+
+        if (id === 'projectSelection') {
+            document.getElementById('breadcrumbProject').classList.add('hidden');
+            document.getElementById('breadcrumbDivider').classList.add('hidden');
+        }
     }
 
     loadData();

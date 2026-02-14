@@ -25,18 +25,26 @@
 
 <!-- Create/Edit Modal -->
 <dialog class="modal" id="projectModal">
-    <div class="modal-box">
+    <div class="modal-box w-11/12 max-w-4xl">
         <h3 class="font-bold text-lg" id="modalTitle">สร้างโครงการใหม่</h3>
         <input type="hidden" id="editProjectId">
-        <div class="form-control mt-4">
-            <label class="label"><span class="label-text">ชื่อโครงการ</span></label>
-            <input type="text" class="input input-bordered w-full" id="projectName">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div class="form-control">
+                <label class="label"><span class="label-text">รหัส UBUFMIS</span></label>
+                <input type="text" class="input input-bordered" id="ubufmisCode" placeholder="ระบุรหัส UBUFMIS">
+            </div>
+            <div class="form-control">
+                <label class="label"><span class="label-text">ชื่อโครงการ</span></label>
+                <input type="text" class="input input-bordered" id="projectName" placeholder="ระบุชื่อโครงการ">
+            </div>
+            <div class="form-control">
+                <label class="label"><span class="label-text">งบประมาณทั้งหมด</span></label>
+                <input type="number" class="input input-bordered" id="totalBudget" step="0.01" value="0">
+            </div>
         </div>
-        <div class="form-control mt-3">
-            <label class="label"><span class="label-text">งบประมาณทั้งหมด (บาท)</span></label>
-            <input type="number" class="input input-bordered w-full" id="totalBudget" step="0.01">
-        </div>
-        <div class="grid grid-cols-2 gap-3 mt-3">
+
+        <div class="grid grid-cols-2 gap-3 mt-4">
             <div class="form-control">
                 <label class="label"><span class="label-text">วันเริ่มต้น</span></label>
                 <input type="date" class="input input-bordered w-full" id="startDate">
@@ -78,7 +86,7 @@
                     ` : ''}
                     ${p.status === 'Active' ? `
                         <a href="/projects/participants/?project_id=${p.project_id}" class="btn btn-outline btn-xs">ผู้เข้าร่วม</a>
-                        <button class="btn btn-error btn-xs" onclick="closeProject(${p.project_id})">ปิดโครงการ</button>
+                        <button class="btn btn-error btn-xs" onclick="goToClosure(${p.project_id})">ปิดโครงการ</button>
                     ` : ''}
                 </td>
             </tr>
@@ -89,7 +97,9 @@
         document.getElementById('modalTitle').textContent = 'สร้างโครงการใหม่';
         document.getElementById('editProjectId').value = '';
         document.getElementById('projectName').value = '';
-        document.getElementById('totalBudget').value = '';
+        document.getElementById('ubufmisCode').value = '';
+        document.getElementById('totalBudget').value = '0';
+
         document.getElementById('startDate').value = '';
         document.getElementById('endDate').value = '';
         document.getElementById('projectModal').showModal();
@@ -100,7 +110,9 @@
         document.getElementById('modalTitle').textContent = 'แก้ไขโครงการ';
         document.getElementById('editProjectId').value = id;
         document.getElementById('projectName').value = p.project_name;
-        document.getElementById('totalBudget').value = p.total_budget;
+        document.getElementById('ubufmisCode').value = p.ubufmis_code || '';
+        document.getElementById('totalBudget').value = p.total_budget || 0;
+
         document.getElementById('startDate').value = p.start_date || '';
         document.getElementById('endDate').value = p.end_date || '';
         document.getElementById('projectModal').showModal();
@@ -112,17 +124,23 @@
         const id = document.getElementById('editProjectId').value;
         const body = {
             project_name: document.getElementById('projectName').value,
+            ubufmis_code: document.getElementById('ubufmisCode').value,
             total_budget: document.getElementById('totalBudget').value,
+
             start_date: document.getElementById('startDate').value || null,
             end_date: document.getElementById('endDate').value || null,
         };
+        
+        let res;
         if (id) {
-            await apiFetch(`/api/projects/${id}/`, { method: 'PUT', body: JSON.stringify(body) });
-            showToast('แก้ไขโครงการสำเร็จ');
+            res = await apiFetch(`/api/projects/${id}/`, { method: 'PUT', body: JSON.stringify(body) });
         } else {
-            await apiFetch('/api/projects/', { method: 'POST', body: JSON.stringify(body) });
-            showToast('สร้างโครงการสำเร็จ');
+            res = await apiFetch('/api/projects/', { method: 'POST', body: JSON.stringify(body) });
         }
+        
+        if (res.error) { showToast(res.error, 'error'); return; }
+        
+        showToast(id ? 'แก้ไขโครงการสำเร็จ' : 'สร้างโครงการสำเร็จ');
         closeModal();
         loadProjects();
     }
@@ -134,11 +152,8 @@
         showToast(res.message); loadProjects();
     }
 
-    async function closeProject(id) {
-        if (!confirm('ปิดโครงการนี้?')) return;
-        const res = await apiFetch(`/api/projects/${id}/close/`, { method: 'POST' });
-        if (res.error) { showToast(res.error, 'error'); return; }
-        showToast(res.message); loadProjects();
+    function goToClosure(id) {
+        window.location.href = `/projects/closure/?project_id=${id}`;
     }
 
     loadProjects();

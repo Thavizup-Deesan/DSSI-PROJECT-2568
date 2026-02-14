@@ -13,9 +13,21 @@ class User(models.Model):
     user_id = models.AutoField(primary_key=True)
     email = models.EmailField(max_length=255, unique=True)  # Google email (@ubu.ac.th)
     full_name = models.CharField(max_length=255, blank=True, default='')
+    
+    # Flags (Legacy/Computed - will be synced from role)
     is_admin = models.BooleanField(default=False, verbose_name='ผู้ดูแลระบบ')
     is_officer = models.BooleanField(default=False, verbose_name='เจ้าหน้าที่พัสดุ')
     is_head = models.BooleanField(default=False, verbose_name='หัวหน้าภาค')
+    
+    # New Role Field for Dropdown
+    ROLE_CHOICES = [
+        ('Admin', 'Admin'),
+        ('Officer', 'Officer'),
+        ('User', 'User'),
+        ('Committee', 'Committee'),
+    ]
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='User', verbose_name='บทบาท')
+
     department = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -24,6 +36,36 @@ class User(models.Model):
 
     def __str__(self):
         return f"{self.full_name} ({self.email})"
+
+    def save(self, *args, **kwargs):
+        """Auto-sync boolean flags from role"""
+        if self.role == 'Admin':
+            self.is_admin = True
+            self.is_officer = False
+            self.is_head = False
+        elif self.role == 'Officer':
+            self.is_admin = False
+            self.is_officer = True
+            self.is_head = False
+        elif self.role == 'Committee':
+            self.is_admin = False
+            self.is_officer = False
+            self.is_head = False
+        else:  # User or empty
+            self.is_admin = False
+            self.is_officer = False
+            self.is_head = False
+            
+        # Ensure these are saved even if update_fields is used
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None:
+            update_fields = set(update_fields)
+            role_related = {'role', 'is_admin', 'is_officer', 'is_head'}
+            if any(f in update_fields for f in role_related):
+                update_fields.update(role_related)
+            kwargs['update_fields'] = list(update_fields)
+
+        super().save(*args, **kwargs)
 
 
 # =================================================================
@@ -46,6 +88,17 @@ class Project(models.Model):
         verbose_name='สร้างโดย'
     )
     project_name = models.CharField(max_length=255, verbose_name='ชื่อโครงการ')
+    
+    # New Fields
+    ubufmis_code = models.CharField(max_length=50, blank=True, null=True, verbose_name='รหัส UBUFMIS')
+    responsible_person = models.CharField(max_length=255, blank=True, null=True, verbose_name='ผู้รับผิดชอบโครงการ')
+
+    # Budget Breakdown
+    budget_remuneration = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), verbose_name='ค่าตอบแทน')
+    budget_operations = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), verbose_name='ค่าใช้สอย')
+    budget_materials = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), verbose_name='ค่าวัสดุ')
+    budget_equipment = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), verbose_name='ค่าครุภัณฑ์')
+
     total_budget = models.DecimalField(
         max_digits=15, decimal_places=2, default=Decimal('0.00'),
         verbose_name='งบประมาณทั้งหมด'
@@ -144,12 +197,23 @@ class PurchaseOrder(models.Model):
         related_name='orders_approved',
         verbose_name='ผู้อนุมัติ'
     )
+    inspection_committee = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='orders_inspected',
+        verbose_name='กรรมการตรวจรับ (User)'
+    )
+    inspection_committee_name = models.CharField(
+        max_length=255, blank=True, null=True,
+        verbose_name='กรรมการตรวจรับ (ระบุเอง)'
+    )
     order_no = models.CharField(max_length=50, verbose_name='เลขที่เอกสาร')
     total_amount = models.DecimalField(
         max_digits=15, decimal_places=2, default=Decimal('0.00'),
         verbose_name='จำนวนเงินรวม'
     )
     reason = models.TextField(blank=True, null=True, verbose_name='เหตุผลในการจัดซื้อ')
+    rejection_reason = models.TextField(blank=True, null=True, verbose_name='เหตุผลที่ปฏิเสธ/แก้ไข')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Draft')
@@ -223,6 +287,12 @@ class PartialReceive(models.Model):
         related_name='partial_receives_recorded',
         verbose_name='บันทึกโดย'
     )
+    committee = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='assigned_inspections',
+        verbose_name='กรรมการตรวจรับ (ผู้ได้รับมอบหมาย)'
+    )
     receipt_no = models.CharField(
         max_length=100, blank=True, null=True,
         verbose_name='เลขที่ใบเสร็จ'
@@ -243,6 +313,31 @@ class PartialReceive(models.Model):
 
     def __str__(self):
         return f"PR-{self.receive_id} ({self.order.order_no})"
+
+
+class PartialReceiveItem(models.Model):
+    """รายการวัสดุที่รับของในแต่ละครั้ง"""
+
+    item_id = models.AutoField(primary_key=True)
+    partial_receive = models.ForeignKey(
+        PartialReceive, on_delete=models.CASCADE,
+        related_name='receive_items',
+        verbose_name='ใบรับของ'
+    )
+    order_item = models.ForeignKey(
+        OrderItem, on_delete=models.CASCADE,
+        related_name='received_records',
+        verbose_name='รายการสั่งซื้อ'
+    )
+    quantity = models.IntegerField(default=0, verbose_name='จำนวนที่รับ')
+
+    class Meta:
+        db_table = 'partial_receive_items'
+        verbose_name = 'รายการรับของ'
+        verbose_name_plural = 'รายการรับของ'
+
+    def __str__(self):
+        return f"{self.partial_receive.receive_id} - {self.order_item.material_name} ({self.quantity})"
 
 
 # =================================================================

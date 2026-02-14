@@ -5,7 +5,7 @@
 <div class="flex items-center justify-between mb-6">
     <div>
         <h1 class="text-2xl font-bold">จัดการผู้ใช้</h1>
-        <p class="text-sm text-base-content/50">Officer — กำหนด role/department ให้ผู้ใช้</p>
+        <p class="text-sm text-base-content/50">Admin/Officer — การจัดการและแก้ไขข้อมูลผู้ใช้</p>
     </div>
 </div>
 
@@ -52,22 +52,46 @@
 
 {% block extra_js %}
 <script>
+    function getStatusBadge(role) {
+        const badges = {
+            'Admin': '<span class="badge badge-error">Admin (ผู้ดูแลระบบ)</span>',
+            'Head': '<span class="badge badge-warning">Head (หัวหน้าภาค)</span>',
+            'Officer': '<span class="badge badge-info">Officer (เจ้าหน้าที่)</span>',
+            'User': '<span class="badge badge-ghost">User (ทั่วไป)</span>'
+        };
+        return badges[role] || '<span class="badge badge-ghost">Unknown</span>';
+    }
+
+    let currentUser = null;
+
     async function loadUsers() {
+        if (!currentUser) currentUser = await apiFetch('/api/auth/me/');
+        
         const users = await apiFetch('/api/users/');
         const tbody = document.getElementById('usersTable');
         if (users.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-base-content/40">ยังไม่มีผู้ใช้</td></tr>';
             return;
         }
-        tbody.innerHTML = users.map(u => `
-            <tr class="hover">
-                <td class="font-medium">${u.full_name}</td>
-                <td>${u.email}</td>
-                <td>${getStatusBadge(u.role)}</td>
-                <td>${u.department || '—'}</td>
-                <td><button class="btn btn-outline btn-xs" onclick='editUser(${JSON.stringify(u)})'>แก้ไข</button></td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = users.map(u => {
+            const isSelf = u.user_id === currentUser.user_id;
+            const canEdit = currentUser.is_admin || (currentUser.is_officer && isSelf);
+            
+            return `
+                <tr class="hover">
+                    <td class="font-medium">${u.full_name}</td>
+                    <td>${u.email}</td>
+                    <td>${getStatusBadge(u.role)}</td>
+                    <td>${u.department || '—'}</td>
+                    <td>
+                        ${canEdit ? 
+                            `<button class="btn btn-outline btn-xs" onclick='editUser(${JSON.stringify(u)})'>แก้ไข</button>` : 
+                            '<span class="text-xs opacity-30 italic">No permission</span>'
+                        }
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
     function editUser(u) {
@@ -75,18 +99,37 @@
         document.getElementById('editName').value = u.full_name;
         document.getElementById('editRole').value = u.role;
         document.getElementById('editDept').value = u.department || '';
+        
+        // Restricted fields for non-admins
+        const isSelf = u.user_id === currentUser.user_id;
+        document.getElementById('editRole').disabled = !currentUser.is_admin;
+        document.getElementById('editDept').disabled = !currentUser.is_admin && !isSelf;
+        
         document.getElementById('editModal').showModal();
     }
 
     async function saveUser() {
         const id = document.getElementById('editUserId').value;
+        const body = {
+            full_name: document.getElementById('editName').value,
+            department: document.getElementById('editDept').value,
+        };
+
+        if (!currentUser) {
+            currentUser = await apiFetch('/api/auth/me/');
+        }
+
+        // Only admins can send role flags
+        if (currentUser && currentUser.is_admin) {
+            const role = document.getElementById('editRole').value;
+            body.is_admin = role === 'Admin';
+            body.is_officer = role === 'Officer' || role === 'Admin';
+            body.is_head = role === 'Head';
+        }
+        
         const res = await apiFetch(`/api/users/${id}/`, {
             method: 'PUT',
-            body: JSON.stringify({
-                full_name: document.getElementById('editName').value,
-                role: document.getElementById('editRole').value,
-                department: document.getElementById('editDept').value,
-            })
+            body: JSON.stringify(body)
         });
         if (res.error) { showToast(res.error, 'error'); return; }
         showToast(res.message);

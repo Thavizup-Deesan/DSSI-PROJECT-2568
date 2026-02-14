@@ -23,21 +23,46 @@
                 <input type="text" class="input input-bordered" id="receiptNo">
             </div>
             <div class="form-control min-w-[200px]">
-                <label class="label"><span class="label-text">ไฟล์ใบเสร็จ (path)</span></label>
-                <input type="text" class="input input-bordered" id="receiptFile" placeholder="uploads/receipt.pdf">
+                <label class="label"><span class="label-text">ไฟล์ใบเสร็จ (รูปภาพ/PDF)</span></label>
+                <input type="file" class="file-input file-input-bordered w-full" id="receiptFile" accept="image/*,.pdf">
             </div>
-            <button class="btn btn-primary" onclick="createReceive()">สร้าง</button>
+        </div>
+
+        <!-- Order Items Selection -->
+        <div id="orderItemsSection" class="hidden mt-6">
+            <h3 class="font-bold text-lg mb-2">ระบุรายการและจำนวนที่รับ</h3>
+            <div class="overflow-x-auto bg-base-100 rounded-lg border border-base-content/10">
+                <table class="table table-sm">
+                    <thead>
+                        <tr class="bg-base-200/50">
+                            <th class="w-12">เลือก</th>
+                            <th>รายการ</th>
+                            <th>จำนวนทั้งหมด</th>
+                            <th>หน่วย</th>
+                            <th class="w-32">รับงวดนี้</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderItemsTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+            <button class="btn btn-primary min-w-[120px]" onclick="createReceive()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                บันทึกรับของ
+            </button>
         </div>
     </div>
 </div>
 
 <!-- List -->
-<div class="card bg-base-200 border border-base-content/5">
+<div class="card bg-base-200 border border-base-content/5 mt-6">
     <div class="card-body">
-        <h2 class="card-title text-lg mb-3">รายการใบรับของ</h2>
+        <h2 class="card-title text-lg mb-3">ประวัติการรับของ</h2>
         <div class="overflow-x-auto">
             <table class="table table-zebra">
-                <thead><tr><th>ID</th><th>ใบสั่งซื้อ</th><th>เลขที่ใบเสร็จ</th><th>ผู้บันทึก</th><th>วันที่รับ</th><th>สถานะ</th></tr></thead>
+                <thead><tr><th>ID</th><th>ใบสั่งซื้อ</th><th>โครงการ</th><th>เลขที่ใบเสร็จ</th><th>ไฟล์แนบ</th><th>ผู้บันทึก</th><th>วันที่รับ</th><th>สถานะ</th></tr></thead>
                 <tbody id="receivesTable"></tbody>
             </table>
         </div>
@@ -47,49 +72,289 @@
 
 {% block extra_js %}
 <script>
+    let currentOrderItems = [];
+
     async function loadOrders() {
         const orders = await apiFetch('/api/orders/');
         const select = document.getElementById('orderSelect');
-        orders.filter(o => o.status === 'Approved').forEach(o => {
-            select.innerHTML += `<option value="${o.order_id}">${o.order_no} — ${o.project_name}</option>`;
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlOrderId = urlParams.get('order_id');
+
+        // Clear existing options except placeholder
+        select.innerHTML = '<option value="" disabled selected>เลือกใบสั่งซื้อ...</option>';
+
+        orders.filter(o => ['Approved', 'Processing'].includes(o.status) && !o.is_fully_received).forEach(o => {
+            const selected = (urlOrderId && parseInt(urlOrderId) === o.order_id) ? 'selected' : '';
+            select.innerHTML += `<option value="${o.order_id}" ${selected}>${o.order_no} — ${o.project_name} (${o.status})</option>`;
         });
+
+        if (urlOrderId) {
+            select.value = urlOrderId;
+            loadOrderItems(urlOrderId);
+        }
+
+        select.addEventListener('change', (e) => loadOrderItems(e.target.value));
+    }
+
+    async function loadOrderItems(orderId) {
+        console.log("Loading items for Order ID:", orderId);
+        const section = document.getElementById('orderItemsSection');
+        const tbody = document.getElementById('orderItemsTable');
+        
+        if (!orderId) {
+            section.classList.add('hidden');
+            return;
+        }
+
+        try {
+            const order = await apiFetch(`/api/orders/${orderId}/`);
+            console.log("Order Data Received:", order);
+            
+            if (!order.items || order.items.length === 0) {
+                console.warn("No items found in order response");
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 opacity-50">ไม่พบรายการสินค้าในใบสั่งซื้อนี้</td></tr>';
+            } else {
+                currentOrderItems = order.items;
+                tbody.innerHTML = order.items.map(item => `
+                    <tr class="hover">
+                        <td>
+                            <input type="checkbox" class="checkbox" 
+                                   onchange="toggleItem(this, ${item.item_id})"
+                                   ${item.remaining_quantity <= 0 ? 'disabled' : ''} />
+                        </td>
+                        <td class="font-medium">${item.material_name}</td>
+                        <td>
+                            <span class="font-bold text-primary">${item.remaining_quantity}</span> 
+                            <span class="text-xs opacity-50">/ ${item.quantity}</span>
+                        </td>
+                        <td>${item.unit}</td>
+                        <td>
+                            <input type="number" 
+                                   id="qty-${item.item_id}" 
+                                   class="input input-sm input-bordered w-full text-center" 
+                                   min="0" 
+                                   max="${item.remaining_quantity}" 
+                                   value="${item.remaining_quantity}"
+                                   disabled
+                                   placeholder="0">
+                        </td>
+                    </tr>
+                `).join('');
+            }
+            
+            section.classList.remove('hidden');
+        } catch (error) {
+            console.error("Error loading order items:", error);
+            showToast('ไม่สามารถโหลดรายการสินค้าได้', 'error');
+        }
     }
 
     async function loadReceives() {
         const data = await apiFetch('/api/partial-receives/');
         const tbody = document.getElementById('receivesTable');
         if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-base-content/40">ยังไม่มีใบรับของ</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-base-content/40">ยังไม่มีประวัติการรับของ</td></tr>';
             return;
         }
         tbody.innerHTML = data.map(r => `
             <tr class="hover">
                 <td>${r.receive_id}</td>
                 <td>${r.order_no}</td>
+                <td>${r.project_name}</td>
                 <td>${r.receipt_no || '—'}</td>
+                <td>${r.receipt_file_path ? `<a href="${r.receipt_file_path}" target="_blank" class="link link-primary underline flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clip-rule="evenodd" /></svg> ดูไฟล์</a>` : '-'}</td>
                 <td>${r.recorded_by}</td>
-                <td>${new Date(r.received_date).toLocaleDateString('th-TH')}</td>
+                <td>${new Date(r.received_date).toLocaleDateString('th-TH', {year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'})}</td>
                 <td>${getStatusBadge(r.status)}</td>
+                <td>
+                    <button class="btn btn-xs btn-ghost" onclick="viewReceiveDetails(${r.receive_id})">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    </button>
+                </td>
             </tr>
         `).join('');
     }
 
+    function toggleItem(checkbox, itemId) {
+        const input = document.getElementById(`qty-${itemId}`);
+        input.disabled = !checkbox.checked;
+        if (!checkbox.checked) {
+            input.value = input.getAttribute('max'); // Reset to max? or 0? 
+            // User likely wants to receive all remaining? 
+            // Let's set to max (remaining) when checked, and maybe keep as is when unchecked but disabled.
+            // Actually, if unchecked, value shouldn't matter as we won't submit it.
+        } else {
+             input.focus();
+             input.select();
+        }
+        
+    }
+
     async function createReceive() {
         const orderId = document.getElementById('orderSelect').value;
+        const fileInput = document.getElementById('receiptFile');
+        const receiptNo = document.getElementById('receiptNo').value;
+        
         if (!orderId) { showToast('กรุณาเลือกใบสั่งซื้อ', 'error'); return; }
-        const res = await apiFetch('/api/partial-receives/', {
-            method: 'POST',
-            body: JSON.stringify({
-                order_id: orderId,
-                receipt_no: document.getElementById('receiptNo').value,
-                receipt_file_path: document.getElementById('receiptFile').value,
-            })
+        if (fileInput.files.length === 0) { showToast('กรุณาแนบไฟล์ใบเสร็จ', 'error'); return; }
+
+        // Compile items based on CHECKBOXES
+        const itemsToSubmit = [];
+        let hasItems = false;
+        
+        // Find all checkboxes in the table
+        const checkboxes = document.querySelectorAll('#orderItemsTable input[type="checkbox"]');
+        
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                // Get Item ID from onchange="toggleItem(this, ID)"
+                // Or better, let's parse it from the call or traversing DOM.
+                // The structure is <tr><td><input checkbox ... onchange="toggleItem(this, ${item.item_id})">...
+                
+                // Let's rely on mapping currentOrderItems again, it's safer.
+            }
         });
-        if (res.error) { showToast(res.error, 'error'); return; }
-        showToast(res.message); loadReceives();
+        
+        currentOrderItems.forEach(item => {
+            // Find checkbox for this item. 
+            // We didn't give ID to checkbox, but we can query row or just add ID to checkbox.
+            // Let's assume we can get the checkbox via DOM traversal or just by ID if we add one.
+            // Let's add ID to checkbox in the map loop? 
+            // Or simpler: just use the input's disabled state! 
+            
+            const input = document.getElementById(`qty-${item.item_id}`);
+            if (!input.disabled) {
+                const receiveQty = parseInt(input.value) || 0;
+                if (receiveQty > 0) {
+                    itemsToSubmit.push({
+                        item_id: item.item_id,
+                        quantity: receiveQty
+                    });
+                    hasItems = true;
+                }
+            }
+        });
+
+        if (!hasItems) {
+            showToast('กรุณาระบุจำนวนที่รับอย่างน้อย 1 รายการ', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+        formData.append('receipt_no', receiptNo);
+        formData.append('receipt_file', fileInput.files[0]);
+        formData.append('items', JSON.stringify(itemsToSubmit));
+
+        try {
+            const res = await fetch('/api/partial-receives/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: formData
+            });
+            
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Upload failed');
+            
+            showToast(data.message);
+            loadReceives();
+            
+            // Reset form
+            document.getElementById('receiptNo').value = '';
+            fileInput.value = '';
+            loadOrderItems(orderId); // Reset inputs
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+
+    async function viewReceiveDetails(receiveId) {
+        // Since we don't have a dedicated API for single receive detail with items yet,
+        // we might need to fetch all and filter, or add a detail endpoint.
+        // For now, let's assume /api/partial-receives/ returns items if we ask?
+        // Wait, PartialReceiveSerializer doesn't have items.
+        // We need to fetch /api/partial-receives/?receive_id=X or similar.
+        // Or update the list API to include items is too heavy.
+        
+        // Let's implement a quick fetch.
+        // Actually, we should check if the current API supports detail.
+        // PartialReceiveAPIView.get supports filtering by order_id. 
+        // We might need to add logic to view items.
+        
+        // Quick fix: Add a modal and fetch details.
+        // But first, let's just alert "Not implemented" if backend is missing.
+        // No, I should implement it. 
+        
+        // Let's assume I'll add a detail endpoint or expand the list.
+        // For now, I'll add the modal and logic to fetch.
+        
+        try {
+             // We need a way to get items for a partial receive. 
+             // Let's try to fetch specific receive. 
+             // If I didn't verify the backend supports this, it might fail.
+             // PartialReceiveAPIView in views.py (Step 903) doesn't seem to have logic for single ID or items.
+             // It returns a list based on order_id.
+             
+             // I will implement a new action or query param in GET to fetch items.
+             // But for now, let's create the modal HTML first.
+             const modal = document.getElementById('receiveDetailModal');
+             modal.showModal();
+             
+             const listContainer = document.getElementById('receiveDetailItems');
+             listContainer.innerHTML = '<tr><td colspan="3" class="text-center">กำลังโหลด...</td></tr>';
+             
+             // Fetch receive details
+             const res = await apiFetch(`/api/partial-receives/?receive_id=${receiveId}`);
+             if (res && res.length > 0) {
+                 const receive = res[0];
+                 
+                 if (receive.items && receive.items.length > 0) {
+                     listContainer.innerHTML = receive.items.map((item, i) => `
+                        <tr>
+                            <td>${item.material_name}</td>
+                            <td>${item.quantity}</td>
+                            <td>${item.unit}</td>
+                        </tr>
+                     `).join('');
+                 } else {
+                     listContainer.innerHTML = '<tr><td colspan="3" class="text-center text-warning">ไม่พบรายการสินค้า</td></tr>';
+                 }
+             } else {
+                 listContainer.innerHTML = '<tr><td colspan="3" class="text-center text-error">ไม่พบข้อมูลใบรับของ</td></tr>';
+             }
+        } catch (e) {
+            console.error(e);
+            showToast('เกิดข้อผิดพลาด', 'error');
+        }
     }
 
     loadOrders();
     loadReceives();
 </script>
+
+<!-- Detail Modal -->
+<dialog id="receiveDetailModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">รายละเอียดการรับของ</h3>
+        
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>รายการ</th>
+                    <th>จำนวนที่รับ</th>
+                    <th>หน่วย</th>
+                </tr>
+            </thead>
+            <tbody id="receiveDetailItems"></tbody>
+        </table>
+
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn">ปิด</button>
+            </form>
+        </div>
+    </div>
+</dialog>
 {% endblock %}

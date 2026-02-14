@@ -18,5 +18,5 @@ COPY . /app/
 # รวบรวม Static Files
 RUN python manage.py collectstatic --noinput
 
-# คำสั่งรัน Server ผ่าน Gunicorn
-CMD exec gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 0 backend.wsgi:application
+# คำสั่งรัน Server ผ่าน Gunicorn (รัน migrations ก่อน)
+CMD python manage.py migrate --noinput && exec gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 0 backend.wsgi:application

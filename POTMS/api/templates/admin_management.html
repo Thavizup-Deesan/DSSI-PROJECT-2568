@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}จัดการ Admin{% endblock %}
+{% block title %}จัดการสิทธิ์สตาฟฟ์ส{% endblock %}
 
 {% block content %}
 <div class="flex items-center justify-between mb-6">
     <div>
-        <h1 class="text-2xl font-bold">จัดการ Admin</h1>
-        <p class="text-sm text-base-content/50">เพิ่ม/ถอด เจ้าหน้าที่พัสดุ (Officer) ของระบบ</p>
+        <h1 class="text-2xl font-bold">จัดการสิทธิ์ผู้ดูแลระบบ</h1>
+        <p class="text-sm text-base-content/50">เพิ่ม/ถอด สิทธิ์ Admin และ Officer (เจ้าหน้าที่พัสดุ)</p>
     </div>
     <button class="btn btn-primary gap-2" onclick="document.getElementById('addModal').showModal()">
         <span class="material-icons-outlined text-base">person_add</span>
-        เพิ่ม Admin
+        เพิ่มสตาฟฟ์ใหม่
     </button>
 </div>
 
-<!-- Admin List -->
+<!-- Staff List -->
 <div class="card bg-base-200 border border-base-content/5">
     <div class="card-body">
         <div class="overflow-x-auto">
@@ -22,6 +22,7 @@
                     <tr>
                         <th>ชื่อ</th>
                         <th>อีเมล</th>
+                        <th>บทบาท</th>
                         <th>ภาค/หน่วยงาน</th>
                         <th>วันที่เพิ่ม</th>
                         <th>การดำเนินการ</th>
@@ -33,22 +34,32 @@
     </div>
 </div>
 
-<!-- Add Admin Modal -->
+<!-- Add Modal -->
 <dialog class="modal" id="addModal">
     <div class="modal-box">
-        <h3 class="font-bold text-lg">เพิ่ม Admin ใหม่</h3>
-        <p class="text-sm text-base-content/50 mt-1">ระบุอีเมล @ubu.ac.th ของผู้ที่ต้องการแต่งตั้งเป็น admin</p>
+        <h3 class="font-bold text-lg">เพิ่มสตาฟฟ์ใหม่</h3>
+        <p class="text-sm text-base-content/50 mt-1">ระบุอีเมล @ubu.ac.th ของผู้ที่ต้องการแต่งตั้งสิทธิ์</p>
+        
         <div class="form-control mt-4">
             <label class="label"><span class="label-text">อีเมล</span></label>
             <input type="email" class="input input-bordered" id="addEmail" placeholder="example@ubu.ac.th">
         </div>
+
+        <div class="form-control mt-3">
+            <label class="label"><span class="label-text">บทบาท</span></label>
+            <select class="select select-bordered" id="addRole">
+                <option value="Admin">Admin (ผู้ดูแลระบบ)</option>
+                <option value="Officer">Officer (เจ้าหน้าที่พัสดุ)</option>
+            </select>
+        </div>
+
         <div class="form-control mt-3">
             <label class="label"><span class="label-text">ชื่อ (ไม่บังคับ — ระบบจะดึงจาก Google เมื่อ login)</span></label>
             <input type="text" class="input input-bordered" id="addName" placeholder="ชื่อ-นามสกุล">
         </div>
         <div class="modal-action">
             <button class="btn btn-ghost" onclick="document.getElementById('addModal').close()">ยกเลิก</button>
-            <button class="btn btn-primary" onclick="addAdmin()">เพิ่ม Admin</button>
+            <button class="btn btn-primary" onclick="addAdmin()">เพิ่มสตาฟฟ์</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop"><button>close</button></form>
@@ -57,13 +68,13 @@
 <!-- Confirm Remove Modal -->
 <dialog class="modal" id="removeModal">
     <div class="modal-box">
-        <h3 class="font-bold text-lg text-error">ยืนยันถอด Admin</h3>
-        <p class="mt-2">ต้องการถอด <strong id="removeName"></strong> ออกจาก admin หรือไม่?</p>
-        <p class="text-sm text-base-content/50 mt-1">ผู้ใช้จะถูกเปลี่ยน role เป็น User</p>
+        <h3 class="font-bold text-lg text-error">ยืนยันถอดสิทธิ์</h3>
+        <p class="mt-2">ต้องการถอดสิทธิ์ของ <strong id="removeName"></strong> หรือไม่?</p>
+        <p class="text-sm text-base-content/50 mt-1">ผู้ใช้จะถูกเปลี่ยน role เป็น User ปกติ</p>
         <input type="hidden" id="removeUserId">
         <div class="modal-action">
             <button class="btn btn-ghost" onclick="document.getElementById('removeModal').close()">ยกเลิก</button>
-            <button class="btn btn-error" onclick="confirmRemoveAdmin()">ถอด Admin</button>
+            <button class="btn btn-error" onclick="confirmRemoveAdmin()">ยืนยันถอดสิทธิ์</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop"><button>close</button></form>
@@ -86,12 +97,12 @@
         const tbody = document.getElementById('adminsTable');
 
         if (admins.error) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-error">' + admins.error + '</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-error">' + admins.error + '</td></tr>';
             return;
         }
 
         if (admins.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-base-content/40">ยังไม่มี admin</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-base-content/40">ยังไม่มีรายชื่อสตาฟฟ์</td></tr>';
             return;
         }
 
@@ -100,11 +111,15 @@
             const isSelf = a.user_id === currentUserId;
             const removeBtn = isSelf
                 ? '<span class="badge badge-ghost badge-sm">ตัวคุณ</span>'
-                : `<button class="btn btn-outline btn-error btn-xs" onclick='removeAdmin(${a.user_id}, "${a.full_name}")'>ถอด Admin</button>`;
+                : `<button class="btn btn-outline btn-error btn-xs" onclick='removeAdmin(${a.user_id}, "${a.full_name}")'>ถอดสิทธิ์</button>`;
+            
+            const roleBadge = a.is_admin ? '<span class="badge badge-primary badge-sm">Admin</span>' : '<span class="badge badge-info badge-sm">Officer</span>';
+
             return `
                 <tr class="hover">
                     <td class="font-medium">${a.full_name}</td>
                     <td>${a.email}</td>
+                    <td>${roleBadge}</td>
                     <td>${a.department || '—'}</td>
                     <td>${date}</td>
                     <td>${removeBtn}</td>
@@ -115,10 +130,11 @@
     async function addAdmin() {
         const email = document.getElementById('addEmail').value.trim();
         const fullName = document.getElementById('addName').value.trim();
+        const role = document.getElementById('addRole').value;
 
         if (!email) { showToast('กรุณาระบุอีเมล', 'error'); return; }
 
-        const body = { email };
+        const body = { email, role };
         if (fullName) body.full_name = fullName;
 
         const res = await apiFetch('/api/admins/', {

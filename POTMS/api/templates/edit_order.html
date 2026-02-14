@@ -10,6 +10,11 @@
     <span class="badge badge-lg badge-ghost" id="orderNo">—</span>
 </div>
 
+<!-- Order Info (Added for Context) -->
+<div class="card bg-base-200 border border-base-content/5 mb-6">
+    <div class="card-body" id="orderInfo"></div>
+</div>
+
 <div class="card bg-base-200 border border-base-content/5 mb-6">
     <div class="card-body">
         <div class="form-control">
@@ -55,7 +60,29 @@
     async function loadOrder() {
         const data = await apiFetch(`/api/orders/${orderId}/`);
         if (data.error) { showToast(data.error, 'error'); return; }
+        
         document.getElementById('orderNo').textContent = data.order_no;
+        
+        // Populate Info Header
+        document.getElementById('orderInfo').innerHTML = `
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div><div class="text-xs opacity-50">เลขที่</div><div class="font-semibold">${data.order_no}</div></div>
+                <div><div class="text-xs opacity-50">โครงการ</div><div>${data.project_name}</div></div>
+                <div><div class="text-xs opacity-50">ผู้ขอซื้อ</div><div>${data.requester_name}</div></div>
+                <div><div class="text-xs opacity-50">จำนวนเงินเดิม</div><div class="font-semibold text-primary">฿${parseFloat(data.total_amount).toLocaleString()}</div></div>
+                <div><div class="text-xs opacity-50">สถานะปัจจุบัน</div><div>${getStatusBadge(data.status)}</div></div>
+                <div><div class="text-xs opacity-50">วันที่สร้าง</div><div>${new Date(data.created_at).toLocaleDateString('th-TH')}</div></div>
+            </div>
+            ${data.status === 'Rejected' && data.rejection_reason ? `
+            <div role="alert" class="alert alert-error mt-4">
+                <span class="material-icons-outlined">report_problem</span>
+                <div>
+                    <div class="font-bold">เหตุผลที่ถูกส่งกลับแก้ไข</div>
+                    <div class="text-sm">${data.rejection_reason}</div>
+                </div>
+            </div>` : ''}
+        `;
+
         document.getElementById('reason').value = data.reason || '';
         data.items.forEach(item => addItemRow(item));
         calcTotal();
@@ -92,11 +119,13 @@
     async function saveOrder() {
         const items = [];
         document.querySelectorAll('#itemsTable tr').forEach(row => {
+            const qtyVal = parseInt(row.querySelector('.item-qty').value);
+            const priceVal = parseFloat(row.querySelector('.item-price').value);
             items.push({
                 material_name: row.querySelector('.item-name').value,
-                quantity: parseInt(row.querySelector('.item-qty').value),
+                quantity: isNaN(qtyVal) ? 1 : qtyVal,
                 unit: row.querySelector('.item-unit').value,
-                unit_price: parseFloat(row.querySelector('.item-price').value),
+                unit_price: isNaN(priceVal) ? 0 : priceVal,
             });
         });
         const res = await apiFetch(`/api/orders/${orderId}/`, {
@@ -105,7 +134,7 @@
         });
         if (res.error) { showToast(res.error, 'error'); return; }
         showToast(res.message);
-        setTimeout(() => window.history.back(), 1000);
+        setTimeout(() => window.location.href = `/orders/detail/?id=${orderId}`, 1000);
     }
 
     loadOrder();

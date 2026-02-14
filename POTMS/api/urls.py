@@ -33,12 +33,14 @@ urlpatterns = [
     path('orders/<int:order_id>/submit/', views.OrderSubmitAPIView.as_view(), name='order_submit'),
     path('orders/<int:order_id>/export/', views.OrderExportAPIView.as_view(), name='order_export'),
     path('orders/<int:order_id>/approve/', views.OrderApprovalRecordAPIView.as_view(), name='order_approve'),
+    path('orders/<int:order_id>/process/', views.OrderProcessAPIView.as_view(), name='order_process'),
 
     # =================================================================
     # Partial Receive APIs
     # Activity: สร้างใบสั่งซื้อย่อย พร้อมแนบใบเสร็จ
     # =================================================================
     path('partial-receives/', views.PartialReceiveAPIView.as_view(), name='partial_receives'),
+    path('partial-receives/<int:receive_id>/', views.PartialReceiveDetailAPIView.as_view(), name='partial_receive_detail'),
 
     # =================================================================
     # Inspection APIs
@@ -51,6 +53,7 @@ urlpatterns = [
     # Activity: ตั้งเบิกจ่ายเงิน
     # =================================================================
     path('payments/', views.PaymentAPIView.as_view(), name='payments'),
+    path('payments/<int:payment_id>/confirm/', views.PaymentConfirmAPIView.as_view(), name='payment_confirm'),
 
     # =================================================================
     # Admin Management APIs
@@ -92,4 +95,5 @@ page_urlpatterns = [
     path('projects/closure/', views.project_closure_page, name='project_closure'),
     path('officer/users/', views.user_management_page, name='user_management'),
     path('officer/admins/', views.admin_management_page, name='admin_management'),
+    path('orders/inspect-landing/', views.inspector_landing_page, name='inspector_landing'),
 ]

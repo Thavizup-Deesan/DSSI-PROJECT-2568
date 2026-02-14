@@ -31,10 +31,10 @@
 <!-- Partial Receives -->
 <div class="card bg-base-200 border border-base-content/5 mb-6 hidden" id="receivesSection">
     <div class="card-body">
-        <h2 class="card-title text-lg mb-3">ใบรับของ</h2>
+        <h2 class="card-title text-lg mb-3">ใบรับของ (History)</h2>
         <div class="overflow-x-auto">
-            <table class="table table-zebra">
-                <thead><tr><th>เลขที่ใบรับ</th><th>วันที่รับ</th><th>สถานะ</th></tr></thead>
+            <table class="table table-zebra table-sm">
+                <thead><tr><th>เลชที่ใบรับ</th><th>วันที่รับ</th><th>กรรมการตรวจ</th><th>สถานะ</th><th>การดำเนินการ</th></tr></thead>
                 <tbody id="receivesTable"></tbody>
             </table>
         </div>
@@ -43,14 +43,112 @@
 
 <!-- Actions -->
 <div class="flex gap-3" id="actions"></div>
+
+<!-- Modal: Receive Item Details -->
+<dialog id="receiveItemsModal" class="modal">
+    <div class="modal-box w-11/12 max-w-2xl">
+        <div class="flex justify-between items-start mb-4">
+            <h3 class="font-bold text-lg">รายการสินค้าประจำใบรับของ</h3>
+            <div class="text-right">
+                <div class="text-xs opacity-50">กรรมการผู้ตรวจ</div>
+                <div class="font-medium text-sm" id="modalCommitteeName">—</div>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="table table-sm">
+                <thead><tr><th>#</th><th>รายการ</th><th>จำนวนที่รับ</th><th>หน่วย</th></tr></thead>
+                <tbody id="modalItemsTable"></tbody>
+            </table>
+        </div>
+        <div class="modal-action">
+            <form method="dialog"><button class="btn btn-sm">ปิด</button></form>
+        </div>
+    </div>
+</dialog>
+
+<!-- Modal: Inspection -->
+<dialog class="modal" id="inspModal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">ยืนยันผลตรวจรับ</h3>
+        <input type="hidden" id="inspReceiveId">
+        <div class="form-control mt-4">
+            <label class="label"><span class="label-text">ผลการตรวจ</span></label>
+            <select class="select select-bordered" id="inspResult">
+                <option value="Pass">✅ ผ่าน (Pass)</option>
+                <option value="Reject">❌ ไม่ผ่าน (Reject)</option>
+            </select>
+        </div>
+        <div class="form-control mt-3">
+            <label class="label"><span class="label-text">หมายเหตุ</span></label>
+            <textarea class="textarea textarea-bordered" id="inspComment" rows="3"></textarea>
+        </div>
+        <div class="modal-action">
+            <button class="btn btn-ghost" onclick="document.getElementById('inspModal').close()">ยกเลิก</button>
+            <button class="btn btn-primary" onclick="submitInspection()">บันทึกผลการตรวจ</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Export Modal -->
+<dialog id="exportModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">ระบุกรรมการตรวจรับ</h3>
+        <p class="py-4">กรุณาเลือกกรรมการตรวจรับประจำรายการนี้ก่อน Export เอกสาร</p>
+        
+        <div class="form-control w-full">
+            <label class="label"><span class="label-text">ชื่อกรรมการตรวจรับ (ระบุเพื่อแสดงในเอกสาร)</span></label>
+            <input type="text" class="input input-bordered w-full mb-3" id="committeeName" placeholder="ระบุชื่อ-นามสกุล กรรมการ..." />
+            
+            <label class="label"><span class="label-text">อีเมลกรรมการตรวจรับ (ระบุเพื่อกำหนดสิทธิ์)</span></label>
+            <input type="email" class="input input-bordered w-full" id="committeeEmail" placeholder="example@ubu.ac.th" />
+            <label class="label"><span class="label-text-alt text-error">* ระบบจะสร้างบัญชีให้ทันทีหากยังไม่มีในระบบ</span></label>
+        </div>
+
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn">ยกเลิก</button>
+            </form>
+            <button class="btn btn-primary" onclick="confirmExport()">ยืนยัน & Export</button>
+        </div>
+    </div>
+</dialog>
+
+<!-- Reject Modal -->
+<dialog id="rejectModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">ระบุเหตุผลที่ส่งกลับแก้ไข</h3>
+        <p class="py-4">กรุณาระบุเหตุผลเพื่อให้ผู้ขอซื้อทำการแก้ไข</p>
+        
+        <div class="form-control w-full">
+            <textarea class="textarea textarea-bordered h-24" id="rejectReason" placeholder="ระบุเหตุผล..."></textarea>
+        </div>
+
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn">ยกเลิก</button>
+            </form>
+            <button class="btn btn-error" onclick="confirmReject()">ยืนยันส่งกลับ</button>
+        </div>
+    </div>
+</dialog>
+
+<!-- Modal: QR Code -->
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     const orderId = new URLSearchParams(window.location.search).get('id');
+    let currentData = null;
 
     async function loadOrder() {
-        const d = await apiFetch(`/api/orders/${orderId}/`);
+        const [d, user] = await Promise.all([
+            apiFetch(`/api/orders/${orderId}/`),
+            apiFetch('/api/auth/me/')
+        ]);
+        currentData = d;
+
         if (d.error) { showToast(d.error, 'error'); return; }
 
         document.getElementById('orderBreadcrumb').textContent = d.order_no;
@@ -58,37 +156,170 @@
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div><div class="text-xs opacity-50">เลขที่</div><div class="font-semibold">${d.order_no}</div></div>
                 <div><div class="text-xs opacity-50">โครงการ</div><div>${d.project_name}</div></div>
-                <div><div class="text-xs opacity-50">ผู้ขอซื้อ</div><div>${d.requester.full_name}</div></div>
-                <div><div class="text-xs opacity-50">จำนวนเงิน</div><div class="font-semibold text-primary">฿${parseFloat(d.total_amount).toLocaleString()}</div></div>
+                <div><div class="text-xs opacity-50">ผู้ขอซื้อ</div><div>${d.requester_name}</div></div>
+                <div>
+                    <div class="text-xs opacity-50">${['Reserved', 'Pending_Approval', 'Approved', 'Completed'].includes(d.status) ? 'ยอดเงินที่กันวงเงิน (Reserved)' : 'จำนวนเงิน'}</div>
+                    <div class="font-semibold text-primary">฿${parseFloat(d.total_amount).toLocaleString()}</div>
+                </div>
                 <div><div class="text-xs opacity-50">สถานะ</div><div>${getStatusBadge(d.status)}</div></div>
                 <div><div class="text-xs opacity-50">วันที่สร้าง</div><div>${new Date(d.created_at).toLocaleDateString('th-TH')}</div></div>
+                <div><div class="text-xs opacity-50">กรรมการตรวจรับ</div><div>${d.inspection_committee_full_name || d.inspection_committee_name || '—'}</div></div>
             </div>
             ${d.reason ? `<div class="mt-4"><div class="text-xs opacity-50">เหตุผล</div><div class="mt-1">${d.reason}</div></div>` : ''}
+            
+            ${d.status === 'Reserved' ? `
+            <div role="alert" class="alert alert-success mt-4">
+                <span class="material-icons-outlined">check_circle</span>
+                <span>ได้ทำการกันวงเงินจากโครงการแล้วจำนวน ฿${parseFloat(d.total_amount).toLocaleString()}</span>
+            </div>` : ''}
+
+            ${d.status === 'Rejected' && d.rejection_reason ? `
+            <div role="alert" class="alert alert-error mt-4">
+                <span class="material-icons-outlined">report_problem</span>
+                <div>
+                    <div class="font-bold">ถูกส่งกลับแก้ไข</div>
+                    <div class="text-sm">${d.rejection_reason}</div>
+                </div>
+            </div>` : ''}
         `;
 
         document.getElementById('itemsTable').innerHTML = d.items.map((item, i) => `
             <tr><td>${i+1}</td><td>${item.material_name}</td><td>${item.quantity}</td><td>${item.unit}</td><td>฿${parseFloat(item.unit_price).toLocaleString()}</td><td class="font-medium">฿${parseFloat(item.total_price).toLocaleString()}</td></tr>
         `).join('');
 
+        // Show Partial Receives Section (Always show for Committee/Officer to verify)
+        const isCommitteeRole = user.role === 'Committee' || user.is_officer || user.is_admin;
+        
         if (d.partial_receives && d.partial_receives.length > 0) {
             document.getElementById('receivesSection').classList.remove('hidden');
-            document.getElementById('receivesTable').innerHTML = d.partial_receives.map(r => `
-                <tr><td>${r.receipt_no || '—'}</td><td>${new Date(r.received_date).toLocaleDateString('th-TH')}</td><td>${getStatusBadge(r.status)}</td></tr>
-            `).join('');
+            document.getElementById('receivesTable').innerHTML = d.partial_receives.map(r => {
+                // Check if user is the assigned committee for Order OR this specific Partial Receive
+                // Use == for loose type check (int vs string safety)
+                const isAssignedCommittee = (d.inspection_committee == user.user_id) || (r.committee == user.user_id);
+                
+                // Allow inspection if: Officer OR Admin
+                const canInspect = (user.is_officer || user.is_admin) && r.status === 'Pending_Inspection';
+                
+                return `
+                    <tr class="hover">
+                        <td>${r.receipt_no || '—'}</td>
+                        <td class="text-xs">${new Date(r.received_date).toLocaleDateString('th-TH')}</td>
+                        <td class="text-xs">${r.committee_name || '—'}</td>
+                        <td>${getStatusBadge(r.status)}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button class="btn btn-xs btn-ghost" onclick="viewReceiveItems(${r.receive_id})">ดูของ</button>
+                                ${canInspect ? `<button class="btn btn-xs btn-primary bg-primary text-white" onclick="openInspection(${r.receive_id})">ตรวจรับ</button>` : ''}
+                                ${user.is_officer && (r.status === 'Pending_Inspection' || (r.status === 'Inspected' && r.result === 'Reject')) ? 
+                                    `<button class="btn btn-xs btn-error btn-outline" onclick="deletePartialReceive(${r.receive_id})">ลบ</button>` : ''}
+                                ${r.receipt_file_path ? `<a href="${r.receipt_file_path}" target="_blank" class="btn btn-xs btn-ghost">ดูไฟล์</a>` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } else if (isCommitteeRole) {
+            // Show empty state for Committee/Officer
+            document.getElementById('receivesSection').classList.remove('hidden');
+            document.getElementById('receivesTable').innerHTML = `
+                <tr><td colspan="5" class="text-center opacity-50 py-4">ยังไม่มีรายการรับของ (Partial Receive)</td></tr>
+            `;
         }
 
         const actions = document.getElementById('actions');
-        if (['Draft','Rejected'].includes(d.status)) {
-            actions.innerHTML += `<a href="/orders/edit/?id=${orderId}" class="btn btn-primary gap-2"><span class="material-icons-outlined text-base">edit</span>แก้ไข</a>`;
-            actions.innerHTML += `<button class="btn btn-success gap-2" onclick="submitOrder()"><span class="material-icons-outlined text-base">send</span>ส่งใบสั่งซื้อ (ตรวจงบ)</button>`;
+        
+        // Actions for Requester (User)
+        // d.requester is ID (int), user.user_id is ID (int)
+        if (d.requester === user.user_id) {
+             if (d.status === 'Draft' || d.status === 'Rejected') {
+                actions.innerHTML += `<a href="/orders/edit/?id=${orderId}" class="btn btn-primary gap-2"><span class="material-icons-outlined text-base">edit</span>แก้ไข</a>`;
+                actions.innerHTML += `<button class="btn btn-success gap-2" onclick="submitOrder()"><span class="material-icons-outlined text-base">send</span>ยืนยันสั่งซื้อ</button>`;
+            }
+            if (d.status === 'Draft') {
+                actions.innerHTML += `<button class="btn btn-error btn-outline gap-2" onclick="deleteOrder()"><span class="material-icons-outlined text-base">delete</span>ลบ</button>`;
+            }
         }
-        if (d.status === 'Reserved') {
-            actions.innerHTML += `<button class="btn btn-primary gap-2" onclick="exportOrder()"><span class="material-icons-outlined text-base">upload_file</span>Export & ส่งรออนุมัติ</button>`;
+
+        // Actions for Officer
+        if (user.is_officer) {
+            if (d.status === 'Reserved') {
+                actions.innerHTML += `<button class="btn btn-primary gap-2" onclick="exportOrder()"><span class="material-icons-outlined text-base">upload_file</span>Export & ส่งรออนุมัติ</button>`;
+            }
+            if (d.status === 'Pending_Approval') {
+                actions.innerHTML += `<button class="btn btn-success gap-2" onclick="recordApproval('approve')"><span class="material-icons-outlined text-base">check_circle</span>บันทึกอนุมัติ</button>`;
+                actions.innerHTML += `<button class="btn btn-error gap-2" onclick="recordApproval('reject')"><span class="material-icons-outlined text-base">cancel</span>ส่งกลับแก้ไข</button>`;
+            }
+            if (d.status === 'Approved') {
+                actions.innerHTML += `<button class="btn btn-primary gap-2" onclick="recordProcess()"><span class="material-icons-outlined text-base">send</span>ส่งใบสั่งซื้อให้งานพัสดุ</button>`;
+            }
+            if (d.status === 'Processing') {
+                actions.innerHTML += `<a href="/partial-receives/?order_id=${orderId}" class="btn btn-active gap-2"><span class="material-icons-outlined text-base">inventory_2</span>บันทึกรับของ</a>`;
+            }
         }
-        if (d.status === 'Pending_Approval') {
-            actions.innerHTML += `<button class="btn btn-success gap-2" onclick="recordApproval('approve')"><span class="material-icons-outlined text-base">check_circle</span>บันทึกอนุมัติ</button>`;
-            actions.innerHTML += `<button class="btn btn-error gap-2" onclick="recordApproval('reject')"><span class="material-icons-outlined text-base">cancel</span>ส่งกลับแก้ไข</button>`;
+    }
+
+
+
+    function viewReceiveItems(receiveId) {
+        const r = currentData.partial_receives.find(x => x.receive_id === receiveId);
+        if (!r) return;
+        
+        document.getElementById('modalCommitteeName').textContent = r.committee_name || '—';
+        
+        const tbody = document.getElementById('modalItemsTable');
+        if (!r.items || r.items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center opacity-50">ไม่มีรายการ</td></tr>';
+        } else {
+            tbody.innerHTML = r.items.map((item, i) => `
+                <tr><td>${i+1}</td><td>${item.material_name}</td><td>${item.quantity}</td><td>${item.unit}</td></tr>
+            `).join('');
         }
+        document.getElementById('receiveItemsModal').showModal();
+    }
+
+    function openInspection(receiveId) {
+        document.getElementById('inspReceiveId').value = receiveId;
+        document.getElementById('inspResult').value = 'Pass';
+        document.getElementById('inspComment').value = '';
+        document.getElementById('inspModal').showModal();
+    }
+
+    async function submitInspection() {
+        const receiveId = document.getElementById('inspReceiveId').value;
+        const res = await apiFetch('/api/inspections/', {
+            method: 'POST',
+            body: JSON.stringify({
+                receive_id: receiveId,
+                result: document.getElementById('inspResult').value,
+                comment: document.getElementById('inspComment').value,
+            })
+        });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        
+        // Flowchart Feedback
+        if (res.result === 'Reject') {
+            showToast(res.message, 'error'); // "ปฏิเสธรับของ — แจ้งผู้ขายแก้ไข"
+        } else {
+            showToast(res.message); // Success + Completion info
+        }
+
+        document.getElementById('inspModal').close();
+        loadOrder();
+    }
+
+    async function recordProcess() {
+        if (!confirm('ยืนยันส่งใบสั่งซื้อให้งานพัสดุ?')) return;
+        const res = await apiFetch(`/api/orders/${orderId}/process/`, { method: 'POST' });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message); location.reload();
+    }
+
+    async function deleteOrder() {
+        if (!confirm('ยืนยันว่าต้องการลบใบสั่งซื้อนี้? (ไม่สามารถกู้คืนได้)')) return;
+        const res = await apiFetch(`/api/orders/${orderId}/`, { method: 'DELETE' });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message);
+        window.location.href = '/orders/my/';
     }
 
     async function submitOrder() {
@@ -98,18 +329,73 @@
     }
 
     async function exportOrder() {
-        const res = await apiFetch(`/api/orders/${orderId}/export/`, { method: 'POST' });
-        if (res.error) { showToast(res.error, 'error'); return; }
-        showToast(res.message); location.reload();
+        document.getElementById('exportModal').showModal();
+    }
+
+    async function confirmExport() {
+        const committeeEmail = document.getElementById('committeeEmail').value;
+        const committeeName = document.getElementById('committeeName').value;
+        if (!committeeEmail) { showToast('กรุณาระบุอีเมลกรรมการตรวจรับ', 'error'); return; }
+
+        const res = await fetch(`/api/orders/${orderId}/export/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ 
+                committee_email: committeeEmail,
+                committee_name: committeeName
+            })
+        });
+
+        if (res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `PO-${document.getElementById('orderBreadcrumb').textContent}.xlsx`;
+            document.body.appendChild(a);
+            a.click(); a.remove();
+            showToast('Export สำเร็จ! สถานะเปลี่ยนเป็นรออนุมัติ');
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            const data = await res.json();
+            showToast(data.error || 'เกิดข้อผิดพลาด', 'error');
+        }
     }
 
     async function recordApproval(action) {
-        if (!confirm(action === 'approve' ? 'ยืนยันอนุมัติ?' : 'ส่งกลับแก้ไข?')) return;
+        if (action === 'approve') {
+            if (!confirm('ยืนยันอนุมัติ?')) return;
+            const res = await apiFetch(`/api/orders/${orderId}/approve/`, {
+                method: 'POST', body: JSON.stringify({ action })
+            });
+            if (res.error) { showToast(res.error, 'error'); return; }
+            showToast(res.message); location.reload();
+        } else {
+            document.getElementById('rejectModal').showModal();
+        }
+    }
+
+    async function confirmReject() {
+        const reason = document.getElementById('rejectReason').value;
+        if (!reason) { showToast('กรุณาระบุเหตุผล', 'error'); return; }
         const res = await apiFetch(`/api/orders/${orderId}/approve/`, {
-            method: 'POST', body: JSON.stringify({ action })
+            method: 'POST', body: JSON.stringify({ action: 'reject', note: reason })
         });
         if (res.error) { showToast(res.error, 'error'); return; }
-        showToast(res.message); location.reload();
+        showToast(res.message);
+        document.getElementById('rejectModal').close();
+        setTimeout(() => location.reload(), 1000);
+    }
+
+    async function deletePartialReceive(receiveId) {
+        if (!confirm('ยืนยันลบรายการรับของนี้? (การลบจะทำให้ต้องบันทึกรับของใหม่)')) return;
+        const res = await apiFetch(`/api/partial-receives/${receiveId}/`, { method: 'DELETE' });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message);
+        loadOrder();
     }
 
     loadOrder();

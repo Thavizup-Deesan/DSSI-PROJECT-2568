@@ -5,37 +5,49 @@
 <div class="flex items-center justify-between mb-6">
     <div>
         <h1 class="text-2xl font-bold">จัดการใบสั่งซื้อ</h1>
-        <p class="text-sm text-base-content/50">เจ้าหน้าที่พัสดุ — ใบสั่งซื้อทั้งหมด</p>
+        <p class="text-sm text-base-content/50">เจ้าหน้าที่พัสดุ — แยกตามโครงการ</p>
+    </div>
+    <div id="projectNavControls" class="hidden">
+        <button class="btn btn-ghost btn-sm gap-2" onclick="showProjectGrid()">
+            <span class="material-icons-outlined text-base">arrow_back</span> กลับไปเลือกโครงการ
+        </button>
     </div>
 </div>
 
-<!-- Filter -->
-<div class="card bg-base-200 border border-base-content/5 mb-4">
-    <div class="card-body py-3">
-        <div class="flex gap-3 flex-wrap items-center">
-            <select class="select select-bordered select-sm w-auto min-w-[160px]" id="filterStatus" onchange="loadOrders()">
-                <option value="">ทุกสถานะ</option>
-                <option value="Draft">Draft</option>
-                <option value="Reserved">Reserved</option>
-                <option value="Pending_Approval">Pending Approval</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Completed">Completed</option>
-            </select>
-            <select class="select select-bordered select-sm w-auto min-w-[200px]" id="filterProject" onchange="loadOrders()">
-                <option value="">ทุกโครงการ</option>
-            </select>
+<!-- Project Grid View -->
+<div id="projectGridView">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="projectGrid">
+        <!-- Project Cards will be injected here -->
+    </div>
+</div>
+
+<!-- Order List View (Hidden by default) -->
+<div id="orderListView" class="hidden">
+    <div class="card bg-base-200 border border-base-content/5 mb-4">
+        <div class="card-body py-3">
+            <div class="flex gap-3 flex-wrap items-center justify-between">
+                <h2 class="text-lg font-bold" id="selectedProjectName">ชื่อโครงการ</h2>
+                <select class="select select-bordered select-sm w-auto min-w-[160px]" id="filterStatus" onchange="filterOrders()">
+                    <option value="">ทุกสถานะ</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Reserved">Reserved</option>
+                    <option value="Pending_Approval">Pending Approval</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="Completed">Completed</option>
+                </select>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="card bg-base-200 border border-base-content/5">
-    <div class="card-body">
-        <div class="overflow-x-auto">
-            <table class="table table-zebra">
-                <thead><tr><th>เลขที่</th><th>โครงการ</th><th>ผู้ขอซื้อ</th><th>จำนวนเงิน</th><th>รายการ</th><th>สถานะ</th><th>วันที่</th><th>การดำเนินการ</th></tr></thead>
-                <tbody id="ordersTable"></tbody>
-            </table>
+    <div class="card bg-base-200 border border-base-content/5">
+        <div class="card-body">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead><tr><th>เลขที่</th><th>ผู้ขอซื้อ</th><th>จำนวนเงิน</th><th>รายการ</th><th>สถานะ</th><th>วันที่</th><th>การดำเนินการ</th></tr></thead>
+                    <tbody id="ordersTable"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -43,41 +55,86 @@
 
 {% block extra_js %}
 <script>
+    let currentOrders = [];
+    let projectsMap = {};
+
     async function loadProjects() {
         const projects = await apiFetch('/api/projects/');
-        const select = document.getElementById('filterProject');
-        projects.forEach(p => { select.innerHTML += `<option value="${p.project_id}">${p.project_name}</option>`; });
-    }
-
-    async function loadOrders() {
-        let url = '/api/orders/';
-        const projectId = document.getElementById('filterProject').value;
-        if (projectId) url += `?project_id=${projectId}`;
-
-        const orders = await apiFetch(url);
-        const statusFilter = document.getElementById('filterStatus').value;
-        const filtered = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;
-
-        const tbody = document.getElementById('ordersTable');
-        if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-base-content/40">ไม่พบใบสั่งซื้อ</td></tr>';
+        const grid = document.getElementById('projectGrid');
+        
+        if (projects.length === 0) {
+            grid.innerHTML = `<div class="col-span-full text-center py-10 opacity-50">ไม่พบโครงการ</div>`;
             return;
         }
-        tbody.innerHTML = filtered.map(o => `
+
+        grid.innerHTML = projects.map(p => {
+            projectsMap[p.project_id] = p;
+            return `
+            <div class="card bg-base-100 shadow-sm hover:shadow-md transition-all border border-base-content/10 cursor-pointer group"
+                 onclick="loadOrders(${p.project_id})">
+                <div class="card-body p-6">
+                    <div class="flex justify-between items-start">
+                        <div class="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span class="material-icons-outlined text-3xl">folder</span>
+                        </div>
+                        ${getStatusBadge(p.status)}
+                    </div>
+                    <h3 class="card-title mt-4 text-lg group-hover:text-primary transition-colors">${p.project_name}</h3>
+                    <div class="text-sm opacity-60 mt-1">งบประมาณ: ฿${parseFloat(p.total_budget).toLocaleString()}</div>
+                    <div class="text-sm opacity-60">คงเหลือ: ฿${parseFloat(p.remaining_budget).toLocaleString()}</div>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    async function loadOrders(projectId) {
+        // Show Loading state if needed
+        document.getElementById('projectGridView').classList.add('hidden');
+        document.getElementById('orderListView').classList.remove('hidden');
+        document.getElementById('projectNavControls').classList.remove('hidden');
+        
+        const project = projectsMap[projectId];
+        document.getElementById('selectedProjectName').textContent = project ? project.project_name : 'รายการใบสั่งซื้อ';
+
+        const orders = await apiFetch(`/api/orders/?project_id=${projectId}`);
+        currentOrders = orders;
+        renderOrders(orders);
+    }
+
+    function renderOrders(orders) {
+        const tbody = document.getElementById('ordersTable');
+        if (orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-base-content/40 py-8">ไม่พบใบสั่งซื้อในโครงการนี้</td></tr>';
+            return;
+        }
+        tbody.innerHTML = orders.map(o => `
             <tr class="hover">
                 <td><a href="/orders/detail/?id=${o.order_id}" class="link link-primary font-medium">${o.order_no}</a></td>
-                <td>${o.project_name}</td>
                 <td>${o.requester_name}</td>
                 <td>฿${parseFloat(o.total_amount).toLocaleString()}</td>
                 <td>${o.items_count} รายการ</td>
                 <td>${getStatusBadge(o.status)}</td>
                 <td class="text-sm opacity-60">${new Date(o.created_at).toLocaleDateString('th-TH')}</td>
-                <td><a href="/orders/detail/?id=${o.order_id}" class="btn btn-ghost btn-xs">ดู</a></td>
+                <td><a href="/orders/detail/?id=${o.order_id}" class="btn btn-ghost btn-xs">ดูรายละเอียด</a></td>
             </tr>
         `).join('');
     }
 
+    function filterOrders() {
+        const status = document.getElementById('filterStatus').value;
+        const filtered = status ? currentOrders.filter(o => o.status === status) : currentOrders;
+        renderOrders(filtered);
+    }
+
+    function showProjectGrid() {
+        document.getElementById('orderListView').classList.add('hidden');
+        document.getElementById('projectNavControls').classList.add('hidden');
+        document.getElementById('projectGridView').classList.remove('hidden');
+        currentOrders = [];
+    }
+
+    // Initialize
     loadProjects();
-    loadOrders();
 </script>
 {% endblock %}

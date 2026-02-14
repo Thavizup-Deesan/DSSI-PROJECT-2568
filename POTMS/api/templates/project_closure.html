@@ -36,33 +36,51 @@
         projects.filter(p => p.status === 'Active').forEach(p => {
             select.innerHTML += `<option value="${p.project_id}">${p.project_name}</option>`;
         });
+
+        // Auto-select from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('project_id');
+        if (projectId) {
+            select.value = projectId;
+            if (select.value) loadProjectSummary(); // Only load if option exists
+        }
     }
 
     async function loadProjectSummary() {
         const id = document.getElementById('projectSelect').value;
         if (!id) { document.getElementById('summarySection').classList.add('hidden'); return; }
-        const p = await apiFetch(`/api/projects/${id}/`);
+        
+        // Fetch Summary from Close API
+        const data = await apiFetch(`/api/projects/${id}/close/`);
+        if (data.error) { showToast(data.error, 'error'); return; }
+
+        const s = data.summary;
         document.getElementById('summarySection').classList.remove('hidden');
         document.getElementById('summaryGrid').innerHTML = `
             <div class="stat bg-base-200 rounded-xl border border-base-content/5">
                 <div class="stat-figure text-primary"><span class="material-icons-outlined text-3xl">payments</span></div>
                 <div class="stat-title">งบประมาณทั้งหมด</div>
-                <div class="stat-value text-primary text-xl">฿${parseFloat(p.total_budget).toLocaleString()}</div>
+                <div class="stat-value text-primary text-xl">฿${parseFloat(s.total_budget).toLocaleString()}</div>
             </div>
             <div class="stat bg-base-200 rounded-xl border border-base-content/5">
                 <div class="stat-figure text-warning"><span class="material-icons-outlined text-3xl">savings</span></div>
                 <div class="stat-title">กันวงเงินแล้ว</div>
-                <div class="stat-value text-warning text-xl">฿${parseFloat(p.reserved_budget).toLocaleString()}</div>
+                <div class="stat-value text-warning text-xl">฿${parseFloat(s.reserved_budget).toLocaleString()}</div>
             </div>
             <div class="stat bg-base-200 rounded-xl border border-base-content/5">
                 <div class="stat-figure text-success"><span class="material-icons-outlined text-3xl">account_balance</span></div>
                 <div class="stat-title">คงเหลือ</div>
-                <div class="stat-value text-success text-xl">฿${parseFloat(p.remaining_budget).toLocaleString()}</div>
+                <div class="stat-value text-success text-xl">฿${parseFloat(s.remaining_budget).toLocaleString()}</div>
             </div>
             <div class="stat bg-base-200 rounded-xl border border-base-content/5">
-                <div class="stat-figure text-secondary"><span class="material-icons-outlined text-3xl">group</span></div>
-                <div class="stat-title">ผู้เข้าร่วม</div>
-                <div class="stat-value text-secondary text-xl">${p.participants ? p.participants.length : 0}</div>
+                <div class="stat-figure text-secondary"><span class="material-icons-outlined text-3xl">shopping_cart</span></div>
+                <div class="stat-title">ใบขอซื้อ (เสร็จ/ทั้งหมด)</div>
+                <div class="stat-value text-secondary text-xl">${s.completed_orders} / ${s.total_orders}</div>
+            </div>
+            <div class="stat bg-base-200 rounded-xl border border-base-content/5 col-span-full md:col-span-2">
+                <div class="stat-figure text-info"><span class="material-icons-outlined text-3xl">paid</span></div>
+                <div class="stat-title">เบิกจ่ายรวม</div>
+                <div class="stat-value text-info text-xl">฿${parseFloat(s.total_payments).toLocaleString()}</div>
             </div>
         `;
     }
