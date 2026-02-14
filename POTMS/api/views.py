@@ -1839,13 +1839,30 @@ def run_migrations(request):
     f = io.StringIO()
     try:
         with redirect_stdout(f), redirect_stderr(f):
+            # 0. Fix Schema Mismatch (id vs user_id)
+            print("--- Checking Schema ---")
+            with connection.cursor() as cursor:
+                # Check columns in users table
+                cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'users'")
+                columns = [row[0] for row in cursor.fetchall()]
+                print(f"Current columns in 'users': {columns}")
+                
+                if 'id' in columns and 'user_id' not in columns:
+                    print("Detected mismatch: 'id' exists but 'user_id' missing. Renaming...")
+                    cursor.execute("ALTER TABLE users RENAME COLUMN id TO user_id")
+                    print("Renamed 'id' to 'user_id'.")
+                elif 'user_id' not in columns and 'id' not in columns:
+                     # Fallback for weird state, but unlikley if table exists
+                     pass
+
             # 1. Run Migrations
-            print("--- Running Migrations ---")
+            print("\n--- Running Migrations ---")
             call_command('migrate', interactive=False)
             
             # 2. Fix Site ID = 1
             print("\n--- Fix Site Configuration ---")
             current_domain = request.get_host()
+            # Site is already imported
             site, created = Site.objects.update_or_create(
                 id=1,
                 defaults={
@@ -1855,11 +1872,12 @@ def run_migrations(request):
             )
             print(f"Site ID=1 configured: {site.domain}")
 
-            # 3. Setup Google SocialApp (Optional but helpful)
+            # 3. Setup Google SocialApp
             google_client_id = os.environ.get('GOOGLE_CLIENT_ID')
             google_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
             if google_client_id and google_client_secret:
                 print("\n--- Setup Google SocialApp ---")
+                # SocialApp is already imported
                 app, app_created = SocialApp.objects.update_or_create(
                     provider='google',
                     defaults={
