@@ -16,7 +16,7 @@
     <div class="card-body">
         <div class="overflow-x-auto">
             <table class="table table-zebra">
-                <thead><tr><th>ชื่อโครงการ</th><th>งบประมาณ</th><th>งบคงเหลือ</th><th>สถานะ</th><th>การดำเนินการ</th></tr></thead>
+                <thead><tr><th>รหัสโครงการ</th><th>ชื่อโครงการ</th><th>งบประมาณ</th><th>งบคงเหลือ</th><th>สถานะ</th><th>การดำเนินการ</th></tr></thead>
                 <tbody id="projectsTable"></tbody>
             </table>
         </div>
@@ -33,6 +33,10 @@
             <div class="form-control">
                 <label class="label"><span class="label-text">รหัส UBUFMIS</span></label>
                 <input type="text" class="input input-bordered" id="ubufmisCode" placeholder="ระบุรหัส UBUFMIS">
+            </div>
+            <div class="form-control">
+                <label class="label"><span class="label-text">รหัสโครงการ (Project Code)</span></label>
+                <input type="text" class="input input-bordered" id="projectCode" placeholder="ระบุรหัสโครงการ (เว้นว่างเพื่อสร้างอัตโนมัติ)">
             </div>
             <div class="form-control">
                 <label class="label"><span class="label-text">ชื่อโครงการ</span></label>
@@ -74,6 +78,7 @@
         }
         tbody.innerHTML = projects.map(p => `
             <tr class="hover">
+                <td class="font-mono text-sm">${p.project_code || '—'}</td>
                 <td class="font-medium">${p.project_name}</td>
                 <td>฿${parseFloat(p.total_budget).toLocaleString()}</td>
                 <td>฿${parseFloat(p.remaining_budget).toLocaleString()}</td>
@@ -98,6 +103,7 @@
         document.getElementById('editProjectId').value = '';
         document.getElementById('projectName').value = '';
         document.getElementById('ubufmisCode').value = '';
+        document.getElementById('projectCode').value = '';
         document.getElementById('totalBudget').value = '0';
 
         document.getElementById('startDate').value = '';
@@ -111,6 +117,7 @@
         document.getElementById('editProjectId').value = id;
         document.getElementById('projectName').value = p.project_name;
         document.getElementById('ubufmisCode').value = p.ubufmis_code || '';
+        document.getElementById('projectCode').value = p.project_code || '';
         document.getElementById('totalBudget').value = p.total_budget || 0;
 
         document.getElementById('startDate').value = p.start_date || '';
@@ -125,6 +132,7 @@
         const body = {
             project_name: document.getElementById('projectName').value,
             ubufmis_code: document.getElementById('ubufmisCode').value,
+            project_code: document.getElementById('projectCode').value,
             total_budget: document.getElementById('totalBudget').value,
 
             start_date: document.getElementById('startDate').value || null,

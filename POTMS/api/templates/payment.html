@@ -5,7 +5,7 @@
 <div class="flex items-center justify-between mb-6">
     <div>
         <h1 class="text-2xl font-bold">ตั้งเบิกจ่ายเงิน</h1>
-        <p class="text-sm text-base-content/50">UC-09: คำนวณงบประมาณ → ตั้งเบิกจ่ายเงิน</p>
+        <p class="text-sm text-base-content/50">เบิกจ่ายตามใบรับของ (ใบเสร็จ) ที่ตรวจรับผ่านแล้ว</p>
     </div>
 </div>
 
@@ -15,8 +15,8 @@
         <h2 class="card-title text-lg mb-3">ตั้งเบิกจ่าย</h2>
         <div class="flex gap-3 flex-wrap items-end">
             <div class="form-control flex-1 min-w-[300px]">
-                <label class="label"><span class="label-text">เลือกใบขอซื้อ (Approved, Processing, Completed)</span></label>
-                <select class="select select-bordered w-full" id="paymentOrderSelect" onchange="onOrderSelectChange()"><option value="">เลือกใบขอซื้อ...</option></select>
+                <label class="label"><span class="label-text">เลือกใบรับของ (ตรวจรับผ่านแล้ว)</span></label>
+                <select class="select select-bordered w-full" id="paymentReceiveSelect" onchange="onReceiveSelectChange()"><option value="">เลือกใบรับของ...</option></select>
             </div>
             <div class="form-control w-48">
                 <label class="label"><span class="label-text">จำนวนเงินที่เบิก (บาท)</span></label>
@@ -33,7 +33,7 @@
         <h2 class="card-title text-lg mb-3">ประวัติการเบิกจ่าย</h2>
         <div class="overflow-x-auto">
             <table class="table table-zebra">
-                <thead><tr><th>ID</th><th>โครงการ</th><th>ใบขอซื้อ</th><th>จำนวนเงิน</th><th>วันที่เบิก</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead>
+                <thead><tr><th>ID</th><th>โครงการ</th><th>ใบสั่งซื้อ</th><th>ใบรับของ</th><th>จำนวนเงิน</th><th>วันที่เบิก</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead>
                 <tbody id="paymentsTable"></tbody>
             </table>
         </div>
@@ -44,85 +44,32 @@
 {% block extra_js %}
 <script>
 
-    let allOrders = [];
+    async function loadData() {
+        const res = await apiFetch('/api/payments/');
+        const payments = res.payments || [];
+        const payableReceives = res.payable_receives || [];
 
-    async function loadOrders() {
-        const orders = await apiFetch('/api/orders/');
-        allOrders = orders;
-        const select = document.getElementById('paymentOrderSelect');
-        
-        select.innerHTML = '<option value="" disabled selected>เลือกใบขอซื้อ...</option>';
+        // Populate dropdown with payable receives
+        const select = document.getElementById('paymentReceiveSelect');
+        select.innerHTML = '<option value="" disabled selected>เลือกใบรับของ...</option>';
 
-        orders.filter(o => 
-            ['Approved', 'Processing', 'Completed'].includes(o.status) && 
-            !existingPaymentOrderIds.includes(o.order_id)
-        ).forEach(o => {
+        payableReceives.forEach(r => {
             const opt = document.createElement('option');
-            opt.value = o.order_id;
-            opt.textContent = `${o.order_no} — ${o.project_name} (${o.status})`;
-            opt.setAttribute('data-amount', o.total_amount);
+            opt.value = r.receive_id;
+            opt.textContent = `${r.receipt_no || 'PR-' + r.receive_id} — ${r.order_no} / ${r.project_name} (฿${parseFloat(r.value).toLocaleString()})`;
+            opt.setAttribute('data-amount', r.value);
             select.appendChild(opt);
         });
-    }
 
-    function onOrderSelectChange() {
-        const select = document.getElementById('paymentOrderSelect');
-        const option = select.options[select.selectedIndex];
-        const orderId = select.value;
-
-        // Try data attribute first, then fallback to array lookup
-        let amount = option ? option.getAttribute('data-amount') : null;
-        if (!amount || amount === 'undefined') {
-            const order = allOrders.find(o => String(o.order_id) === String(orderId));
-            amount = order ? order.total_amount : '';
+        if (payableReceives.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'ไม่มีใบรับของที่รอเบิกจ่าย';
+            opt.disabled = true;
+            select.appendChild(opt);
         }
-        
-        document.getElementById('paymentAmount').value = amount || '';
-    }
 
-    async function createPayment() {
-        const orderId = document.getElementById('paymentOrderSelect').value;
-        const amount = document.getElementById('paymentAmount').value;
-
-        if (!orderId) { showToast('กรุณาเลือกใบขอซื้อ', 'error'); return; }
-        if (!amount || parseFloat(amount) <= 0) { showToast('กรุณาระบุจำนวนเงิน', 'error'); return; }
-
-        if (!confirm(`ยืนยันการตั้งเบิกจ่ายยอด ${parseFloat(amount).toLocaleString()} บาท?`)) return;
-        
-        const res = await apiFetch('/api/payments/', {
-            method: 'POST',
-            body: JSON.stringify({ 
-                order_id: orderId,
-                amount_paid: amount
-            })
-        });
-        if (res.error) { showToast(res.error, 'error'); return; }
-        showToast(res.message); 
-        
-        // Reset Inputs
-        document.getElementById('paymentOrderSelect').value = "";
-        document.getElementById('paymentAmount').value = "";
-        
-        await loadPayments(); // Wait for payment list to update
-        // loadOrders() is called inside loadPayments
-    }
-    
-    async function confirmPayment(paymentId) {
-        if (!confirm('ยืนยันว่าได้ทำการเบิกจ่ายเงินเรียบร้อยแล้ว?')) return;
-        const res = await apiFetch(`/api/payments/${paymentId}/confirm/`, {
-            method: 'POST'
-        });
-        if (res.error) { showToast(res.error, 'error'); return; }
-        showToast(res.message);
-        loadPayments();
-    }
-
-    let existingPaymentOrderIds = [];
-
-    async function loadPayments() {
-        const payments = await apiFetch('/api/payments/');
-        existingPaymentOrderIds = payments.map(p => p.order_id);
-        
+        // Populate payment history table
         const table = document.getElementById('paymentsTable');
         table.innerHTML = '';
         payments.forEach(p => {
@@ -131,6 +78,7 @@
                     <td>${p.payment_id}</td>
                     <td>${p.project_name}</td>
                     <td>${p.order_no}</td>
+                    <td>${p.receive_no || '—'}</td>
                     <td>฿${parseFloat(p.amount_paid).toLocaleString()}</td>
                     <td>${new Date(p.payment_date).toLocaleDateString('th-TH')}</td>
                     <td>${getStatusBadge(p.status)}</td>
@@ -143,10 +91,52 @@
                 </tr>
             `;
         });
-        await loadOrders();
+    }
+
+    function onReceiveSelectChange() {
+        const select = document.getElementById('paymentReceiveSelect');
+        const option = select.options[select.selectedIndex];
+        const amount = option ? option.getAttribute('data-amount') : '0';
+        document.getElementById('paymentAmount').value = amount || '0';
+    }
+
+    async function createPayment() {
+        const receiveId = document.getElementById('paymentReceiveSelect').value;
+        const amount = document.getElementById('paymentAmount').value;
+
+        if (!receiveId) { showToast('กรุณาเลือกใบรับของ', 'error'); return; }
+        if (!amount || parseFloat(amount) <= 0) { showToast('กรุณาระบุจำนวนเงิน', 'error'); return; }
+
+        if (!confirm(`ยืนยันการตั้งเบิกจ่ายยอด ${parseFloat(amount).toLocaleString()} บาท?`)) return;
+        
+        const res = await apiFetch('/api/payments/', {
+            method: 'POST',
+            body: JSON.stringify({ 
+                receive_id: receiveId,
+                amount_paid: amount
+            })
+        });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message); 
+        
+        // Reset Inputs
+        document.getElementById('paymentReceiveSelect').value = "";
+        document.getElementById('paymentAmount').value = "";
+        
+        await loadData();
+    }
+    
+    async function confirmPayment(paymentId) {
+        if (!confirm('ยืนยันว่าได้ทำการเบิกจ่ายเงินเรียบร้อยแล้ว?')) return;
+        const res = await apiFetch(`/api/payments/${paymentId}/confirm/`, {
+            method: 'POST'
+        });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message);
+        loadData();
     }
 
     // Initial load
-    loadPayments();
+    loadData();
 </script>
 {% endblock %}

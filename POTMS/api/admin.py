@@ -61,7 +61,7 @@ class UserAdmin(admin.ModelAdmin):
     make_officer.short_description = '✅ เปลี่ยนเป็น Officer'
 
     def make_user(self, request, queryset):
-        rows = queryset.update(role='User', is_admin=False, is_officer=False, is_head=False)
+        rows = queryset.update(role='Requester', is_admin=False, is_officer=False, is_head=False)
         self.message_user(request, f'เปลี่ยน {rows} ผู้ใช้เป็น User สำเร็จ')
     make_user.short_description = '✅ เปลี่ยนเป็น User'
 

@@ -12,9 +12,15 @@
 <div class="card bg-base-200 border border-base-content/5 mb-6">
     <div class="card-body">
         <h2 class="card-title text-lg mb-3">ข้อมูลใบสั่งซื้อ</h2>
-        <div class="form-control">
-            <label class="label"><span class="label-text">โครงการ</span></label>
-            <select class="select select-bordered w-full" id="projectSelect"><option value="">เลือกโครงการ...</option></select>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="form-control">
+                <label class="label"><span class="label-text">โครงการ</span></label>
+                <select class="select select-bordered w-full" id="projectSelect"><option value="">เลือกโครงการ...</option></select>
+            </div>
+            <div class="form-control">
+                <label class="label"><span class="label-text">เลขที่ใบสั่งซื้อ (แบบกรอกเอง)</span></label>
+                <input type="text" class="input input-bordered" id="orderNo" placeholder="เว้นว่างเพื่อให้ระบบสร้างให้ (เช่น PO-XXXX-XXXX)">
+            </div>
         </div>
         <div class="form-control mt-3">
             <label class="label"><span class="label-text">เหตุผลในการจัดซื้อ</span></label>
@@ -119,6 +125,7 @@
             method: 'POST',
             body: JSON.stringify({ 
                 project_id: projectId, 
+                order_no: document.getElementById('orderNo').value,
                 reason: document.getElementById('reason').value, 
                 items,
                 submit: isSubmit 

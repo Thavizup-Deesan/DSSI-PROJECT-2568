@@ -5,7 +5,7 @@
 <div class="flex items-center justify-between mb-6">
     <div>
         <h1 class="text-2xl font-bold">บันทึกใบรับของ</h1>
-        <p class="text-sm text-base-content/50">UC-07: สร้างใบสั่งซื้อย่อย พร้อมแนบใบเสร็จ</p>
+        <p class="text-sm text-base-content/50">UC-09: สร้างใบสั่งซื้อย่อย พร้อมแนบใบเสร็จ</p>
     </div>
 </div>
 
@@ -83,7 +83,7 @@
         // Clear existing options except placeholder
         select.innerHTML = '<option value="" disabled selected>เลือกใบสั่งซื้อ...</option>';
 
-        orders.filter(o => ['Approved', 'Processing'].includes(o.status) && !o.is_fully_received).forEach(o => {
+        orders.filter(o => ['Approved', 'Processing', 'Partially_Paid'].includes(o.status) && !o.is_fully_received).forEach(o => {
             const selected = (urlOrderId && parseInt(urlOrderId) === o.order_id) ? 'selected' : '';
             select.innerHTML += `<option value="${o.order_id}" ${selected}>${o.order_no} — ${o.project_name} (${o.status})</option>`;
         });

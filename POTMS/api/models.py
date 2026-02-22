@@ -23,10 +23,10 @@ class User(models.Model):
     ROLE_CHOICES = [
         ('Admin', 'Admin'),
         ('Officer', 'Officer'),
-        ('User', 'User'),
-        ('Committee', 'Committee'),
+        ('Requester', 'Requester'),
+        ('Inspector', 'Inspector'),
     ]
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='User', verbose_name='บทบาท')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='Requester', verbose_name='บทบาท')
 
     department = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -47,11 +47,11 @@ class User(models.Model):
             self.is_admin = False
             self.is_officer = True
             self.is_head = False
-        elif self.role == 'Committee':
+        elif self.role == 'Inspector':
             self.is_admin = False
             self.is_officer = False
             self.is_head = False
-        else:  # User or empty
+        else:  # Requester or empty
             self.is_admin = False
             self.is_officer = False
             self.is_head = False
@@ -91,6 +91,7 @@ class Project(models.Model):
     
     # New Fields
     ubufmis_code = models.CharField(max_length=50, blank=True, null=True, verbose_name='รหัส UBUFMIS')
+    project_code = models.CharField(max_length=50, blank=True, null=True, verbose_name='รหัสโครงการ')
     responsible_person = models.CharField(max_length=255, blank=True, null=True, verbose_name='ผู้รับผิดชอบโครงการ')
 
     # Budget Breakdown
@@ -123,9 +124,17 @@ class Project(models.Model):
         return self.project_name
 
     def save(self, *args, **kwargs):
-        """Auto-calculate remaining_budget"""
+        """Auto-calculate remaining_budget and project_code"""
         self.remaining_budget = self.total_budget - self.reserved_budget
+        
+        # If project_code is missing, we need ID. Save once first if new.
+        is_new = self.pk is None
         super().save(*args, **kwargs)
+        
+        if not self.project_code:
+            self.project_code = f"PRJ-{self.project_id:04d}"
+            # Save again only if we updated the code
+            super().save(update_fields=['project_code'])
 
 
 # =================================================================
@@ -138,7 +147,7 @@ class ProjectParticipant(models.Model):
 
     ROLE_IN_PROJECT_CHOICES = [
         ('Requester', 'ผู้ขอซื้อ'),
-        ('Committee', 'กรรมการตรวจรับ'),
+        ('Inspector', 'กรรมการตรวจรับ'),
     ]
 
     project = models.ForeignKey(
@@ -176,7 +185,10 @@ class PurchaseOrder(models.Model):
         ('Reserved', 'กันวงเงินแล้ว'),
         ('Pending_Approval', 'รออนุมัติ'),
         ('Approved', 'อนุมัติแล้ว'),
-        ('Rejected', 'ถูกปฏิเสธ'),
+        ('Partially_Paid', 'จ่ายแล้วบางส่วน'),
+        ('Rejected', 'ส่งกลับแก้ไข'),
+        ('Revising', 'กำลังแก้ไข'),
+        ('Cancelled', 'ไม่อนุมัติ'),
         ('Completed', 'เสร็จสิ้น'),
     ]
 
@@ -207,7 +219,7 @@ class PurchaseOrder(models.Model):
         max_length=255, blank=True, null=True,
         verbose_name='กรรมการตรวจรับ (ระบุเอง)'
     )
-    order_no = models.CharField(max_length=50, verbose_name='เลขที่เอกสาร')
+    order_no = models.CharField(max_length=50, blank=True, null=True, verbose_name='เลขที่เอกสาร')
     total_amount = models.DecimalField(
         max_digits=15, decimal_places=2, default=Decimal('0.00'),
         verbose_name='จำนวนเงินรวม'
@@ -221,6 +233,13 @@ class PurchaseOrder(models.Model):
     class Meta:
         db_table = 'purchase_orders'
         unique_together = ['project', 'order_no']
+
+    def save(self, *args, **kwargs):
+        if not self.order_no:
+            # Generate auto order_no
+            count = PurchaseOrder.objects.filter(project=self.project).count() + 1
+            self.order_no = f"PO-{self.project.project_id:04d}-{count:04d}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.order_no} - {self.project.project_name}"
@@ -398,6 +417,12 @@ class Payment(models.Model):
         PurchaseOrder, on_delete=models.CASCADE,
         related_name='payments',
         verbose_name='ใบสั่งซื้อที่เกี่ยวข้อง'
+    )
+    related_receive = models.ForeignKey(
+        'PartialReceive', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='payments',
+        verbose_name='ใบรับของที่เกี่ยวข้อง'
     )
     amount_paid = models.DecimalField(
         max_digits=15, decimal_places=2, default=Decimal('0.00'),

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}หน้าหลักกรรมการตรวจรับ{% endblock %}
+
+{% block content %}
+<div class="hero min-h-[60vh] bg-base-200 rounded-box">
+    <div class="hero-content text-center">
+        <div class="max-w-md">
+            <span class="material-icons-outlined text-6xl text-primary mb-4">fact_check</span>
+            <h1 class="text-4xl font-bold">ระบบตรวจรับพัสดุ</h1>
+            <p class="py-6">ยินดีต้อนรับเข้าสู่ระบบสำหรับกรรมการตรวจรับพัสดุ ท่านสามารถตรวจสอบรายการที่รอการตรวจรับ และบันทึกผลการตรวจรับได้ที่นี่</p>
+            
+            <div class="flex flex-col gap-4">
+                <a href="{% url 'inspection' %}" class="btn btn-primary btn-lg gap-2">
+                    <span class="material-icons-outlined">list_alt</span>
+                    เริ่มการตรวจรับ
+                </a>
+                
+                <div class="stats shadow bg-base-100">
+                    <div class="stat">
+                        <div class="stat-figure text-secondary">
+                            <span class="material-icons-outlined text-3xl">pending_actions</span>
+                        </div>
+                        <div class="stat-title">รอตรวจรับ</div>
+                        <div class="stat-value text-secondary" id="pendingCount">-</div>
+                        <div class="stat-desc">รายการที่ต้องดำเนินการ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadStats() {
+        // Fetch stats independently or reuse existing API
+        // For now, let's just use the inspection API to count pending
+        try {
+            const inspections = await apiFetch('/api/inspections/');
+            if (Array.isArray(inspections)) {
+                // This API returns inspection history, so it might not show 'pending' if they aren't created in Inspection Pending table yet.
+                // Actually, 'PartialReceive' status 'Pending_Inspection' is what we need.
+                // But we don't have a direct count API for that on this landing page easily without fetching all orders.
+                // Let's rely on a specific stats call if available, or just leave it dynamic later.
+                // Ideally, we'd use /api/stats/ but that might be general.
+                
+                // fallback: fetch orders to count pending
+                const orders = await apiFetch('/api/orders/');
+                let pending = 0;
+                if(Array.isArray(orders)) {
+                    orders.forEach(o => {
+                        if(o.partial_receives) {
+                            pending += o.partial_receives.filter(r => r.status === 'Pending_Inspection').length;
+                        }
+                    });
+                }
+                document.getElementById('pendingCount').textContent = pending;
+            }
+        } catch (e) {
+            console.error("Failed to load stats", e);
+            document.getElementById('pendingCount').textContent = "0";
+        }
+    }
+
+    loadStats();
+</script>
+{% endblock %}

@@ -1,11 +1,15 @@
-#!/usr/bin/env bash
-# exit on error
-set -o errexit
+#!/bin/bash
 
-pip install -r requirements.txt
+echo "🚀 Starting build process..."
+python --version
 
+echo "📂 Current directory content:"
+ls -la
 
-python manage.py collectstatic --no-input
+echo "🎨 Collecting static files..."
+python manage.py collectstatic --no-input || { echo "❌ Collectstatic failed"; exit 1; }
 
-# Run migrations
-python manage.py migrate
+echo "🗄️ Running migrations..."
+python manage.py migrate || { echo "❌ Migrations failed"; exit 1; }
+
+echo "✅ Build completed successfully."

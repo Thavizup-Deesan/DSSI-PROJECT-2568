@@ -34,7 +34,7 @@ def get_current_user(request):
 
 
 def require_flags(*flags):
-    """Decorator: ตรวจสอบว่า user มี flag ที่กำหนด (is_admin, is_officer, is_head)"""
+    """Decorator: ตรวจสอบว่า user มี flag ที่กำหนด (is_admin, is_officer, is_committee)"""
     def decorator(view_func):
         def wrapper(request, *args, **kwargs):
             user = get_current_user(request)
@@ -64,7 +64,7 @@ def login_page(request):
         if api_user:
             if api_user.is_officer:
                 return redirect('officer_dashboard')
-            elif api_user.role == 'Committee':
+            elif api_user.role == 'Inspector':
                 return redirect('inspection')
             return redirect('user_dashboard')
     return render(request, 'login.html')
@@ -194,7 +194,7 @@ def allauth_post_login_view(request):
         return redirect('admin_management')
     elif api_user.is_officer:
         return redirect('officer_dashboard')
-    elif api_user.role == 'Committee':
+    elif api_user.role == 'Inspector':
         return redirect('inspection')
     else:
         return redirect('user_dashboard')
@@ -273,6 +273,7 @@ class ProjectAPIView(APIView):
             'project_id': p.project_id,
             'project_name': p.project_name,
             'ubufmis_code': p.ubufmis_code,
+            'project_code': p.project_code,
             'total_budget': str(p.total_budget),
             'reserved_budget': str(p.reserved_budget),
             'remaining_budget': str(p.remaining_budget),
@@ -295,6 +296,7 @@ class ProjectAPIView(APIView):
             created_by=user,
             project_name=data.get('project_name', ''),
             ubufmis_code=data.get('ubufmis_code', ''),
+            project_code=data.get('project_code', ''),
             total_budget=Decimal(str(data.get('total_budget', 0))),
             start_date=data.get('start_date'),
             end_date=data.get('end_date'),
@@ -471,8 +473,8 @@ class ProjectParticipantAPIView(APIView):
         email = data.get('email', '')
         role_in_project = data.get('role_in_project', 'Requester')
 
-        # Restrict 'Committee' role in Participant Setup
-        if role_in_project == 'Committee':
+        # Restrict 'Inspector' role in Participant Setup
+        if role_in_project == 'Inspector':
              return Response({'error': 'บทบาทกรรมการตรวจรับต้องระบุในขั้นตอน Export ใบสั่งซื้อเท่านั้น'}, status=400)
 
         # หา User จาก email หรือสร้างใหม่ (Placeholder)
@@ -480,7 +482,7 @@ class ProjectParticipantAPIView(APIView):
             target_user, created = User.objects.get_or_create(email=email)
             if created:
                 target_user.full_name = email.split('@')[0]
-                target_user.role = 'User'
+                target_user.role = 'Requester'
                 target_user.save()
         except Exception as e:
             return Response({'error': f'Invalid Email: {str(e)}'}, status=400)
@@ -541,7 +543,7 @@ def update_project_budget(project):
     
     orders = PurchaseOrder.objects.filter(
         project=project
-    ).exclude(status__in=['Draft', 'Rejected', 'Cancelled'])
+    ).exclude(status__in=['Draft', 'Cancelled'])
     
     for order in orders:
         # Check for payments (Authorized/Paid/Processing)
@@ -550,13 +552,15 @@ def update_project_budget(project):
             total=Sum('amount_paid')
         )['total'] or Decimal('0')
         
-        if payment_sum > 0:
-            # If there are payments, use the actual paid amount
-            total_reserved += payment_sum
+        # Logic Update:
+        # 1. If Completed (Closed job), use actual payment sum (release leftover budget).
+        # 2. If Not Completed (Active/Partial), keep full order amount reserved.
+        
+        if order.status == 'Completed':
+             total_reserved += payment_sum
         else:
-            # Not paid yet (Reserved, Approved, Completed-but-no-payment-record-yet)
-            # Use the planned order total
-            total_reserved += order.total_amount
+             # Reserve full amount until the job is done
+             total_reserved += order.total_amount
             
     project.reserved_budget = total_reserved
     project.save() # Triggers remaining_budget calculation
@@ -594,8 +598,22 @@ class PurchaseOrderAPIView(APIView):
 
         data = []
         for o in orders:
+            # 1. Calculate Suggested Payment Amount (Passed Inspections - Paid)
+            delivered_value = Decimal('0')
+            for item in o.items.all():
+                passed_qty = item.received_records.filter(
+                    partial_receive__inspection__result='Pass'
+                ).aggregate(total=Sum('quantity'))['total'] or 0
+                delivered_value += (Decimal(passed_qty) * item.unit_price)
+
+            already_paid = Payment.objects.filter(related_order=o).aggregate(
+                total=Sum('amount_paid')
+            )['total'] or Decimal('0')
+
+            suggested = delivered_value - already_paid
+            if suggested < 0: suggested = Decimal('0')
+
             # Check if order is fully received (all items received >= ordered)
-            # Excluding rejected items
             is_fully_received = True
             if o.items.count() == 0:
                 is_fully_received = False # Empty order is not "received"
@@ -625,9 +643,12 @@ class PurchaseOrderAPIView(APIView):
                 'order_id': o.order_id,
                 'order_no': o.order_no,
                 'project_name': o.project.project_name,
+                'project_code': o.project.project_code,   # Added
+                'ubufmis_code': o.project.ubufmis_code,   # Added
                 'project_id': o.project_id,
                 'requester_name': o.requester.full_name,
                 'total_amount': str(o.total_amount),
+                'suggested_payment_amount': str(suggested),
                 'status': o.status,
                 'created_at': o.created_at.isoformat(),
                 'items_count': o.items.count(),
@@ -661,9 +682,8 @@ class PurchaseOrderAPIView(APIView):
         if project.status != 'Active':
             return Response({'error': 'โครงการยังไม่เปิดใช้งาน'}, status=400)
 
-        # สร้าง order_no อัตโนมัติ
-        count = PurchaseOrder.objects.filter(project=project).count() + 1
-        order_no = f"PO-{project.project_id:04d}-{count:04d}"
+        # รับเลขที่ใบสั่งซื้อ (ถ้ามีกรอกมา)
+        order_no = data.get('order_no', '').strip() or None
 
         # 1. คำนวณยอดรวม (Calculate Total)
         total = Decimal('0')
@@ -798,7 +818,7 @@ class PurchaseOrderDetailAPIView(APIView):
         except PurchaseOrder.DoesNotExist:
             return Response({'error': 'ไม่พบใบสั่งซื้อ'}, status=404)
 
-        if order.status not in ['Draft', 'Rejected']:
+        if order.status not in ['Draft', 'Rejected', 'Revising']:
             return Response({'error': 'แก้ไขได้เฉพาะ Draft หรือถูกปฏิเสธ'}, status=400)
 
         if order.requester != user:
@@ -829,9 +849,9 @@ class PurchaseOrderDetailAPIView(APIView):
 
                     order.total_amount = total
 
-                # If it was Rejected, reset to Draft on save
+                # If it was Rejected, change to Revising (not Draft)
                 if order.status == 'Rejected':
-                    order.status = 'Draft'
+                    order.status = 'Revising'
 
                 order.save()
         except ValueError as e:
@@ -861,8 +881,8 @@ class OrderSubmitAPIView(APIView):
         except PurchaseOrder.DoesNotExist:
             return Response({'error': 'ไม่พบใบสั่งซื้อ'}, status=404)
 
-        if order.status not in ['Draft', 'Rejected']:
-            return Response({'error': 'ส่งได้เฉพาะ Draft หรือถูกปฏิเสธ'}, status=400)
+        if order.status not in ['Draft', 'Rejected', 'Revising']:
+            return Response({'error': 'ส่งได้เฉพาะ Draft, ส่งกลับแก้ไข, หรือกำลังแก้ไข'}, status=400)
 
         if order.requester != user:
              return Response({'error': 'เฉพาะผู้ขอซื้อเท่านั้นที่สามารถยืนยันคำสั่งซื้อได้'}, status=403)
@@ -943,12 +963,13 @@ class OrderExportAPIView(APIView):
             committee_user, created = User.objects.get_or_create(email=committee_email)
             if created or not committee_user.full_name:
                 committee_user.full_name = committee_name if committee_name else committee_email.split('@')[0]
-                committee_user.role = 'Committee'
-                committee_user.save()
             elif committee_name:
-                # Update name if provided explicitly
                 committee_user.full_name = committee_name
-                committee_user.save(update_fields=['full_name'])
+            
+            # Always ensure Inspector role (แม้ user มีอยู่แล้ว ต้องได้ role Inspector)
+            if committee_user.role not in ['Admin', 'Officer']:
+                committee_user.role = 'Inspector'
+            committee_user.save()
             
             # Assign to Order
             order.inspection_committee = committee_user
@@ -1031,10 +1052,30 @@ class OrderApprovalRecordAPIView(APIView):
                 update_project_budget(project)
 
             return Response({
-                'message': 'ส่งกลับแก้ไข — คืนวงเงินให้โครงการแล้ว',
+                'message': 'ส่งกลับแก้ไข — วงเงินยังถูกจองไว้รอแก้ไขและส่งใหม่',
                 'remaining_budget': str(project.remaining_budget),
             })
 
+        elif action == 'cancel':
+            note = request.data.get('note', '').strip()
+            if not note:
+                return Response({'error': 'กรุณาระบุเหตุผลที่ไม่อนุมัติ'}, status=400)
+
+            project = order.project
+            with transaction.atomic():
+                order.status = 'Cancelled'
+                order.rejection_reason = note
+                order.save()
+
+                # คืนวงเงินให้โครงการ (Cancelled ถูก exclude จาก budget calculation)
+                update_project_budget(project)
+
+            return Response({
+                'message': 'ไม่อนุมัติ — ยกเลิกใบสั่งซื้อและคืนวงเงินให้โครงการแล้ว',
+                'remaining_budget': str(project.remaining_budget),
+            })
+
+        return Response({'error': 'กรุณาระบุ action: approve, reject หรือ cancel'}, status=400)
 
 class OrderProcessAPIView(APIView):
     """
@@ -1100,9 +1141,14 @@ class PartialReceiveAPIView(APIView):
 
         data = [{
             'receive_id': r.receive_id,
+            'order_id': r.order_id,
             'order_no': r.order.order_no,
             'project_name': r.order.project.project_name,
-            'order_id': r.order_id,
+            'project_code': r.order.project.project_code,
+            'ubufmis_code': r.order.project.ubufmis_code,
+            'project_id': r.order.project_id,
+            'requester': r.order.requester.user_id,
+            'requester_name': r.order.requester.full_name,
             'receipt_no': r.receipt_no,
             'receipt_file_path': r.receipt_file_path,
             'recorded_by': r.recorded_by.full_name,
@@ -1131,7 +1177,7 @@ class PartialReceiveAPIView(APIView):
         except PurchaseOrder.DoesNotExist:
             return Response({'error': 'ไม่พบใบสั่งซื้อ'}, status=404)
 
-        if order.status not in ['Approved', 'Processing']:
+        if order.status not in ['Approved', 'Processing', 'Partially_Paid']:
             return Response({'error': 'สร้างได้เฉพาะใบสั่งซื้อที่อนุมัติแล้ว หรือกำลังดำเนินการ (Processing)'}, status=400)
 
         # 1. Use Committee from Order (Inherited from PO Export assignment)
@@ -1368,20 +1414,54 @@ class PaymentAPIView(APIView):
             payments = payments.filter(project_id=project_id)
 
         payments = payments.select_related(
-            'project', 'related_order'
+            'project', 'related_order', 'related_receive'
         ).order_by('-payment_date')
 
-        data = [{
+        payment_data = [{
             'payment_id': p.payment_id,
             'project_name': p.project.project_name,
             'order_id': p.related_order.order_id,
             'order_no': p.related_order.order_no,
+            'receive_id': p.related_receive_id,
+            'receive_no': p.related_receive.receipt_no if p.related_receive else '',
             'amount_paid': str(p.amount_paid),
             'payment_date': p.payment_date.isoformat(),
             'status': p.status,
         } for p in payments]
 
-        return Response(data)
+        # Also return list of payable receives (inspected Pass, not yet paid)
+        # Filter out None to avoid SQL NOT IN (NULL) bug which excludes everything
+        paid_receive_ids = list(
+            Payment.objects.exclude(related_receive__isnull=True)
+            .values_list('related_receive_id', flat=True)
+        )
+        payable_receives = PartialReceive.objects.filter(
+            inspection__result='Pass',
+        ).exclude(
+            receive_id__in=paid_receive_ids
+        ).select_related('order', 'order__project').order_by('-received_date')
+
+        receives_data = []
+        for r in payable_receives:
+            # Calculate value of this receipt
+            receive_value = Decimal('0')
+            for ri in r.receive_items.select_related('order_item'):
+                receive_value += Decimal(ri.quantity) * ri.order_item.unit_price
+            
+            receives_data.append({
+                'receive_id': r.receive_id,
+                'receipt_no': r.receipt_no or f'PR-{r.receive_id}',
+                'order_id': r.order.order_id,
+                'order_no': r.order.order_no,
+                'project_name': r.order.project.project_name,
+                'received_date': r.received_date.isoformat(),
+                'value': str(receive_value),
+            })
+
+        return Response({
+            'payments': payment_data,
+            'payable_receives': receives_data,
+        })
 
     def post(self, request):
         user = get_current_user(request)
@@ -1389,40 +1469,83 @@ class PaymentAPIView(APIView):
             return Response({'error': 'เฉพาะเจ้าหน้าที่พัสดุเท่านั้น'}, status=403)
 
         data = request.data
-        order_id = data.get('order_id')
+        receive_id = data.get('receive_id')
+
+        if not receive_id:
+            return Response({'error': 'กรุณาเลือกใบรับของ'}, status=400)
 
         try:
-            order = PurchaseOrder.objects.select_related('project').get(
-                order_id=order_id
-            )
-        except PurchaseOrder.DoesNotExist:
-            return Response({'error': 'ไม่พบใบสั่งซื้อ'}, status=404)
+            receive = PartialReceive.objects.select_related(
+                'order', 'order__project', 'inspection'
+            ).get(receive_id=receive_id)
+        except PartialReceive.DoesNotExist:
+            return Response({'error': 'ไม่พบใบรับของ'}, status=404)
 
-        if order.status not in ['Approved', 'Processing', 'Completed']:
-            return Response({'error': 'ตั้งเบิกได้เฉพาะใบสั่งซื้อที่อนุมัติแล้ว หรืออยู่ระหว่างดำเนินการ/รับของครบแล้ว'}, status=400)
+        # Check inspection passed
+        if not hasattr(receive, 'inspection') or receive.inspection.result != 'Pass':
+            return Response({'error': 'ใบรับของนี้ยังไม่ผ่านการตรวจรับ'}, status=400)
 
-        # คำนวณยอดจ่ายจริง (Custom Amount or Default Order Total)
+        # Check not already paid
+        if Payment.objects.filter(related_receive=receive).exists():
+            return Response({'error': 'ใบรับของนี้ถูกตั้งเบิกจ่ายแล้ว'}, status=400)
+
+        # Calculate value of this receipt
+        receive_value = Decimal('0')
+        for ri in receive.receive_items.select_related('order_item'):
+            receive_value += Decimal(ri.quantity) * ri.order_item.unit_price
+
+        if receive_value <= 0:
+            return Response({'error': 'ใบรับของนี้ไม่มีมูลค่า'}, status=400)
+
+        # Determine amount (use receipt value as default, allow override)
         try:
-             amount = Decimal(str(request.data.get('amount_paid', order.total_amount)))
+            amount = Decimal(str(data.get('amount_paid', receive_value)))
         except:
-             amount = order.total_amount
+            amount = receive_value
+
+        if amount > receive_value:
+            return Response({
+                'error': f'จำนวนเงินที่เบิก ({amount:,.2f}) เกินกว่ามูลค่าใบรับของ ({receive_value:,.2f} บาท)'
+            }, status=400)
+
+        if amount <= 0:
+            return Response({'error': 'จำนวนเงินต้องมากกว่า 0'}, status=400)
+
+        order = receive.order
+        project = order.project
 
         payment = Payment.objects.create(
-            project=order.project,
+            project=project,
             related_order=order,
+            related_receive=receive,
             amount_paid=amount,
             status='Processing',
         )
-        
-        # Update Budget (Include Processing payment)
-        update_project_budget(order.project)
 
-        # อัปเดตสถานะ order เป็น Completed
-        order.status = 'Completed'
+        # Update Budget
+        update_project_budget(project)
+
+        # Update Order Status
+        total_delivered = Decimal('0')
+        for item in order.items.all():
+            passed_qty = PartialReceiveItem.objects.filter(
+                order_item=item,
+                partial_receive__inspection__result='Pass'
+            ).aggregate(total=Sum('quantity'))['total'] or 0
+            total_delivered += Decimal(passed_qty) * item.unit_price
+
+        total_paid = Payment.objects.filter(related_order=order).aggregate(
+            total=Sum('amount_paid')
+        )['total'] or Decimal('0')
+
+        if total_paid >= total_delivered and total_delivered >= order.total_amount:
+            order.status = 'Completed'
+        elif total_paid > 0:
+            order.status = 'Partially_Paid'
         order.save()
 
         return Response({
-            'message': 'ตั้งเบิกจ่ายสำเร็จ',
+            'message': f'ตั้งเบิกจ่ายสำเร็จ — ใบรับของ {receive.receipt_no or "PR-" + str(receive.receive_id)} ({amount:,.2f} บาท)',
             'payment_id': payment.payment_id,
             'amount_paid': str(amount),
         }, status=201)
@@ -1604,7 +1727,7 @@ class UserDetailAPIView(APIView):
             if target_user.is_admin: target_user.role = 'Admin'
             elif target_user.is_head: target_user.role = 'Head'
             elif target_user.is_officer: target_user.role = 'Officer'
-            else: target_user.role = 'User'
+            else: target_user.role = 'Requester'
 
         # Officer can only edit their own name and department
         elif user.is_officer and is_self:
@@ -1714,7 +1837,7 @@ class AdminRemoveAPIView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'ไม่พบผู้ใช้'}, status=404)
 
-        target_user.role = 'User'
+        target_user.role = 'Requester'
         target_user.save()
 
         return Response({
@@ -1839,30 +1962,13 @@ def run_migrations(request):
     f = io.StringIO()
     try:
         with redirect_stdout(f), redirect_stderr(f):
-            # 0. Fix Schema Mismatch (id vs user_id)
-            print("--- Checking Schema ---")
-            with connection.cursor() as cursor:
-                # Check columns in users table
-                cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'users'")
-                columns = [row[0] for row in cursor.fetchall()]
-                print(f"Current columns in 'users': {columns}")
-                
-                if 'id' in columns and 'user_id' not in columns:
-                    print("Detected mismatch: 'id' exists but 'user_id' missing. Renaming...")
-                    cursor.execute("ALTER TABLE users RENAME COLUMN id TO user_id")
-                    print("Renamed 'id' to 'user_id'.")
-                elif 'user_id' not in columns and 'id' not in columns:
-                     # Fallback for weird state, but unlikley if table exists
-                     pass
-
             # 1. Run Migrations
-            print("\n--- Running Migrations ---")
+            print("--- Running Migrations ---")
             call_command('migrate', interactive=False)
             
             # 2. Fix Site ID = 1
             print("\n--- Fix Site Configuration ---")
             current_domain = request.get_host()
-            # Site is already imported
             site, created = Site.objects.update_or_create(
                 id=1,
                 defaults={
@@ -1877,7 +1983,6 @@ def run_migrations(request):
             google_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
             if google_client_id and google_client_secret:
                 print("\n--- Setup Google SocialApp ---")
-                # SocialApp is already imported
                 app, app_created = SocialApp.objects.update_or_create(
                     provider='google',
                     defaults={
@@ -1893,4 +1998,4 @@ def run_migrations(request):
         return HttpResponse(f"<h1>Migration & Setup Success</h1><pre>{output}</pre>")
     except Exception:
         error_msg = traceback.format_exc()
-        return HttpResponse(f"<h1>Migration Failed</h1><pre>{error_msg}</pre><hr><pre>{f.getvalue()}</pre>", status=200)
+        return HttpResponse(f"<h1>Migration Failed</h1><pre>{error_msg}</pre><hr><pre>{f.getvalue()}</pre>", status=500)

@@ -30,6 +30,21 @@ services:
   redis:
     image: redis:7-alpine
     container_name: potms-redis-dev
+  # =========================================================================
+  # ngrok tunnel for public access
+  # =========================================================================
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: potms-ngrok
+    restart: unless-stopped
+    command:
+      - "http"
+      - "--domain=hypnosporic-unconvictive-stephania.ngrok-free.app"
+      - "web:8000"
+    environment:
+      - NGROK_AUTHTOKEN=32GJ9dO6rpRf4qTwTYehl2h8F2q_5d6dVChAHehGXxCxrGFSm
     ports:
-      - "6379:6379"
+      - "4040:4040"
+    depends_on:
+      - web
 

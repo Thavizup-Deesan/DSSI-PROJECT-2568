@@ -1,0 +1,48 @@
+@startuml
+title System Sequence Diagram: การเงินและปิดโครงการ (Payment & Closure)
+
+actor "เจ้าหน้าที่การเงิน / พัสดุ" as officer
+participant ":ระบบ POTMS" as system
+
+== ตั้งเบิกจ่ายเงิน ==
+
+officer -> system : 1. เรียกดูใบรับของ (Partial Receive)\nที่ตรวจรับผ่านแล้ว (Inspection Pass)\nและยังไม่ถูกตั้งเบิก
+system --> officer : 2. แสดงรายการใบรับของที่พร้อมเบิกจ่าย\n(เลขใบรับ, ใบสั่งซื้อ, โครงการ, มูลค่า)
+
+officer -> system : 3. เลือกใบรับของ และยืนยันตั้งเบิกจ่าย\n(receive_id, จำนวนเงิน)
+
+note right of system
+  1. สร้างรายการ Payment (สถานะ = "Processing")
+  2. ผูก Payment กับใบรับของ (related_receive)
+  3. อัปเดตงบประมาณโครงการ (update_project_budget)
+  4. อัปเดตสถานะใบสั่งซื้อ:
+     - จ่ายบางส่วน → "Partially_Paid"
+     - จ่ายครบ + ของครบ → "Completed"
+end note
+
+system --> officer : 4. แสดงผลบันทึกการตั้งเบิกสำเร็จ\n(สถานะ Payment = "Processing")
+
+officer -> system : 5. ยืนยันการเบิกจ่ายเสร็จสิ้น (Confirm Payment)
+
+note right of system
+  1. เปลี่ยนสถานะ Payment เป็น "Paid"
+  2. อัปเดตงบประมาณโครงการ
+end note
+
+system --> officer : 6. แสดงผลยืนยันเบิกจ่ายสำเร็จ\n(สถานะ Payment = "Paid")
+
+== ปิดโครงการ ==
+
+officer -> system : 7. เรียกดูสรุปภาพรวมโครงการ (Summary Report)
+system --> officer : 8. แสดงยอดงบประมาณและสถานะงานทั้งหมด\n(งบทั้งหมด, งบกัน, งบคงเหลือ,\nจำนวน PO ทั้งหมด, จำนวน PO สำเร็จ, ยอดเบิกจ่ายรวม)
+
+officer -> system : 9. กดปุ่ม "ปิดโครงการ" (Close Project)
+
+note right of system
+  ตรวจสอบ:
+  - โครงการต้องมีสถานะ "Active"
+end note
+
+system --> officer : 10. ปิดโครงการสำเร็จ (สถานะ = "Closed")\nพร้อมแสดงสรุปข้อมูลโครงการ
+
+@enduml

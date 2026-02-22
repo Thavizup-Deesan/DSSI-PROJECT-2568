@@ -133,6 +133,25 @@
     </div>
 </dialog>
 
+<!-- Cancel Modal -->
+<dialog id="cancelModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg text-error">ไม่อนุมัติ — ยกเลิกใบสั่งซื้อ</h3>
+        <p class="py-4">การไม่อนุมัติจะยกเลิกใบสั่งซื้อถาวรและคืนวงเงินกลับเข้าโครงการ</p>
+        
+        <div class="form-control w-full">
+            <textarea class="textarea textarea-bordered h-24" id="cancelReason" placeholder="ระบุเหตุผลที่ไม่อนุมัติ..."></textarea>
+        </div>
+
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn">ยกเลิก</button>
+            </form>
+            <button class="btn btn-error" onclick="confirmCancel()">ยืนยันไม่อนุมัติ</button>
+        </div>
+    </div>
+</dialog>
+
 <!-- Modal: QR Code -->
 {% endblock %}
 
@@ -153,9 +172,11 @@
 
         document.getElementById('orderBreadcrumb').textContent = d.order_no;
         document.getElementById('orderInfo').innerHTML = `
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
                 <div><div class="text-xs opacity-50">เลขที่</div><div class="font-semibold">${d.order_no}</div></div>
-                <div><div class="text-xs opacity-50">โครงการ</div><div>${d.project_name}</div></div>
+                <div><div class="text-xs opacity-50">โครงการ</div><div class="font-medium">${d.project_name}</div></div>
+                <div><div class="text-xs opacity-50">รหัสโครงการ</div><div class="font-mono text-sm">${d.project_code || '—'}</div></div>
+                <div><div class="text-xs opacity-50">รหัส UBUFMIS</div><div class="font-mono text-sm">${d.ubufmis_code || '—'}</div></div>
                 <div><div class="text-xs opacity-50">ผู้ขอซื้อ</div><div>${d.requester_name}</div></div>
                 <div>
                     <div class="text-xs opacity-50">${['Reserved', 'Pending_Approval', 'Approved', 'Completed'].includes(d.status) ? 'ยอดเงินที่กันวงเงิน (Reserved)' : 'จำนวนเงิน'}</div>
@@ -187,8 +208,8 @@
             <tr><td>${i+1}</td><td>${item.material_name}</td><td>${item.quantity}</td><td>${item.unit}</td><td>฿${parseFloat(item.unit_price).toLocaleString()}</td><td class="font-medium">฿${parseFloat(item.total_price).toLocaleString()}</td></tr>
         `).join('');
 
-        // Show Partial Receives Section (Always show for Committee/Officer to verify)
-        const isCommitteeRole = user.role === 'Committee' || user.is_officer || user.is_admin;
+        // Show Partial Receives Section (Always show for Inspector/Officer to verify)
+        const isInspectorRole = user.role === 'Inspector' || user.is_officer || user.is_admin;
         
         if (d.partial_receives && d.partial_receives.length > 0) {
             document.getElementById('receivesSection').classList.remove('hidden');
@@ -218,8 +239,8 @@
                     </tr>
                 `;
             }).join('');
-        } else if (isCommitteeRole) {
-            // Show empty state for Committee/Officer
+        } else if (isInspectorRole) {
+            // Show empty state for Inspector/Officer
             document.getElementById('receivesSection').classList.remove('hidden');
             document.getElementById('receivesTable').innerHTML = `
                 <tr><td colspan="5" class="text-center opacity-50 py-4">ยังไม่มีรายการรับของ (Partial Receive)</td></tr>
@@ -247,12 +268,13 @@
             }
             if (d.status === 'Pending_Approval') {
                 actions.innerHTML += `<button class="btn btn-success gap-2" onclick="recordApproval('approve')"><span class="material-icons-outlined text-base">check_circle</span>บันทึกอนุมัติ</button>`;
-                actions.innerHTML += `<button class="btn btn-error gap-2" onclick="recordApproval('reject')"><span class="material-icons-outlined text-base">cancel</span>ส่งกลับแก้ไข</button>`;
+                actions.innerHTML += `<button class="btn btn-warning gap-2" onclick="recordApproval('reject')"><span class="material-icons-outlined text-base">replay</span>ส่งกลับแก้ไข</button>`;
+                actions.innerHTML += `<button class="btn btn-error gap-2" onclick="recordCancel()"><span class="material-icons-outlined text-base">block</span>ไม่อนุมัติ</button>`;
             }
             if (d.status === 'Approved') {
                 actions.innerHTML += `<button class="btn btn-primary gap-2" onclick="recordProcess()"><span class="material-icons-outlined text-base">send</span>ส่งใบสั่งซื้อให้งานพัสดุ</button>`;
             }
-            if (d.status === 'Processing') {
+            if (d.status === 'Processing' || d.status === 'Partially_Paid') {
                 actions.innerHTML += `<a href="/partial-receives/?order_id=${orderId}" class="btn btn-active gap-2"><span class="material-icons-outlined text-base">inventory_2</span>บันทึกรับของ</a>`;
             }
         }
@@ -387,6 +409,22 @@
         if (res.error) { showToast(res.error, 'error'); return; }
         showToast(res.message);
         document.getElementById('rejectModal').close();
+        setTimeout(() => location.reload(), 1000);
+    }
+
+    function recordCancel() {
+        document.getElementById('cancelModal').showModal();
+    }
+
+    async function confirmCancel() {
+        const reason = document.getElementById('cancelReason').value;
+        if (!reason) { showToast('กรุณาระบุเหตุผล', 'error'); return; }
+        const res = await apiFetch(`/api/orders/${orderId}/approve/`, {
+            method: 'POST', body: JSON.stringify({ action: 'cancel', note: reason })
+        });
+        if (res.error) { showToast(res.error, 'error'); return; }
+        showToast(res.message);
+        document.getElementById('cancelModal').close();
         setTimeout(() => location.reload(), 1000);
     }
 

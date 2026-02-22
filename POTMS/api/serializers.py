@@ -20,7 +20,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ['project_id', 'created_by', 'created_by_name', 'project_name', 
-                  'ubufmis_code', 'responsible_person', 
+                  'ubufmis_code', 'project_code', 'responsible_person', 
                   'budget_remuneration', 'budget_operations', 'budget_materials', 'budget_equipment',
                   'total_budget', 'reserved_budget', 'remaining_budget', 'start_date', 'end_date', 'status', 'created_at']
 
@@ -92,6 +92,8 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     requester_name = serializers.CharField(source='requester.full_name', read_only=True)
     project_name = serializers.CharField(source='project.project_name', read_only=True)
+    project_code = serializers.CharField(source='project.project_code', read_only=True)   # Added
+    ubufmis_code = serializers.CharField(source='project.ubufmis_code', read_only=True)   # Added
     
     inspection_committee_email = serializers.SerializerMethodField()
     inspection_committee_full_name = serializers.SerializerMethodField()
@@ -103,7 +105,7 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = PurchaseOrder
-        fields = ['order_id', 'project', 'project_name', 'requester', 'requester_name', 'order_no', 
+        fields = ['order_id', 'project', 'project_name', 'project_code', 'ubufmis_code', 'requester', 'requester_name', 'order_no', 
                   'total_amount', 'status', 'items', 'created_at', 'inspection_committee', 
                   'inspection_committee_email', 'inspection_committee_full_name', 
                   'inspection_committee_name', 'rejection_reason', 'partial_receives',
@@ -124,12 +126,12 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
                 defaults={
                     'username': committee_email.split('@')[0], # Default username
                     'full_name': committee_email.split('@')[0], # Default name (can be updated later)
-                    'role': 'Committee'
+                    'role': 'Inspector'
                 }
             )
             # Ensure Committee Role if currently just a User
-            if user.role == 'User':
-                user.role = 'Committee'
+            if user.role == 'Requester':
+                user.role = 'Inspector'
                 user.save()
             
             instance.inspection_committee = user

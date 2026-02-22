@@ -131,7 +131,13 @@ GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 # }
 
 # การตั้งค่าสำหรับ Vercel (ถ้ามี DATABASE_URL ให้ใช้ MySQL/Postgres)
-if 'DATABASE_URL' in os.environ:
+if 'DATABASE_URL_FIX' in os.environ:
+    DATABASES['default'] = dj_database_url.config(
+        default=os.environ.get('DATABASE_URL_FIX'),
+        conn_max_age=0,
+        conn_health_checks=True,
+    )
+elif 'DATABASE_URL' in os.environ:
     DATABASES['default'] = dj_database_url.config(
         default=os.environ.get('DATABASE_URL'),
         conn_max_age=0,
